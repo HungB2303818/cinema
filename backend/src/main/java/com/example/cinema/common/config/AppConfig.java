@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Configuration;
 import java.time.Clock;
 
 @Configuration
+@org.springframework.scheduling.annotation.EnableScheduling
 public class AppConfig {
 
     @Bean

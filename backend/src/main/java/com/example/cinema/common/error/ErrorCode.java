@@ -5,6 +5,16 @@ import org.springframework.http.HttpStatus;
 
 @Getter
 public enum ErrorCode {
+    BOOKING_EXPIRED(HttpStatus.CONFLICT, "Đơn đặt vé đã hết thời hạn giữ ghế."),
+    BOOKING_CONCURRENT_CONFLICT(HttpStatus.CONFLICT, "Không thể hoàn tất do xung đột đồng thời. Vui lòng thử lại cùng request key."),
+    BOOKING_AMOUNT_INVALID(HttpStatus.UNPROCESSABLE_ENTITY, "Tổng tiền đặt vé vượt giới hạn lưu trữ."),
+    SHOWTIME_UNAVAILABLE(HttpStatus.UNPROCESSABLE_ENTITY, "Suất chiếu không còn mở đặt vé."),
+    SEAT_NOT_BOOKABLE(HttpStatus.UNPROCESSABLE_ENTITY, "Ghế đang bảo trì hoặc chưa có inventory cho suất chiếu."),
+    RESOURCE_STATE_CONFLICT(HttpStatus.CONFLICT, "Tài nguyên đã có dữ liệu liên quan hoặc trạng thái không cho phép thao tác."),
+    DUPLICATE_RESOURCE(HttpStatus.CONFLICT, "Tên phòng hoặc vị trí ghế đã tồn tại."),
+    SCHEDULE_INVALID(HttpStatus.UNPROCESSABLE_ENTITY, "Thời gian hoặc giá suất chiếu không hợp lệ."),
+    ROOM_UNAVAILABLE(HttpStatus.UNPROCESSABLE_ENTITY, "Rạp/phòng không hoạt động hoặc không có ghế hoạt động."),
+    MOVIE_UNAVAILABLE(HttpStatus.UNPROCESSABLE_ENTITY, "Phim đang ẩn, không thể lập lịch chiếu."),
     VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "Dữ liệu yêu cầu không hợp lệ."),
     UNAUTHENTICATED(HttpStatus.UNAUTHORIZED, "Chưa xác thực hoặc token không hợp lệ."),
     ACCESS_DENIED(HttpStatus.FORBIDDEN, "Bạn không có quyền thực hiện thao tác này."),

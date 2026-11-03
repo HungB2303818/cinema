@@ -25,7 +25,7 @@ public class Seat {
     @Column(name = "seat_row", nullable = false, length = 5)
     private String seatRow;
 
-    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.SMALLINT)
+    @org.hibernate.annotations.JdbcType(com.example.cinema.common.persistence.UnsignedSmallIntJdbcType.class)
     @Column(name = "seat_number", nullable = false)
     private Integer seatNumber;
 

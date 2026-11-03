@@ -18,6 +18,8 @@
 
 ## Tuần 2 — Movie/Cinema/Showtime
 
+**Cập nhật triển khai backend 2026-11-03:** TASK-05/06/07/08 đã có DTO → repository → service → REST → tests. TASK-06 dùng cinema seed, quản lý phòng/ghế và chính sách maintenance bảo thủ theo GAP-08/11. TASK-07 có room row lock, cleanup overlap, atomic inventory, chặn sửa lịch sử booking và shared booking guard. TASK-08 có lịch theo ngày Việt Nam, seat map giờ DB, không lộ chủ ghế. Chi tiết payload/lock/test trong docs 06/07/08. Chưa có UI (TASK-17/18); kiểm thử POST booking sai phòng/cutoff được bổ sung trong TASK-09/10 bên dưới, không suy ra từ test seat map.
+
 - **TASK-05** Public movie list/detail; admin movie create/update; validate metadata.
 - **TASK-06** Quản lý cinema, rooms và sơ đồ ghế; unique vị trí ghế và maintenance.
 - **TASK-07** Admin tạo showtime với row-lock room + overlap query + tạo showtime_seats.
@@ -25,6 +27,8 @@
 - **DoD:** TC-11/12/23; mọi showtime tạo thành công có inventory đúng phòng, không trùng lịch kể cả concurrent create.
 
 ## Tuần 3 — Booking và concurrency
+
+**Cập nhật triển khai 2026-11-03:** TASK-09/10/11/12 đã có API tạo/cancel/history/detail, DTO + service validation, principal-derived owner, shared showtime guard, khóa từng inventory tăng dần, atomic hold/snapshot, idempotency scoped theo user và retry deadlock tối đa 3 transaction. Cleanup batch 100 mỗi 30s, từng booking một transaction và conditional release; GET effective expiry không ghi DB. Không thay DDL, không xóa lịch sử. Đã chạy 62 test booking mới gồm 31 integration MySQL thật; TC-01..05/09/10/12/15/17..20 có coverage phù hợp. `mvnw.cmd verify` Java 17: 160 tổng, 156 đạt, 4 Movie integration skipped do Docker không chạy. Payment/ticket ở Tuần 4 và UI ở Tuần 5 chưa hoàn thành.
 
 - **TASK-09** Booking DTO/idempotency, 1–8 ghế, cutoff 10 phút, snapshot giá.
 - **TASK-10** `BookingService.createBooking` nguyên tử, lock showtime seats tăng dần, 5 phút hold.

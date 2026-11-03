@@ -16,6 +16,21 @@ import java.util.Optional;
 @Repository
 public interface ShowtimeSeatRepository extends JpaRepository<ShowtimeSeat, Long> {
 
+    @Query("select ss.id from ShowtimeSeat ss where ss.showtime.id = :showtimeId and ss.seat.id in :seatIds order by ss.id")
+    List<Long> resolveInventoryIds(@Param("showtimeId") Long showtimeId, @Param("seatIds") List<Long> seatIds);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select ss from ShowtimeSeat ss where ss.id = :id")
+    Optional<ShowtimeSeat> findByIdForUpdate(@Param("id") Long id);
+
+    @Query("select ss from ShowtimeSeat ss join fetch ss.seat seat where ss.showtime.id = :showtimeId " +
+            "order by seat.seatRow, seat.seatNumber")
+    List<ShowtimeSeat> findSeatMap(@Param("showtimeId") Long showtimeId);
+
+    boolean existsByShowtimeIdAndStatusNot(Long showtimeId, ShowtimeSeatStatus status);
+
+    void deleteByShowtimeId(Long showtimeId);
+
     List<ShowtimeSeat> findByShowtimeId(Long showtimeId);
 
     Optional<ShowtimeSeat> findByShowtimeIdAndSeatId(Long showtimeId, Long seatId);

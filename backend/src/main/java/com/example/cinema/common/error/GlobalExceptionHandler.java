@@ -20,6 +20,32 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataConflict(Exception ex, HttpServletRequest request) {
+        return handleAppException(new AppException(ErrorCode.RESOURCE_STATE_CONFLICT,
+                "Dữ liệu bị trùng hoặc xung đột với dữ liệu liên quan."), request);
+    }
+
+    @ExceptionHandler(org.springframework.dao.PessimisticLockingFailureException.class)
+    public ResponseEntity<ErrorResponse> handleLockConflict(Exception ex, HttpServletRequest request) {
+        return handleAppException(new AppException(ErrorCode.RESOURCE_STATE_CONFLICT,
+                "Tài nguyên đang được cập nhật đồng thời. Vui lòng tải lại và thử lại."), request);
+    }
+
+    @ExceptionHandler({org.springframework.http.converter.HttpMessageNotReadableException.class,
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class,
+            org.springframework.web.bind.MissingServletRequestParameterException.class})
+    public ResponseEntity<ErrorResponse> handleInvalidInput(Exception ex, HttpServletRequest request) {
+        ErrorResponse body = ErrorResponse.builder()
+                .code(ErrorCode.VALIDATION_ERROR.name())
+                .message("JSON hoặc tham số yêu cầu không hợp lệ.")
+                .timestamp(Instant.now())
+                .path(request.getRequestURI())
+                .fieldErrors(List.of())
+                .build();
+        return ResponseEntity.badRequest().body(body);
+    }
+
     @ExceptionHandler(AppException.class)
     public ResponseEntity<ErrorResponse> handleAppException(AppException ex, HttpServletRequest request) {
         log.warn("Application exception: code={}, message={}, path={}",

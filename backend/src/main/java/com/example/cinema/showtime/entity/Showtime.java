@@ -38,7 +38,7 @@ public class Showtime {
     @Column(name = "ends_at", nullable = false)
     private Instant endsAt;
 
-    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.SMALLINT)
+    @org.hibernate.annotations.JdbcType(com.example.cinema.common.persistence.UnsignedSmallIntJdbcType.class)
     @Column(name = "cleanup_minutes", nullable = false)
     @Builder.Default
     private Integer cleanupMinutes = 15;

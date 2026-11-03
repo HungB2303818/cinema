@@ -24,7 +24,7 @@ public class Movie {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.SMALLINT)
+    @org.hibernate.annotations.JdbcType(com.example.cinema.common.persistence.UnsignedSmallIntJdbcType.class)
     @Column(name = "duration_minutes", nullable = false)
     private Integer durationMinutes;
 

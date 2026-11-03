@@ -65,8 +65,5 @@ public class Booking {
     @Column(name = "confirmed_at")
     private Instant confirmedAt;
 
-    @PreUpdate
-    public void onUpdate() {
-        this.updatedAt = Instant.now();
-    }
+    // Writing services set timestamps from DatabaseTime, never from the JVM wall clock.
 }

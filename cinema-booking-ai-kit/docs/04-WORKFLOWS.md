@@ -164,3 +164,9 @@ sequenceDiagram
 - Khi màn hình đếm ngược đến 0, frontend phải gọi lại API lấy trạng thái chính thức. Đồng hồ frontend không có quyền quyết định booking có thể xác nhận hay không.
 - UI cần phân biệt: ghế trống, đang giữ, đã bán; không hiển thị thông tin khách giữ ghế.
 - Đọc JSON thời gian ISO 8601 có `Z`/offset; chuyển giờ hiển thị sang `Asia/Ho_Chi_Minh`.
+
+## 9. Chi tiết triển khai TASK-09..12
+
+- Sau bước kiểm tra key, create lấy shared showtime row lock (giao thức với TASK-07); insert booking, resolve scalar inventory IDs, khóa từng row tăng dần, đọc lại giờ DB, validate lại cutoff/TTL trước HELD/selection snapshots. Bắt unique/deadlock chỉ ở ngoài worker transaction đã rollback; mỗi retry giữ nguyên key và tạo transaction mới.
+- Cancel đã quá TTL trả 409 BOOKING_EXPIRED, không chuyển CANCELLED hoặc hứa đã persist EXPIRED. Cleanup riêng commit EXPIRED, conditional-release theo owner hiện tại; không khóa booking cũ của ghế bị reclaim trong create để tránh đảo thứ tự lock.
+- GET history/detail chỉ suy ra effectiveStatus, không đổi state. Replay key không làm sống lại hoặc gia hạn booking đã hết hạn/hủy/xác nhận. Payment/ticket workflows ở mục 5 chưa được triển khai trong TASK-09..12.

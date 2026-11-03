@@ -10,6 +10,11 @@ import java.util.Optional;
 @Repository
 public interface SeatRepository extends JpaRepository<Seat, Long> {
 
+    List<Seat> findByRoomIdAndStatusOrderByIdAsc(Long roomId,
+            com.example.cinema.cinema.entity.PhysicalSeatStatus status);
+
+    Optional<Seat> findByIdAndRoomId(Long id, Long roomId);
+
     List<Seat> findByRoomIdOrderBySeatRowAscSeatNumberAsc(Long roomId);
 
     Optional<Seat> findByRoomIdAndSeatRowAndSeatNumber(Long roomId, String seatRow, Integer seatNumber);

@@ -36,6 +36,22 @@ Trang này phân biệt **quyết định đã khóa cho MVP** với **chủ đ�
 | GAP-10 | Token check-in | Random ≥128-bit; lưu chuỗi duy nhất; không chứa thông tin cá nhân | Nếu thêm QR/signature/hết hạn riêng |
 | GAP-11 | Endpoint admin ngoài danh sách hiện tại | Chỉ yêu cầu minimum movie/room/showtime; `cinemas` seed một rạp | Nếu cần UI quản lý nhiều cụm |
 
+### Chi tiết hóa khi triển khai TASK-06/07/08
+
+- GAP-08: chọn nhánh bảo thủ được cho phép — không sửa/thêm ghế hoặc sửa cấu hình phòng khi phòng đã có bất kỳ suất nào. Cùng room row lock ở codepath sửa ghế/phòng và tạo/sửa lịch.
+- GAP-09: admin cung cấp endsAt; kiểm tra endsAt >= startsAt + durationMinutes, không tự thêm trailer; cleanup mặc định 15, không âm. API mô tả rõ lỗi 400/422 và giới hạn DATETIME/DECIMAL.
+- GAP-11: dùng rạp seed, cung cấp danh sách rạp/phòng/ghế cho quản trị; không tự thêm workflow CRUD đa cụm.
+- Không bổ sung trạng thái hay cột schema; các endpoint phụ trong TASK-06 chỉ phục vụ minimum quản trị phòng/ghế. Xem API contract mục 1.2/1.3/9.1 và giao thức lock trong Architecture.
+
+### Chi tiết hóa TASK-09..12
+
+- GAP-01/02: DB now là nguồn giờ; expiry tại mốc được coi hết hạn. Cancel quá hạn trả BOOKING_EXPIRED và không đổi state trong transaction sắp rollback; job riêng commit EXPIRED.
+- GAP-03: CUSTOMER chỉ xem đơn của mình; STAFF không dùng booking GET; ADMIN được xem chi tiết hỗ trợ và có audit. Chưa có màn hình quản trị đơn/impersonation.
+- GAP-06: bookingCode UUID 32 ký tự, server-generated, UNIQUE; không dùng làm token check-in.
+- Giá tổng phải vừa DECIMAL(12,2), nếu vượt miền trả 422 và rollback, không cắt/round sai giá. Không đổi schema để tăng giới hạn hoặc thêm policy tax/discount.
+- TTL tính từ DB createdAt trước insert; không gia hạn khi chờ khóa, replay hoặc retry sau đã commit. Bounded retry chỉ cho deadlock/lock conflict, cùng intent/key; cleanup không expose API mới.
+- Payment, GET tickets và phát hành/check-in vé vẫn là TASK-13..15, không đánh dấu hoàn tất bởi test fixture CONFIRMED của booking.
+
 ## 3. Ngoài phạm vi — không tự thêm
 
 Cổng thanh toán online, webhooks, hoàn tiền, đổi vé/đổi suất sau xác nhận, xử lý giá vé trẻ em/sinh viên, combo, loyalty, coupon, thuế và hóa đơn điện tử, tích hợp SMS/email, mobile native, Kafka, kiến trúc phân tán, triển khai high availability, redis giữ ghế là source of truth.

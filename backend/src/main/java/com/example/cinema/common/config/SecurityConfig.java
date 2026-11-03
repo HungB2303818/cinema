@@ -61,7 +61,8 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOriginPatterns(List.of("*"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "Accept"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "Accept", "X-Correlation-ID"));
+        configuration.setExposedHeaders(List.of("X-Correlation-ID", "Location"));
         configuration.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
@@ -82,6 +83,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/me").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/movies/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/showtimes/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/bookings", "/api/bookings/*/cancel").hasRole("CUSTOMER")
+                        .requestMatchers(HttpMethod.GET, "/api/bookings/me").hasRole("CUSTOMER")
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")

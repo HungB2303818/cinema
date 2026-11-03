@@ -54,6 +54,8 @@ erDiagram
 
 Index `idx_movies_status_release(status, release_date)`.
 
+**Mapping Java cho SMALLINT UNSIGNED:** `duration_minutes`, `seats.seat_number`, `showtimes.cleanup_minutes` dùng Integer và `UnsignedSmallIntJdbcType`: binder/extractor JDBC setInt/getInt nhưng SQL type code vẫn SMALLINT để validate schema chuẩn. Không dùng short/getShort/setShort vì tràn tại 32768–65535. Đây là sửa mapping ứng dụng, không thay DDL/migration; integration kiểm thử round-trip 65535 cho cả ba cột.
+
 ### 2.3 `cinemas`
 
 `id` BIGINT PK, `name` VARCHAR(150) NOT NULL, `address` VARCHAR(255) NOT NULL, `status` ENUM(ACTIVE,INACTIVE) mặc định ACTIVE. MVP có 1 cinema nhưng giữ quan hệ 1:N tới rooms.

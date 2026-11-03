@@ -13,3 +13,8 @@ spring:
 logging:
   level:
     com.example.cinema: DEBUG
+
+app:
+  booking:
+    cleanup:
+      enabled: false

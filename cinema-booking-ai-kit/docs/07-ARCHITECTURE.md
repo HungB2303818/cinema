@@ -145,6 +145,27 @@ expire(bookingId):
 - `payments.successful_booking_id` generated UNIQUE bảo vệ payment thứ hai. Trùng idempotency key → đọc lại kết quả cũ hoặc 409 nếu payload khác.
 - Khi cập nhật `showtimes`, phải phối hợp với booking creation để tránh thay lịch sau khi đã tạo booking. Chính sách MVP: **không cho sửa suất nếu đã có booking**, kiểm tra trong transaction và áp dụng cơ chế khóa thích hợp ở cả hai codepath.
 
+### Giao thức TASK-06/07/08 đã triển khai
+
+- Tạo/sửa cấu hình ghế/phòng: khóa write row phòng, kiểm tra không có suất nào, rồi ghi. Tạo lịch dùng cùng khóa phòng nên không thể bỏ sót thay đổi ghế đang commit.
+- Create lịch: transaction READ_COMMITTED, lock phòng → validate rạp/phòng/phim/ghế → native locking overlap read (có cleanup) → insert lịch + inventory. Không dùng kiểm tra overlap cũ bỏ qua cleanup.
+- Update lịch: đọc scalar roomId cũ, lock phòng cũ/mới theo ID tăng dần → lock write showtime → kiểm tra roomId vẫn khớp → current locking read lịch sử bookings → kiểm tra overlap, loại chính nó → cập nhật. Phòng không đổi thì giữ inventory; đổi phòng chỉ thay inventory khi chưa có booking và không có ghế HELD/BOOKED.
+- **Hợp đồng bắt buộc cho TASK-09/10:** đầu transaction create booking, lấy `ShowtimeRepository.findByIdForBooking` (PESSIMISTIC_READ/shared), đọc cấu hình mới nhất; sau đó insert/lock booking mới → lock inventory theo ID tăng dần. Shared lock giữ đến commit để update lịch không vượt qua kiểm tra lịch sử trong lúc booking đang tạo. Không lock room khi tạo booking, tránh đảo thứ tự khóa với update lịch. Các luồng payment/cancel/expiry trên booking đã tồn tại giữ thứ tự booking → inventory như cũ.
+- MySQL session khởi tạo timezone +00:00. GET seat map dùng `DatabaseTime` với UTC_TIMESTAMP(3), không ghi DB; danh sách lịch lọc ngày Việt Nam bằng khoảng UTC nửa mở. GET không có khóa giữ chỗ.
+- TASK-06 chỉ đọc rạp seed, không mở rộng CRUD nhiều cụm (GAP-11); cấu hình ghế/phòng sau khi có bất kỳ suất nào bị khóa bảo thủ (GAP-08). Không thay DDL, không thêm Redis hoặc lock Java.
+
+### Giao dịch booking — TASK-09..12
+
+- `BookingService`: façade có method authorization/validation, lấy actor từ SecurityContext/UserPrincipal, không bao transaction; chỉ audit thành công sau khi worker trả kết quả đã commit.
+- `BookingTransactions`: worker Spring bean riêng, REQUIRES_NEW + READ_COMMITTED cho create/cancel/expire. Create lấy shared showtime guard, insert booking rồi resolve scalar inventory IDs và khóa **từng row** theo thứ tự tăng dần. Không load inventory entity trước khóa để tránh JPA persistence context giữ snapshot cũ. JPA dirty checking cập nhật @Version, không trộn native SQL ghi inventory trong domain services.
+- Create dùng DB now trước insert để đặt createdAt/TTL, đọc lại DB now sau khóa để validate cutoff/TTL và hold expiry. Multi-seat snapshot + HELD + booking + booking_seats trong cùng transaction; không giữ một phần.
+- `BookingQueries`: REQUIRES_NEW + read-only REPEATABLE_READ cho replay/GET; `BookingReplay` so sánh showtime + tập ghế lịch sử. Façade bắt unique conflict **sau rollback** rồi gọi Queries bằng transaction/persistence context mới. Trùng key khác payload không bị coi là retry thành công.
+- `BookingRetry`: tối đa 3 lần cho ConcurrencyFailureException, backoff 20/40ms, cùng request key; mỗi lần gọi worker tạo transaction mới. Không retry business errors; sau 3 lần trả 409 BOOKING_CONCURRENT_CONFLICT. Cancel/expire cũng retry theo booking ID và luôn khóa booking trước inventory.
+- `BookingExpiryService` lấy batch tối đa 100 IDs từ index(status,expires_at), mỗi booking một worker transaction. `BookingExpiryJob` chạy mỗi 30s, có thể disable bằng property. Không có endpoint cleanup; lỗi một đơn không làm rollback các đơn khác. Không release inventory mới được customer khác reclaim.
+- `Booking` không dùng @PreUpdate/Instant.now để ghi updatedAt; các write services phải đặt timestamp từ DatabaseTime. Cấu trúc SQL/constraints không thay đổi, không UNIQUE riêng showtime_seat_id trong booking_seats.
+- Controller chỉ trả DTO, GET chi tiết có ownership hoặc ADMIN support audit; không có write trên GET, không lộ owner inventory/tickets. Filter correlation ID đặt/khôi phục MDC, kể cả khi lỗi để không rò context giữa request threads.
+- Payment/confirm ở TASK-13 phải tiếp tục khóa booking → inventory tăng dần, kiểm tra PENDING + DB now < booking expiry và từng HELD vẫn thuộc owner/còn hạn, đặt timestamp theo DatabaseTime; không tái sử dụng kết luận từ GET hoặc chỉ trạng thái scheduler.
+
 ## 7. Time & money
 
 - DB: `DATETIME(3)` theo UTC; MySQL session timezone `+00:00`; ở API trả `Instant` hoặc `OffsetDateTime` với `Z`; frontend đổi sang Vietnam local time.
