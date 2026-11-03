@@ -53,3 +53,11 @@ buildNumber.properties
 # OS files
 .DS_Store
 Thumbs.db
+
+# Office / Binary Documents
+*.docx
+*.doc
+*.pptx
+*.ppt
+*.xlsx
+*.xls
