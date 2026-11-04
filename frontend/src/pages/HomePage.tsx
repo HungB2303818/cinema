@@ -114,7 +114,7 @@ export const HomePage: React.FC = () => {
             description={searchTerm ? `Không có phim nào khớp với từ khóa "${searchTerm}".` : 'Hiện tại chưa có phim nào trong danh mục này.'}
           />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 lg:gap-6">
             {filteredMovies.map((movie) => (
               <MovieCard key={movie.id} movie={movie} />
             ))}

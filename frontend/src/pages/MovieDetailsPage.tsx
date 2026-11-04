@@ -53,11 +53,20 @@ export const MovieDetailsPage: React.FC = () => {
 
       {/* Movie Hero Info */}
       <section className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8 bg-[#13151d] border border-[#242733] rounded-3xl p-6 sm:p-8 shadow-2xl">
-        <div className="aspect-[2/3] w-full rounded-2xl overflow-hidden bg-[#090a0f] shadow-xl">
+        <div className="relative aspect-[7/10] w-full rounded-2xl overflow-hidden bg-[#090a0f] shadow-xl flex items-center justify-center">
+          {/* Ambient blurred backdrop so any slight aspect difference blends seamlessly */}
+          <img
+            src={movie.posterUrl || fallbackPoster}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-30 scale-110 pointer-events-none select-none"
+          />
+
+          {/* Main movie poster - 100% visible, never clipped or cut off */}
           <img
             src={movie.posterUrl || fallbackPoster}
             alt={movie.title}
-            className="w-full h-full object-cover"
+            className="relative z-10 w-full h-full object-contain"
             onError={(e) => {
               (e.target as HTMLImageElement).src = fallbackPoster;
             }}
