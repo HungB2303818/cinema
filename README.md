@@ -11,7 +11,7 @@ Hệ thống đặt vé xem phim trực tuyến được xây dựng với kiế
 - **Tài liệu API:** OpenAPI 3 / Swagger UI (`springdoc-openapi`)
 - **Kiểm thử:** JUnit 5, AssertJ, Mockito, Testcontainers MySQL
 - **Container:** Docker & Docker Compose
-- **Frontend (dự kiến):** Vue 3 + Vite
+- **Frontend (dự kiến):** React + Vite
 
 ## 2. Cấu trúc thư mục
 

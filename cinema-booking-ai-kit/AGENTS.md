@@ -19,7 +19,7 @@ You are implementing **Cinema Booking System** (a Vietnamese-language course pro
 
 ## Architecture and data contracts
 
-- Use Java/Spring Boot, MySQL InnoDB, JPA, Spring Security/JWT, DTOs, MapStruct (optional), Flyway migrations, JUnit + Testcontainers.
+- Use Java/Spring Boot, MySQL InnoDB, JPA, Spring Security/JWT, DTOs, MapStruct (optional), Flyway migrations, JUnit + Testcontainers. Frontend: React + Vite.
 - Use a **modular monolith** grouped by business feature: `auth`, `catalog`, `cinema`, `showtime`, `booking`, `payment`, `ticket`, `report`, `common`.
 - **The schema file `database/cinema_booking_schema.sql` is canonical** for table/column/enum names. Examples: `showtimes.starts_at`, `showtime_seats.current_booking_id` (not `held_by_booking_id`), `payments.idempotency_key`.
 - Existing DDL contains 11 tables, MySQL `ENUM`, `CHECK`, and a generated unique column `payments.successful_booking_id`. Do not silently change schema, remove constraints, or use `ddl-auto=update` as a replacement for migrations.

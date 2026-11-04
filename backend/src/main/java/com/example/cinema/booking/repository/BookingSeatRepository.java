@@ -26,5 +26,8 @@ public interface BookingSeatRepository extends JpaRepository<BookingSeat, Long> 
 
     Optional<BookingSeat> findByTicketCode(String ticketCode);
 
+    @Query("select bs.booking.id from BookingSeat bs where bs.ticketCode = :code")
+    Optional<Long> findBookingIdByTicketCode(@Param("code") String code);
+
     List<BookingSeat> findByBookingIdAndTicketCodeIsNotNull(Long bookingId);
 }

@@ -5,6 +5,11 @@ import org.springframework.http.HttpStatus;
 
 @Getter
 public enum ErrorCode {
+    UNSUPPORTED_MEDIA_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Content-Type của yêu cầu không được hỗ trợ."),
+    MEDIA_STORAGE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "Cloudinary chưa được cấu hình. Vui lòng liên hệ quản trị hệ thống."),
+    POSTER_UPLOAD_FAILED(HttpStatus.BAD_GATEWAY, "Không thể upload poster lên Cloudinary. Vui lòng thử lại sau."),
+    FILE_TOO_LARGE(HttpStatus.PAYLOAD_TOO_LARGE, "Poster tối đa 5 MB; tổng multipart request tối đa 6 MB."),
+    UNSUPPORTED_IMAGE_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Poster chỉ hỗ trợ ảnh JPEG hoặc PNG hợp lệ."),
     BOOKING_EXPIRED(HttpStatus.CONFLICT, "Đơn đặt vé đã hết thời hạn giữ ghế."),
     BOOKING_CONCURRENT_CONFLICT(HttpStatus.CONFLICT, "Không thể hoàn tất do xung đột đồng thời. Vui lòng thử lại cùng request key."),
     BOOKING_AMOUNT_INVALID(HttpStatus.UNPROCESSABLE_ENTITY, "Tổng tiền đặt vé vượt giới hạn lưu trữ."),

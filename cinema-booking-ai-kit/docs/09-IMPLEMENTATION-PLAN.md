@@ -38,6 +38,8 @@
 
 ## Tuần 4 — Payment, vé, check-in
 
+**Cập nhật backend 2026-11-04:** TASK-13/14/15/16 đã triển khai repository → transaction service → REST DTO → tests; FR-08/11/12/13/14/15, UC-04/07/08/09, BR-12..15/17/18/21/22. Payment mock SUCCESS/FAILED, global idempotency + replay sau rollback, khóa booking → inventory tăng dần, DB UTC sau chờ khóa; SUCCESS/CONFIRMED/BOOKED/vé 192-bit CSPRNG nguyên tử. GET vé owner/ADMIN, check-in STAFF/ADMIN một lần trong cửa sổ bao gồm hai biên; báo cáo SUCCESS theo paid_at và ngày Việt Nam. Giữ nguyên DDL/generated UNIQUE, lịch sử và thay đổi Cloudinary. Đã chạy `mvnw.cmd verify` Java 17 + MySQL 8 local: **251 tổng, 247 đạt, 4 Movie integration skipped do Docker**; **59/59 test tuần 4 đạt**, gồm 29 MySQL integration. TC-06/07/08/13/14/16/21/22/24 có coverage; chi tiết command/traceability ở docs 08. UI vẫn thuộc Tuần 5.
+
 - **TASK-13** Payment mock SUCCESS/FAILED, idempotency, generated unique column, chuyển booking CONFIRMED trong cùng transaction.
 - **TASK-14** Phát hành ticket codes CSPRNG và GET tickets theo owner.
 - **TASK-15** STAFF/ADMIN check-in và bảo vệ UNIQUE.
@@ -46,7 +48,7 @@
 
 ## Tuần 5 — UI, test, demo
 
-- **TASK-17** Vue UI phim → suất → sơ đồ ghế → booking → mock payment → vé.
+- **TASK-17** React + Vite UI phim → suất → sơ đồ ghế → booking → mock payment → vé.
 - **TASK-18** UI Admin quản lý phim/suất, Staff check-in, report.
 - **TASK-19** Docker Compose, env sample, README setup, OpenAPI/Swagger, Postman collection nếu cần.
 - **TASK-20** E2E manual demo, concurrency test, export báo cáo test, hoàn thành báo cáo đồ án.
@@ -85,6 +87,10 @@ Implement UC-03 Create Booking (BR-05…11, BR-14…15).
 - docs/05-DATABASE.md
 - docs/06-API-CONTRACT.md
 ```
+
+## Mở rộng theo yêu cầu: Cloudinary poster (2026-11-04)
+
+Đã thêm SDK/config server env, upload multipart ADMIN, kiểm tra nội dung JPEG/PNG và giới hạn 5 MiB/pixel, attach secure_url vào cột poster_url có sẵn sau upload (không giữ DB transaction trong mạng). Giữ API JSON Movie, không đổi schema, không tự xóa asset cũ/orphan. API contract mục 1.1.1; cách cấu hình/export env và curl trong backend/README.md mục 10. Đã chạy `mvnw.cmd verify` Java 17 + MySQL test riêng: 192 tổng, 188 đạt, 4 Movie integration skipped do Docker; 32 test poster mới đều đạt. Chưa chạy upload với tài khoản Cloudinary thật. Không thay trạng thái các task payment/ticket còn lại.
 
 ## Git workflow đề xuất
 

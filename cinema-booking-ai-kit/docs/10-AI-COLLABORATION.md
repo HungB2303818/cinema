@@ -72,7 +72,7 @@ Không dùng H2 làm bằng chứng về row lock hoặc generated unique column
 ## 5. Prompt mẫu — xây UI theo hợp đồng
 
 ```text
-Hãy xây Vue 3 booking page từ docs/06-API-CONTRACT.md.
+Hãy xây React + Vite booking page từ docs/06-API-CONTRACT.md.
 Các màn hình: movie list, showtime details, seat map, hold timer,
 mock payment result, issued ticket.
 Không tự định nghĩa lại endpoint/JSON field. Không gửi userId hoặc price.

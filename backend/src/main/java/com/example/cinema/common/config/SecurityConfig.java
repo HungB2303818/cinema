@@ -83,7 +83,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/me").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/movies/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/showtimes/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/bookings", "/api/bookings/*/cancel").hasRole("CUSTOMER")
+                        .requestMatchers(HttpMethod.POST, "/api/bookings", "/api/bookings/*/cancel", "/api/bookings/*/payments/mock").hasRole("CUSTOMER")
                         .requestMatchers(HttpMethod.GET, "/api/bookings/me").hasRole("CUSTOMER")
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/actuator/**").permitAll()

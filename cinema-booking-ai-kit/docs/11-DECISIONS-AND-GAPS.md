@@ -52,6 +52,20 @@ Trang này phân biệt **quyết định đã khóa cho MVP** với **chủ đ�
 - TTL tính từ DB createdAt trước insert; không gia hạn khi chờ khóa, replay hoặc retry sau đã commit. Bounded retry chỉ cho deadlock/lock conflict, cùng intent/key; cleanup không expose API mới.
 - Payment, GET tickets và phát hành/check-in vé vẫn là TASK-13..15, không đánh dấu hoàn tất bởi test fixture CONFIRMED của booking.
 
+### Mở rộng theo yêu cầu — Cloudinary poster (2026-11-04)
+
+- Người dùng yêu cầu lưu poster qua Cloudinary. Bổ sung upload multipart ADMIN cho FR-04/15, UC-02; dùng SDK cloudinary-http5 2.6.0, credential server env, signed upload, không unsigned preset.
+- Giữ movies.poster_url và API Movie JSON hiện hành, không thêm DDL/migration. Chỉ JPEG/PNG 5 MiB, validate/decode/re-encode và giới hạn pixel trước khi gửi ra ngoài.
+- Không giữ DB transaction trong mạng; upload asset UUID độc lập rồi transaction attach URL. Chọn giữ asset cũ và asset có thể orphan khi lỗi/commit không rõ, thay vì tự xóa asset dựa trên URL; quản trị cleanup trên Console. Chưa thêm lifecycle/asset table/reconciliation job.
+- SDK HTTP5/core5/commons-lang3 được pin theo POM của Cloudinary để tránh Spring Boot 3.3 BOM hạ xuống phiên bản không khớp. Không gửi dữ liệu lên Cloudinary thật trong test; chỉ provider mock và loopback HTTP stub.
+
+### Chi tiết hóa TASK-13..16 (2026-11-04)
+
+- ADR-005/006/013, GAP-05: payment chỉ MOCK trong DB; cùng key trả attempt cũ; key mới sau CONFIRMED luôn 409. Replay FAILED giữ response PENDING/FAILED lịch sử, không biểu diễn trạng thái booking mới nhất; GET booking là nguồn trạng thái hiện tại. Ownership được kiểm tra trước global-key lookup.
+- GAP-10: ticket 192 bit SecureRandom, mã hex 48 ký tự vừa VARCHAR(48), không chứa PII. Collision/write failure rollback toàn bộ payment, không tự đổi key. Không có QR camera/email trong tuần 4.
+- GAP-03: owner/ADMIN GET vé, ADMIN support read có audit; STAFF chỉ check-in. Check-in serialize trên booking row và vẫn có UNIQUE DB, cửa sổ bao gồm hai biên. Không thêm quyền impersonation/payment cho ADMIN.
+- Báo cáo nhóm ngày UTC+07, chỉ ngày có SUCCESS, tổng từ paid_at trong khoảng nửa mở. Không đổi schema: generated UNIQUE payment, ticket UNIQUE và check-in UNIQUE đã có trong V1; không cần migration mới.
+
 ## 3. Ngoài phạm vi — không tự thêm
 
 Cổng thanh toán online, webhooks, hoàn tiền, đổi vé/đổi suất sau xác nhận, xử lý giá vé trẻ em/sinh viên, combo, loyalty, coupon, thuế và hóa đơn điện tử, tích hợp SMS/email, mobile native, Kafka, kiến trúc phân tán, triển khai high availability, redis giữ ghế là source of truth.

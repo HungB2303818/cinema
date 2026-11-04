@@ -2,7 +2,7 @@
 
 > **Trạng thái:** Đặc tả MVP, phiên bản 1.0 (03/11/2026). Đây là thiết kế đề xuất cho đồ án môn học, không phải mã nguồn đã triển khai.
 >
-> **Stack:** Java + Spring Boot, Spring Security/JWT, Spring Data JPA, MySQL 8.0.16+ (InnoDB), Vue 3, Docker Compose. **Kiến trúc:** modular monolith.
+> **Stack:** Java + Spring Boot, Spring Security/JWT, Spring Data JPA, MySQL 8.0.16+ (InnoDB), React + Vite, Docker Compose. **Kiến trúc:** modular monolith.
 
 ## Mục đích
 

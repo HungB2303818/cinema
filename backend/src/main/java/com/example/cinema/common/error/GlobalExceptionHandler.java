@@ -20,6 +20,21 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(org.springframework.web.HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleUnsupportedMedia(Exception ex, HttpServletRequest request) {
+        return handleAppException(new AppException(ErrorCode.UNSUPPORTED_MEDIA_TYPE), request);
+    }
+
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleUploadTooLarge(Exception ex, HttpServletRequest request) {
+        return handleAppException(new AppException(ErrorCode.FILE_TOO_LARGE), request);
+    }
+
+    @ExceptionHandler(org.springframework.web.multipart.MultipartException.class)
+    public ResponseEntity<ErrorResponse> handleMultipart(Exception ex, HttpServletRequest request) {
+        return handleAppException(new AppException(ErrorCode.VALIDATION_ERROR, "Dữ liệu multipart không hợp lệ."), request);
+    }
+
     @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataConflict(Exception ex, HttpServletRequest request) {
         return handleAppException(new AppException(ErrorCode.RESOURCE_STATE_CONFLICT,
@@ -34,7 +49,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({org.springframework.http.converter.HttpMessageNotReadableException.class,
             org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class,
-            org.springframework.web.bind.MissingServletRequestParameterException.class})
+            org.springframework.web.bind.MissingServletRequestParameterException.class,
+            org.springframework.web.multipart.support.MissingServletRequestPartException.class})
     public ResponseEntity<ErrorResponse> handleInvalidInput(Exception ex, HttpServletRequest request) {
         ErrorResponse body = ErrorResponse.builder()
                 .code(ErrorCode.VALIDATION_ERROR.name())

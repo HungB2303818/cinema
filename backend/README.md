@@ -11,7 +11,7 @@ Hệ thống đặt vé xem phim Backend được phát triển bằng Java 17 v
 
 ## 2. Cấu hình & Biến môi trường
 
-Các biến môi trường được cấu hình trong file `.env` tại thư mục gốc:
+Mẫu biến môi trường nằm trong `.env.example` tại thư mục gốc. Spring Boot đọc biến đã export vào process/IDE, **không tự đọc file `.env`**; Docker Compose dùng `.env` cho cấu hình container. Ví dụ:
 
 ```env
 # Database
@@ -135,7 +135,61 @@ Remove-Item Env:CINEMA_IT_JDBC_URL
 
 Các biến `CINEMA_IT_DB_USERNAME/PASSWORD` cấu hình credential môi trường test (default root/root chỉ cho demo). **Không dùng DB dev/production**: fixture concurrency được commit. Integration gồm 20 request cùng ghế, 20 request cùng key, rollback, cleanup/reclaim và cancel/create đồng thời. Không có Docker/URL thì integration bị skip. Chạy toàn bộ và đóng gói bằng `.\mvnw.cmd verify` với cùng cấu hình DB test.
 
-## 10. Cấu trúc Package Modular Monolith
+## 10. Poster phim với Cloudinary
+
+Tạo tài khoản Cloudinary, lấy **Cloud name, API key, API secret** trong Console → API Keys. Đặt thông tin thật trong môi trường server/IDE, không commit `.env` hoặc gửi API secret xuống frontend:
+
+```powershell
+$env:CLOUDINARY_CLOUD_NAME = '<cloud-name>'
+$env:CLOUDINARY_API_KEY = '<api-key>'
+$env:CLOUDINARY_API_SECRET = '<api-secret>'
+$env:CLOUDINARY_POSTER_FOLDER = 'cinema/posters' # tùy chọn
+$env:CLOUDINARY_TIMEOUT_SECONDS = '30'          # tùy chọn, 1–120 giây
+.\mvnw.cmd spring-boot:run
+```
+
+Có thể giữ các giá trị trong `.env` local nhưng cần cấu hình IDE/launcher nạp file này; Spring Boot không tự nạp `.env`. Không cần cấu hình upload preset unsigned: backend ký request bằng API secret. Khi thiếu credential, backend vẫn khởi động và các API khác chạy bình thường; API upload trả 503 `MEDIA_STORAGE_UNAVAILABLE`.
+
+Sau khi tạo phim và đăng nhập ADMIN, upload poster từ frontend `FormData` hoặc curl:
+
+```bash
+curl -X POST http://localhost:8080/api/admin/movies/10/poster \
+  -H "Authorization: Bearer <admin-jwt>" \
+  -F "file=@poster.png"
+```
+
+Thay `10` bằng ID phim thực. Response 200 là Movie DTO với `posterUrl` HTTPS từ Cloudinary; API public Movie sử dụng URL đó ngay. Chỉ JPEG/PNG, tối đa 5 MiB (multipart request 6 MiB), tối đa 6000 px mỗi chiều/16 triệu pixel; kiểm tra nội dung và decode thật, re-encode bỏ metadata. File SVG/GIF/WebP hoặc giả MIME bị từ chối. Không dùng tên file client làm đường dẫn hoặc public ID.
+
+Ảnh được upload trước, URL gắn vào `movies.poster_url` bằng transaction DB ngắn, không thay schema. Không giữ transaction DB khi gọi mạng. Request song song dùng asset UUID riêng, không overwrite asset; URL gắn cuối cùng có hiệu lực. API JSON create/update phim với `posterUrl` vẫn tương thích.
+
+**Giới hạn:** Cloudinary và MySQL không có transaction chung. Không tự xóa ảnh cũ hoặc ảnh từ upload bị lỗi/mất response/DB lỗi sau upload; asset có thể còn không được tham chiếu. Đây là lựa chọn an toàn khi DB chỉ lưu URL và kết quả commit có thể không rõ; dọn asset bằng Cloudinary Console khi cần, không suy public ID từ URL và không xóa nhầm ảnh đang dùng.
+
+Kiểm thử không cần credential thật: `PosterValidatorTest`, `CloudinaryPosterStorageTest`, `MoviePosterServiceTest`, `MoviePosterControllerTest`, `MoviePosterIntegrationTest`. Adapter mock provider và dùng thêm HTTP stub loopback để kiểm tra SDK thật; integration DB dùng MySQL/Testcontainers hoặc `CINEMA_IT_JDBC_URL` tới DB test riêng như mục 9. **Không gọi Cloudinary thật trong automated tests.**
+
+## 11. Tuần 4 — Thanh toán, vé, check-in, doanh thu (TASK-13..16)
+
+- CUSTOMER owner: `POST /api/bookings/{id}/payments/mock` với `{"simulatedResult":"SUCCESS","idempotencyKey":"uuid-payment-intent"}` (hoặc FAILED). Giữ nguyên key khi retry cùng intent; FAILED muốn thử SUCCESS dùng key mới trước TTL. Không nhận userId/giá từ client, không có cổng thanh toán thật.
+- SUCCESS nguyên tử: payment SUCCESS + booking CONFIRMED + ghế BOOKED + vé ngẫu nhiên. Cùng key trả cùng kết quả, khác payload → 409; key mới sau CONFIRMED → 409. Booking/ghế hết TTL không được confirm dù job chưa chạy.
+- CUSTOMER owner hoặc ADMIN support: `GET /api/bookings/{id}/tickets` → mảng `{seatId,label,ticketCode}`; chỉ CONFIRMED. Owner khác → 404; STAFF không xem qua endpoint này.
+- STAFF/ADMIN: `POST /api/staff/tickets/check-in` với `{"ticketCode":"ma-ve-da-cap"}`; từ 30 phút trước startsAt đến endsAt (bao gồm biên), một lần/vé; ngoài giờ/suất hủy → 422; duplicate → 409.
+- ADMIN: `GET /api/admin/reports/revenue?from=2026-11-01&to=2026-11-30`; ngày Việt Nam, chỉ tính payments.SUCCESS theo paid_at. Trả tổng tiền/số giao dịch/VND và dailyRevenue; không tính booking PENDING hoặc attempt FAILED.
+- Chi tiết response/replay: `../cinema-booking-ai-kit/docs/06-API-CONTRACT.md`, mục 5.1/8.1/9.2. Không đổi migration/schema; giữ nguyên các UNIQUE. Audit không ghi mã vé/key; không bật logger Hibernate SqlExceptionHelper ở môi trường có dữ liệu thật.
+
+Kiểm thử tuần 4 (PowerShell, Docker hoặc MySQL 8 test riêng):
+
+```powershell
+$env:CINEMA_IT_JDBC_URL = 'jdbc:mysql://localhost:3306/cinema_week4_it?createDatabaseIfNotExist=true&serverTimezone=UTC&useSSL=false&allowPublicKeyRetrieval=true'
+$env:DB_NAME = 'cinema_week4_it' # tránh context smoke test cũ trỏ vào DB dev
+.\mvnw.cmd "-Dtest=PaymentTransactionsTest,PaymentTicketControllerTest,PaymentIntegrationTest" test
+# Toàn bộ regression và đóng gói:
+.\mvnw.cmd verify
+Remove-Item Env:CINEMA_IT_JDBC_URL
+Remove-Item Env:DB_NAME
+```
+
+Không dùng DB dev/production: fixture integration/concurrency được commit và không tự xóa. Bỏ biến URL nếu dùng Testcontainers. Không có Docker/URL → integration bị skip, không coi là pass MySQL.
+
+## 12. Cấu trúc Package Modular Monolith
 
 ```
 src/main/java/com/example/cinema/

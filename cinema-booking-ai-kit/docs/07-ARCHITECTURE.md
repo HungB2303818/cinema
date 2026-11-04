@@ -4,7 +4,7 @@
 
 ```mermaid
 flowchart LR
-    FE[Vue 3 Web App] -->|HTTPS JSON + JWT| API[Spring Boot REST API]
+    FE[React + Vite Web App] -->|HTTPS JSON + JWT| API[Spring Boot REST API]
     API --> AUTH[auth]
     API --> CAT[catalog / cinema / showtime]
     API --> BOOK[booking]
@@ -165,6 +165,24 @@ expire(bookingId):
 - `Booking` không dùng @PreUpdate/Instant.now để ghi updatedAt; các write services phải đặt timestamp từ DatabaseTime. Cấu trúc SQL/constraints không thay đổi, không UNIQUE riêng showtime_seat_id trong booking_seats.
 - Controller chỉ trả DTO, GET chi tiết có ownership hoặc ADMIN support audit; không có write trên GET, không lộ owner inventory/tickets. Filter correlation ID đặt/khôi phục MDC, kể cả khi lỗi để không rò context giữa request threads.
 - Payment/confirm ở TASK-13 phải tiếp tục khóa booking → inventory tăng dần, kiểm tra PENDING + DB now < booking expiry và từng HELD vẫn thuộc owner/còn hạn, đặt timestamp theo DatabaseTime; không tái sử dụng kết luận từ GET hoặc chỉ trạng thái scheduler.
+
+### Mở rộng catalog: Cloudinary poster
+
+- `AdminMoviePosterController` + `MoviePosterService` yêu cầu ADMIN, dùng multipart file, không cho client cung cấp upload URL/public ID/folder.
+- `PosterValidator` đọc tối đa 5 MiB + 1 byte, xác minh JPEG/PNG format/dimensions trước decode, re-encode pixels bỏ metadata; không ghi file tạm và không tin filename/content-type.
+- `MoviePosterService` NOT_SUPPORTED: read-only worker kiểm tra tồn tại → upload ảnh qua `PosterStorage`/Cloudinary SDK khi không có transaction DB → worker REQUIRES_NEW khóa Movie row, cập nhật poster_url, flush/commit → audit thành công.
+- Cloudinary config env là server-side; credential thiếu không ngăn boot, request upload trả 503. Timeout transport default 30s; SDK/provider errors được thay bằng lỗi 502 an toàn, không log message/stacktrace có credential.
+- Không sửa schema: poster_url có sẵn VARCHAR(500). Không có distributed transaction/auto-delete/asset lifecycle: asset upload có thể orphan khi lỗi hoặc commit không rõ; giữ ảnh cũ và dọn trong Console, không suy public ID từ URL.
+- Cloudinary SDK 2.6.0 và HTTP5/core5/commons-lang3 theo phiên bản của SDK POM. Test dùng adapter mock + local HTTP stub, không thực thi upload thật với tài khoản cloud.
+
+### Giao dịch payment/ticket/report — TASK-13..16
+
+- `PaymentService` xác thực CUSTOMER và principal-derived owner, validation DTO; worker `PaymentTransactions` REQUIRES_NEW/READ_COMMITTED khóa booking → từng inventory ID tăng dần → lấy DB now. Kiểm tra toàn bộ hold và snapshot trước khi insert payment; SUCCESS + CONFIRMED + BOOKED + CSPRNG ticket codes trong cùng transaction. FAILED giữ nguyên booking PENDING.
+- Tra key sau ownership và khóa booking cho phép replay sau TTL/CONFIRMED mà không chờ scheduler; key khác payload trả 409. Global-key conflict giữa hai booking được façade bắt sau rollback, rồi `PaymentQueries` đọc lại trong transaction/context mới. Dùng `BookingRetry` tối đa 3 transaction khi deadlock/lock conflict, không retry lỗi nghiệp vụ hoặc va chạm mã vé.
+- `TicketCodes` dùng SecureRandom 192 bit → 48 ký tự hex vừa schema; DB UNIQUE vẫn bắt collision và rollback toàn bộ payment. Không thay schema/gỡ generated UNIQUE SUCCESS/booking. Vé GET là read-only snapshot, CUSTOMER owner hoặc ADMIN có audit; chỉ CONFIRMED.
+- `CheckinTransactions`: tra scalar bookingId bằng ticket code → khóa booking → đọc lại ticket/duplicate → DB now và validate CONFIRMED/showtime/phòng/cửa sổ giờ → insert UNIQUE checkin. Không khóa inventory rồi quay lại booking, không đảo thứ tự với payment. Cả STAFF/ADMIN dùng principal, không tin staffId trong request. Audit sau commit chỉ ghi checkinId, không ghi bearer ticket code.
+- `RevenueRepository` aggregate một query duy nhất từ SUCCESS/paid_at, khoảng UTC nửa mở và nhóm ngày UTC+07; `RevenueService` tính tổng từ cùng tập aggregate để không lệch snapshot giữa tổng/ngày. Không cần MySQL timezone tables cho nhóm UTC+07.
+- `SqlExceptionHelper` tắt mặc định vì duplicate errors chứa key/mã vé thô; audit ứng dụng vẫn ghi correlationId/actorId/resourceId/outcome an toàn. Không có outbound payment, Redis, migration hoặc thay đổi giá/lịch sử.
 
 ## 7. Time & money
 

@@ -40,7 +40,7 @@ Khách hàng cần xem phim và suất chiếu, lựa chọn ghế, giữ ghế 
 
 ## 5. Công nghệ và nguyên tắc
 
-- Java Spring Boot, Spring Security + JWT, Spring Data JPA/Hibernate, MySQL 8.0.16+ InnoDB, Vue 3, Docker Compose.
+- Java Spring Boot, Spring Security + JWT, Spring Data JPA/Hibernate, MySQL 8.0.16+ InnoDB, React + Vite, Docker Compose.
 - Tách module theo nghiệp vụ, không cần microservices.
 - MySQL là **source of truth** cho inventory và payment; API công khai không trả mật khẩu hoặc chủ ghế đang giữ.
 - Tất cả thời gian lưu/so sánh theo UTC; hiển thị giờ `Asia/Ho_Chi_Minh` (+07:00).

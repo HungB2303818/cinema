@@ -13,6 +13,10 @@ import java.util.List;
 @Repository
 public interface MovieRepository extends JpaRepository<Movie, Long>, JpaSpecificationExecutor<Movie> {
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("select m from Movie m where m.id = :id")
+    java.util.Optional<Movie> findByIdForUpdate(@org.springframework.data.repository.query.Param("id") Long id);
+
     Page<Movie> findByStatusIn(List<MovieStatus> statuses, Pageable pageable);
 
     List<Movie> findByStatus(MovieStatus status);

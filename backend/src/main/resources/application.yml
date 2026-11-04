@@ -7,6 +7,11 @@ spring:
   application:
     name: cinema-booking-backend
 
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+
   datasource:
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:cinema_booking}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC&createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
     username: ${DB_USERNAME:root}
@@ -43,8 +48,19 @@ spring:
     serialization:
       write-dates-as-timestamps: false
 
+# Constraint errors can include raw idempotency keys and bearer ticket codes. Services log safe outcomes instead.
+logging:
+  level:
+    org.hibernate.engine.jdbc.spi.SqlExceptionHelper: "OFF"
+
 # App-level security & JWT configuration
 app:
+  cloudinary:
+    cloud-name: ${CLOUDINARY_CLOUD_NAME:}
+    api-key: ${CLOUDINARY_API_KEY:}
+    api-secret: ${CLOUDINARY_API_SECRET:}
+    poster-folder: ${CLOUDINARY_POSTER_FOLDER:cinema/posters}
+    timeout-seconds: ${CLOUDINARY_TIMEOUT_SECONDS:30}
   jwt:
     secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}

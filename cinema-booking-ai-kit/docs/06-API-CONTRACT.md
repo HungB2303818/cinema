@@ -23,6 +23,7 @@
 | POST | `/api/staff/tickets/check-in` | STAFF/ADMIN | Check-in một vé | 07 |
 | POST | `/api/admin/movies` | ADMIN | Thêm phim | 02 |
 | PUT | `/api/admin/movies/{id}` | ADMIN | Sửa phim | 02 |
+| POST | `/api/admin/movies/{id}/poster` | ADMIN | Upload poster JPEG/PNG bằng multipart lên Cloudinary | 02 |
 | POST | `/api/admin/rooms` | ADMIN | Tạo phòng | 02 |
 | GET | `/api/admin/cinemas` | ADMIN | Danh sách rạp đã seed | 02 |
 | GET | `/api/admin/cinemas/{id}/rooms` | ADMIN | Danh sách phòng theo rạp | 02 |
@@ -85,6 +86,18 @@ Response 200:
 - Cập nhật cùng phim đồng thời dùng hành vi mặc định DB: lần ghi sau cùng có hiệu lực; chưa có version/ETag trong schema. Không cam kết phát hiện lost update metadata.
 
 Đây là phần chi tiết hóa payload Movie trước đây chưa được mô tả, không đổi DDL/migration. API suất chiếu theo phim và seat map được triển khai ở TASK-08.
+
+### 1.1.1 Upload poster — Cloudinary (mở rộng FR-04/15, UC-02)
+
+`POST /api/admin/movies/{id}/poster`, `Content-Type: multipart/form-data`, phần bắt buộc `file` (binary). Chỉ ADMIN, có cả filter/controller/service authorization. Phim phải tồn tại (kể cả HIDDEN); ID dương. Không nhận cloud name, folder, publicId hoặc URL upload do client chọn.
+
+- JPEG/PNG, tối đa 5 MiB, tổng request tối đa 6 MiB; tối đa 6000 px mỗi chiều và 16 triệu pixel. Kiểm tra ImageIO format/dimensions/decode thật, không tin tên/MIME; re-encode loại metadata/payload phụ trước upload. SVG/GIF/WebP không thuộc tập hỗ trợ hiện tại.
+- Backend ký request bằng API secret từ env, resource_type=image, public ID UUID trong folder server, overwrite=false; chỉ nhận secure_url HTTPS <=500 ký tự. Không trả secret/signature/provider response thô.
+- 200: Movie response cùng cấu trúc GET movie, posterUrl đã lưu DB. API create/update Movie JSON và posterUrl trực tiếp giữ nguyên để tương thích.
+- 400 VALIDATION_ERROR: thiếu part/file rỗng/ảnh hỏng/dimensions quá lớn/ID sai. 413 FILE_TOO_LARGE: file hoặc multipart vượt giới hạn. 415 UNSUPPORTED_IMAGE_TYPE: định dạng ảnh không hỗ trợ; 415 UNSUPPORTED_MEDIA_TYPE khi Content-Type ngoài không phải multipart/form-data. 401/403 theo JWT/role; 404 RESOURCE_NOT_FOUND khi phim không tồn tại.
+- 503 MEDIA_STORAGE_UNAVAILABLE khi thiếu CLOUDINARY_CLOUD_NAME/API_KEY/API_SECRET; không làm ứng dụng không khởi động. 502 POSTER_UPLOAD_FAILED khi Cloudinary lỗi/timeout/response URL không hợp lệ; không lộ thông tin provider. Timeout SDK mặc định 30s (config 1–120).
+- Không giữ transaction DB trong upload; kiểm tra tồn tại trước, sau upload lock phim và gắn URL bằng transaction mới ngắn. Các lần upload song song có asset riêng và lần attach cuối có hiệu lực, không ảnh hưởng booking/lịch sử. Không đổi schema vì đã có poster_url VARCHAR(500).
+- Không có distributed transaction hoặc auto-retry upload. Không tự xóa poster cũ/asset còn lại nếu upload hoặc DB thất bại/commit không rõ; quản trị dọn qua Cloudinary Console. Chưa có asset metadata/publicId trong DB, không suy publicId từ URL để xóa.
 
 ### 1.2 Rạp/phòng/ghế — TASK-06
 
@@ -251,6 +264,14 @@ TASK-08 dùng `UTC_TIMESTAMP(3)` từ DB để so sánh `hold_expires_at <= now`
 
 **Xử lý retry:** Lặp cùng `idempotencyKey` và cùng `bookingId + simulatedResult` trả response tương đương kết quả cũ, không tạo payment mới. Key trùng khác payload → 409. Một booking đã CONFIRMED với key mới không tạo SUCCESS lần thứ hai: trả 409 `BOOKING_STATE_CONFLICT` (đã chọn làm contract MVP). Booking đã EXPIRED → 409 và không phát hành vé. Payment không tạo tác động bên ngoài DB trong MVP.
 
+### 5.1 Chi tiết triển khai — TASK-13/14
+
+- Chỉ CUSTOMER owner, actor lấy từ principal; ADMIN/STAFF không thanh toán thay khách. ID dương; owner khác/ID không tồn tại đều 404, kể cả replay. JSON `simulatedResult` phải là chuỗi chính xác SUCCESS/FAILED, không nhận ordinal số; key giữ nguyên, nonblank <=64, so sánh theo collation MySQL hiện hành.
+- Khóa booking trước, tra key, rồi khóa từng inventory ID tăng dần; đọc DB UTC sau chờ khóa. Cả FAILED lẫn SUCCESS mới đều yêu cầu PENDING, booking/ghế còn hạn, tất cả ghế HELD đúng owner, đúng showtime/phòng, tổng snapshot khớp booking; không tính lại giá hiện hành hoặc áp cutoff tạo booking vào thanh toán.
+- SUCCESS ghi payment, CONFIRMED/confirmedAt, BOOKED và mã vé trong một transaction. Mã vé 24 byte SecureRandom (192 bit), hex 48 ký tự, UNIQUE DB. Lỗi ghi/va chạm mã rollback toàn bộ, không có payment/vé một phần. Không đổi DDL hoặc generated UNIQUE `successful_booking_id` đã có từ V1.
+- Replay cùng key được xét trước kiểm tra TTL/trạng thái terminal, nhưng sau ownership. Replay FAILED luôn trả kết quả attempt cũ PENDING/FAILED (không có tickets/paidAt), kể cả sau lần SUCCESS khác; trạng thái booking hiện tại lấy qua GET booking. Replay SUCCESS trả cùng mã vé/paidAt. Không tạo payment mới khi hết hạn; scheduler cập nhật EXPIRED sau, API không sửa EXPIRED rồi throw rollback.
+- Unique conflict của key toàn cục được rollback trước khi đọc lại bằng transaction mới; khác booking/result → 409 IDEMPOTENCY_CONFLICT. Retry lock conflict tối đa 3 transaction qua BookingRetry; hết lượt → 409 BOOKING_CONCURRENT_CONFLICT. Không gọi cổng thanh toán ngoài.
+
 ## 6. POST hủy booking — UC-05
 
 `POST /api/bookings/1001/cancel`, body rỗng. **HTTP 200:**
@@ -282,7 +303,7 @@ Cleanup không có endpoint public/admin. Job mặc định chạy sau mỗi 30 
 - `/api/bookings/me`: chỉ CUSTOMER; page envelope `{content,page,size,totalElements,totalPages}`, mặc định page=0/size=20; size 1–100. `sort` một cặp field,asc/desc; whitelist `id`, `createdAt`, `startsAt`, `status`; mặc định `createdAt,desc`, thêm id tăng dần để ổn định. Phần tử `{bookingId,bookingCode,status,effectiveStatus,movieTitle,startsAt,totalAmount,createdAt,expiresAt}`. Filter userId luôn từ principal, không từ query string.
 - `/api/bookings/{id}`: CUSTOMER owner hoặc ADMIN hỗ trợ (có audit); STAFF bị từ chối. Trả `{bookingId,bookingCode,showtimeId,movieTitle,roomName,startsAt,status,effectiveStatus,totalAmount,createdAt,expiresAt,seats}`; phần tử seats `{seatId,label,seatType,unitPrice}` theo hàng/số ghế.
 - `effectiveStatus=EXPIRED` khi persisted PENDING và expiresAt <= DB now; không ghi DB trong GET. Giá dùng snapshot booking_seats, không tính lại từ showtime hiện tại.
-- Không trả current_booking_id, hold của khách khác hoặc ticket_code qua hai API trên. Ticket endpoint và cấp vé thuộc TASK-14, chưa được triển khai trong TASK-12.
+- Không trả current_booking_id, hold của khách khác hoặc ticket_code qua hai API trên. Ticket endpoint và cấp vé được triển khai riêng trong TASK-14 bên dưới.
 - ID không dương/phân trang/sort sai → 400; owner khác và ID không tồn tại cùng 404. JWT thiếu/sai → 401; role không được phép → 403.
 - Header `X-Correlation-ID` được echo nếu là 1–64 ký tự A–Z/a–z/0–9/_/-, nếu không server sinh UUID; audit ghi correlation ID, actor ID, booking ID và outcome sau khi transaction write commit. Không ghi request key, JWT hoặc mật khẩu vào audit.
 
@@ -307,6 +328,13 @@ Cleanup không có endpoint public/admin. Job mặc định chạy sau mỗi 30 
 ```
 
 Lỗi 404 invalid ticket; 422 trước/sau khung giờ hoặc suất bị hủy; 409 đã check-in. Không cho khách tự check-in.
+
+### 8.1 Vé và check-in — TASK-14/15
+
+- `GET /api/bookings/{id}/tickets`: CUSTOMER owner hoặc ADMIN hỗ trợ có audit; STAFF không dùng endpoint này. Trả **mảng** `{seatId,label,ticketCode}` theo hàng/số ghế, cùng cấu trúc `tickets` trong payment SUCCESS. Booking chưa CONFIRMED → 409 BOOKING_STATE_CONFLICT, không trả mã vé; owner khác/ID không tồn tại → 404; ID không dương → 400.
+- `ticketCode` đầu vào check-in nonblank <=48 ký tự, không trim/case-fold ở ứng dụng. Code không tồn tại → 404; booking không CONFIRMED → 409 BOOKING_STATE_CONFLICT; inventory lệch showtime/phòng → 422 SEAT_NOT_IN_ROOM.
+- Check-in khóa booking rồi đọc lại vé/check-in, dùng DB now; cho phép chính xác `startsAt - 30 phút <= now <= endsAt`. Showtime CANCELLED hoặc ngoài cửa sổ → 422 CHECKIN_TIME_INVALID. Vé đã dùng trả 409 TICKET_ALREADY_USED, kể cả nhiều request song song. UNIQUE booking_seat_id vẫn là tuyến bảo vệ cuối.
+- staff_id chỉ từ principal STAFF/ADMIN, không từ body. Audit sau commit dùng checkinId/correlationId/actorId, không log mã vé. Logger SQL constraint thô của Hibernate được tắt mặc định vì thông báo duplicate có thể chứa ticket code/key.
 
 ## 9. Admin — ví dụ tạo suất
 
@@ -343,6 +371,18 @@ Lỗi 404 invalid ticket; 422 trước/sau khung giờ hoặc suất bị hủy;
 - Luồng booking TASK-09/10 đã dùng `findByIdForBooking` (shared row lock) trước khi insert booking. Đây là giao thức phối hợp với khóa write của update lịch; TASK-07 riêng chỉ cung cấp guard và quản trị lịch.
 
 `GET /api/admin/reports/revenue?from=2026-11-01&to=2026-11-30`: hai ngày theo local calendar; server convert `[startLocal 00:00, dayAfterEndLocal 00:00)` sang UTC. Trả `totalRevenue`, `successfulPayments`, `currency="VND"`, danh sách `dailyRevenue`.
+
+### 9.2 Báo cáo doanh thu — TASK-16
+
+Chỉ ADMIN; `from/to` bắt buộc là ngày ISO hợp lệ, năm 1000–9998, from <= to; lỗi → 400 VALIDATION_ERROR. Response 200:
+
+```json
+{"totalRevenue":150000.00,"successfulPayments":1,"currency":"VND","dailyRevenue":[
+  {"date":"2026-11-10","totalRevenue":150000.00,"successfulPayments":1}
+]}
+```
+
+Một truy vấn aggregate theo `payments.status=SUCCESS` và `paid_at >= fromUtc AND paid_at < endUtc`, không dùng created_at hoặc bookings.total_amount. Nhóm ngày Việt Nam (UTC+07), sắp tăng dần; chỉ có ngày phát sinh SUCCESS, không tự chèn ngày trống. Không có dữ liệu → totalRevenue=0.00, successfulPayments=0, dailyRevenue=[]. Không phân trang danh sách aggregate này. INITIATED/FAILED không được cộng, kể cả có paid_at.
 
 ## 10. Ràng buộc tích hợp frontend
 

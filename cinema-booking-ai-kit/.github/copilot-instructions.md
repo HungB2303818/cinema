@@ -1,6 +1,6 @@
 # GitHub Copilot instructions — Cinema Booking System
 
-Read `/AGENTS.md` first. Project: **Spring Boot + MySQL 8 + Vue 3, modular monolith, one cinema MVP**. Business specification: `/docs/02-BUSINESS-RULES.md`, flows: `/docs/04-WORKFLOWS.md`, schema: `/database/cinema_booking_schema.sql`, API: `/docs/06-API-CONTRACT.md`, tests: `/docs/08-TEST-PLAN.md`.
+Read `/AGENTS.md` first. Project: **Spring Boot + MySQL 8 + React + Vite, modular monolith, one cinema MVP**. Business specification: `/docs/02-BUSINESS-RULES.md`, flows: `/docs/04-WORKFLOWS.md`, schema: `/database/cinema_booking_schema.sql`, API: `/docs/06-API-CONTRACT.md`, tests: `/docs/08-TEST-PLAN.md`.
 
 - `showtime_seats` owns seat inventory; `seats.status` is only physical maintenance state.
 - Booking 1–8 seats, all-or-nothing, hold 5 minutes, booking cutoff 10 minutes before showtime.

@@ -108,6 +108,51 @@ $env:CINEMA_IT_JDBC_URL = 'jdbc:mysql://localhost:3306/cinema_booking_it_2026110
 
 BUILD SUCCESS và đóng gói JAR; **160 tổng, 156 đạt, 0 failures/errors, 4 skipped** (MovieIntegrationTest cũ do Docker daemon không khả dụng). **62/62 test booking mới đạt**: BookingIntegrationTest 31, BookingControllerTest 18, BookingServiceTest 8, BookingTransactionsTest 3, BookingExpiryServiceTest 2. Đã thực thi race 20 request cùng ghế (1 thắng/19 SEAT_UNAVAILABLE), 20 request cùng key (1 created/19 replay), cleanup/reclaim/cancel đồng thời và rollback lỗi ghi. Integration thực sự chạy MySQL, không H2/mock DB. Một lần chạy integration ban đầu bị timeout 120s lúc khởi tạo context, đã chạy lại với giới hạn 360s và đạt; không tính lần timeout là pass. Chưa kiểm chứng chạy container Docker trên máy này.
 
+### Cloudinary poster — FR-04/15, UC-02 (2026-11-04)
+
+| TC | Kịch bản | Kỳ vọng |
+|---|---|---|
+| TC-41 | ADMIN upload JPEG/PNG vào phim có sẵn | 200 Movie DTO, secure_url lưu DB, GET public trả URL mới, metadata khác không đổi |
+| TC-42 | Rỗng/quá 5 MiB, MIME giả, SVG/GIF, PNG hỏng, dimensions quá lớn, stream khai sai size | 400/413/415 phù hợp, không gọi provider; re-encode bỏ trailing payload |
+| TC-43 | Guest/CUSTOMER/STAFF upload, hoặc thiếu part/sai Content-Type | 401/403/400/415, không gọi service/provider trái phép; service cũng kiểm tra ADMIN |
+| TC-44 | Upload thành công nhưng DB thất bại; hai upload đồng thời | DB rollback giữ URL cũ khi lỗi; URL attach sau cùng có hiệu lực khi đồng thời; không tự xóa asset remote |
+| TC-45 | Thiếu credential, provider exception/URL không an toàn/quá dài; SDK HTTP5 thật qua loopback stub | 503/502, không lộ credential/message gốc; request signed multipart, không overwrite, URL HTTPS |
+
+Test files: `catalog/service/PosterValidatorTest`, `MoviePosterServiceTest`, `catalog/storage/CloudinaryPosterStorageTest`, `catalog/controller/MoviePosterControllerTest`, `catalog/MoviePosterIntegrationTest`. MySQL integration dùng schema riêng qua CINEMA_IT_JDBC_URL hoặc Testcontainers. Không cần credential Cloudinary thật: provider được mock, thêm một HTTP server loopback để kiểm chứng transport SDK/dependency/signing thật. Không gửi ảnh/secret lên Cloudinary trong automated tests. Chưa coi đây là kiểm chứng end-to-end tài khoản Cloudinary thật.
+
+**Kết quả 2026-11-04:** Windows/Java 17.0.20.1, MySQL 8.0 local với schema test riêng `cinema_cloudinary_it_20261104`. Từ `backend` đã chạy:
+
+```powershell
+$env:JAVA_HOME = 'C:\Program Files\Eclipse Adoptium\jdk-17.0.20.101-hotspot'
+$env:CINEMA_IT_JDBC_URL = 'jdbc:mysql://localhost:3306/cinema_cloudinary_it_20261104?createDatabaseIfNotExist=true&serverTimezone=UTC&useSSL=false&allowPublicKeyRetrieval=true'
+.\mvnw.cmd verify
+```
+
+BUILD SUCCESS; **192 tổng, 188 đạt, 0 failures/errors, 4 skipped** (MovieIntegrationTest cũ cần Docker). **32/32 test poster mới đạt**: validator 10, service 4, SDK/adapter 5 (có signed HTTP loopback), controller 8, MySQL integration 5 (có rollback/concurrent upload và kiểm tra không có DB transaction trong provider call). Cloudinary credential thật chưa được cấu hình/kiểm chứng trong lần chạy; test không gọi cloud thật. Không thay DDL, Flyway/schema validate và các regression booking/showtime đều chạy đạt.
+
+### Kết quả tuần 4 — TASK-13..16 (2026-11-04)
+
+Traceability: FR-08/11/12/13/14/15, UC-04/07/08/09, BR-12..15/17/18/21/22.
+
+| Test | Coverage |
+|---|---|
+| `payment/service/PaymentTransactionsTest` (7) | Booking → từng inventory tăng dần → DB clock; hết TTL trong khi chờ; ghế đổi owner/sai suất/sai phòng; FAILED không phát vé; ownership trước tra key. |
+| `payment/controller/PaymentTicketControllerTest` (23) | SecurityConfig thật, ma trận Guest/CUSTOMER/STAFF/ADMIN cho payment/tickets/check-in/revenue; JSON/result ordinal/key/code/ngày sai; response UTC và error envelope 400/401/403/404/409/422. |
+| `payment/PaymentIntegrationTest` (29) | TC-06/07/08/13/14/16/21/22/24: atomic SUCCESS/snapshot/versions, FAILED→SUCCESS/replay lịch sử, 10 payment cùng key, 10 key khác nhau/booking, global key tranh hai booking, payment vs cancel/cleanup/reclaim, TTL biên, mọi ghế còn HELD, snapshot tổng sai, collision vé rollback, generated UNIQUE thực, ownership/admin support, check-in staff/duplicate/concurrent/cửa sổ ±1ms/suất hủy/booking chưa xác nhận, revenue loại FAILED/INITIATED và ranh giới ngày Việt Nam. |
+
+Integration mặc định Testcontainers MySQL 8.0.36 hoặc opt-in `CINEMA_IT_JDBC_URL` tới schema test riêng; không H2, không transaction bao ngoài concurrency. Fixture được commit, không tự xóa schema local; report fixture SQL có paid_at lịch sử độc lập TTL. Unit/mock clock chỉ điều khiển biên giờ; race dùng DB transaction độc lập. Không gọi payment gateway hoặc Cloudinary thật.
+
+Lần kiểm chứng trên Windows/Java 17.0.20.1/MySQL 8.0.45 local, từ `backend`:
+
+```powershell
+$env:JAVA_HOME = 'C:\Program Files\Eclipse Adoptium\jdk-17.0.20.101-hotspot'
+$env:CINEMA_IT_JDBC_URL = 'jdbc:mysql://localhost:3306/cinema_week4_it_20261104?createDatabaseIfNotExist=true&serverTimezone=UTC&useSSL=false&allowPublicKeyRetrieval=true'
+$env:DB_NAME = 'cinema_week4_it_20261104' # context smoke test cũ cũng dùng schema test riêng
+.\mvnw.cmd verify
+```
+
+**BUILD SUCCESS, 251 tests: 247 đạt, 0 failures/errors, 4 skipped** (MovieIntegrationTest cũ cần Docker). **59/59 test mới đạt**, gồm 29 integration thực sự chạy MySQL/Flyway V1/V2 + Hibernate validate. JAR tại `backend/target/cinema-backend-1.0.0-SNAPSHOT.jar`. Chưa kiểm chứng Docker/Testcontainers trên máy này; không coi 4 skipped là pass. Không dùng kết quả này để đánh dấu UI/E2E manual Tuần 5 hoàn thành.
+
 ## 2. Fixture tối thiểu
 
 - Một cinema ACTIVE, hai room ACTIVE; mỗi room 30–50 ghế STANDARD/VIP.

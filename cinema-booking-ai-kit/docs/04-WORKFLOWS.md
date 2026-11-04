@@ -62,7 +62,7 @@ stateDiagram-v2
 ```mermaid
 sequenceDiagram
     actor C as Customer
-    participant FE as Vue Client
+    participant FE as React Client
     participant API as BookingController
     participant S as BookingService
     participant DB as MySQL / InnoDB
