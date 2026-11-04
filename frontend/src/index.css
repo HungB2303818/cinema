@@ -1,14 +1,52 @@
 @import "tailwindcss";
 
+@theme {
+  --color-primary: #e6e2c1;
+  --color-primary-hover: #dad6b2;
+  --color-primary-active: #cecaa6;
+  --color-primary-text: #000000;
+
+  --color-cinema-bg: #090a0f;
+  --color-cinema-surface: #12141a;
+  --color-cinema-card: #171922;
+  --color-cinema-card-hover: #1e212d;
+  --color-cinema-border: #262934;
+}
+
 @layer base {
   :root {
-    --color-primary: #e50914;
-    --color-primary-hover: #b80710;
+    --color-primary: #e6e2c1;
+    --color-primary-hover: #dad6b2;
   }
   
   body {
-    background-color: #0f172a;
-    color: #f8fafc;
+    background-color: #090a0f;
+    color: #f4f4f5;
     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    min-height: 100vh;
+  }
+
+  ::selection {
+    background-color: #e6e2c1;
+    color: #000000;
+  }
+
+  /* Custom dark scrollbar matching cinematic theme */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #090a0f;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #242733;
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #353949;
   }
 }

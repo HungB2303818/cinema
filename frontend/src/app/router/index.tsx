@@ -1,6 +1,6 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { MainLayout } from '@/shared/components/layout';
+import { MainLayout, AdminLayout, AuthLayout } from '@/shared/components/layout';
 import {
   HomePage,
   MovieDetailsPage,
@@ -18,19 +18,17 @@ import { AdminRoute } from './AdminRoute';
 export const AppRouter: React.FC = () => {
   return (
     <Routes>
-      <Route path="/" element={<MainLayout />}>
-        {/* Public Routes */}
-        <Route index element={<HomePage />} />
-        <Route path="movies" element={<HomePage />} />
-        <Route path="movies/:id" element={<MovieDetailsPage />} />
-        <Route path="cinemas" element={<CinemasPage />} />
-        <Route path="showtimes" element={<ShowtimesPage />} />
-        <Route path="login" element={<LoginPage />} />
-        <Route path="register" element={<RegisterPage />} />
+      {/* Public & Customer Routes */}
+      <Route element={<MainLayout />}>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/movies" element={<HomePage />} />
+        <Route path="/movies/:id" element={<MovieDetailsPage />} />
+        <Route path="/cinemas" element={<CinemasPage />} />
+        <Route path="/showtimes" element={<ShowtimesPage />} />
 
-        {/* Customer Protected Routes */}
+        {/* Customer Protected Route */}
         <Route
-          path="my-tickets"
+          path="/my-tickets"
           element={
             <ProtectedRoute>
               <MyTicketsPage />
@@ -38,18 +36,26 @@ export const AppRouter: React.FC = () => {
           }
         />
 
-        {/* Admin Protected Routes */}
-        <Route
-          path="admin"
-          element={
-            <AdminRoute>
-              <AdminDashboardPage />
-            </AdminRoute>
-          }
-        />
-
         {/* 404 Route */}
         <Route path="*" element={<NotFoundPage />} />
+      </Route>
+
+      {/* Auth Routes */}
+      <Route element={<AuthLayout />}>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+      </Route>
+
+      {/* Admin Protected Routes */}
+      <Route
+        path="/admin"
+        element={
+          <AdminRoute>
+            <AdminLayout />
+          </AdminRoute>
+        }
+      >
+        <Route index element={<AdminDashboardPage />} />
       </Route>
     </Routes>
   );

@@ -18,41 +18,41 @@ export const AdminDashboardPage: React.FC = () => {
       description: 'Thêm, sửa, ẩn phim và tải ảnh poster độ phân giải cao lên Cloudinary.',
       icon: Film,
       count: '37 phim',
-      color: 'text-rose-500',
+      color: 'text-[#e6e2c1]',
     },
     {
       title: 'Quản lý Suất Chiếu',
       description: 'Thiết lập lịch chiếu, kiểm tra chống trùng thời gian dọn phòng (BR-02).',
       icon: Calendar,
       count: 'Lên lịch',
-      color: 'text-sky-500',
+      color: 'text-sky-400',
     },
     {
       title: 'Phòng Chiếu & Sơ Đồ Ghế',
       description: 'Cấu hình phòng chiếu (Standard, VIP, Sweetbox, Gold Class) và bảo trì.',
       icon: Tv,
       count: '16 phòng',
-      color: 'text-amber-500',
+      color: 'text-[#e6e2c1]',
     },
     {
       title: 'Tài Khoản & Soát Vé',
       description: 'Quản lý người dùng, phân quyền Staff và kiểm tra mã check-in vé.',
       icon: Users,
       count: 'Bảo mật',
-      color: 'text-emerald-500',
+      color: 'text-emerald-400',
     },
   ];
 
   return (
     <div className="space-y-8 pb-16">
-      <div className="border-b border-slate-800 pb-6 flex items-center justify-between">
+      <div className="border-b border-[#20232e] pb-6 flex items-center justify-between">
         <div>
-          <div className="flex items-center gap-2 text-rose-500 text-sm font-semibold mb-1">
+          <div className="flex items-center gap-2 text-[#e6e2c1] text-sm font-bold mb-1">
             <Shield className="w-4 h-4" />
             <span>Admin Control Panel</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white">Bảng điều khiển Quản trị</h1>
-          <p className="text-slate-400 text-sm mt-1">Quản lý danh mục rạp, phim, suất chiếu và kiểm soát hệ thống</p>
+          <h1 className="text-2xl sm:text-3xl font-black text-white">Bảng điều khiển Quản trị</h1>
+          <p className="text-zinc-400 text-sm mt-1">Quản lý danh mục rạp, phim, suất chiếu và kiểm soát hệ thống</p>
         </div>
       </div>
 
@@ -62,19 +62,19 @@ export const AdminDashboardPage: React.FC = () => {
           return (
             <div
               key={i}
-              className="bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-slate-700 transition-all flex items-start gap-5 shadow-lg"
+              className="bg-[#13151d] border border-[#242733] rounded-2xl p-6 hover:border-[#e6e2c1]/50 transition-all flex items-start gap-5 shadow-xl shadow-black/30"
             >
-              <div className={`p-3.5 rounded-xl bg-slate-950 border border-slate-800 ${mod.color}`}>
+              <div className={`p-3.5 rounded-xl bg-[#090a0f] border border-[#242733] ${mod.color}`}>
                 <Icon className="w-6 h-6" />
               </div>
               <div className="space-y-1.5 flex-1">
                 <div className="flex items-center justify-between">
                   <h3 className="font-bold text-white text-base">{mod.title}</h3>
-                  <span className="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-semibold">
+                  <span className="text-xs px-2.5 py-0.5 rounded-lg bg-[#181a24] border border-[#282b3a] text-zinc-300 font-semibold">
                     {mod.count}
                   </span>
                 </div>
-                <p className="text-xs text-slate-400 leading-relaxed">{mod.description}</p>
+                <p className="text-xs text-zinc-400 leading-relaxed">{mod.description}</p>
               </div>
             </div>
           );

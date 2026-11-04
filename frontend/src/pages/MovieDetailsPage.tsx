@@ -4,30 +4,34 @@ import { Clock, Calendar, Film, ArrowLeft } from 'lucide-react';
 import { useMovieDetail } from '@/features/movies';
 import { useShowtimes } from '@/features/showtimes';
 import { formatDate, formatDateTime, formatCurrency, getAgeRatingBadge } from '@/shared/utils/format';
-import { LoadingSpinner } from '@/shared/components/ui/LoadingSpinner';
+import { LoadingSpinner, ErrorState, EmptyState, StatusBadge } from '@/shared/components/ui';
 
 export const MovieDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const movieId = Number(id);
 
-  const { data: movie, isLoading: loadingMovie, error: movieError } = useMovieDetail(movieId);
+  const { data: movie, isLoading: loadingMovie, error: movieError, refetch } = useMovieDetail(movieId);
   const { data: showtimes = [] } = useShowtimes({ movieId });
 
   if (loadingMovie) return <LoadingSpinner message="Đang tải thông tin phim..." />;
 
   if (movieError || !movie) {
     return (
-      <div className="py-16 text-center space-y-4">
-        <p className="text-rose-400">
-          {movieError instanceof Error ? movieError.message : 'Không tìm thấy bộ phim này.'}
-        </p>
-        <Link
-          to="/"
-          className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm rounded-lg transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Quay lại trang chủ</span>
-        </Link>
+      <div className="py-16">
+        <ErrorState
+          title="Không tìm thấy bộ phim này"
+          message={movieError instanceof Error ? movieError.message : 'Bộ phim bạn tìm kiếm không tồn tại hoặc đã bị ẩn khỏi hệ thống.'}
+          onRetry={() => refetch()}
+          action={
+            <Link
+              to="/"
+              className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-[#181a24] hover:bg-[#222530] text-zinc-200 text-xs font-semibold rounded-full border-none transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Quay lại trang chủ</span>
+            </Link>
+          }
+        />
       </div>
     );
   }
@@ -41,15 +45,15 @@ export const MovieDetailsPage: React.FC = () => {
       {/* Back button */}
       <Link
         to="/"
-        className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors"
+        className="inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-[#e6e2c1] transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         <span>Quay lại</span>
       </Link>
 
       {/* Movie Hero Info */}
-      <section className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8 bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xl">
-        <div className="aspect-[2/3] w-full rounded-xl overflow-hidden bg-slate-950 shadow-lg">
+      <section className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8 bg-[#13151d] border border-[#242733] rounded-3xl p-6 sm:p-8 shadow-2xl">
+        <div className="aspect-[2/3] w-full rounded-2xl overflow-hidden bg-[#090a0f] shadow-xl">
           <img
             src={movie.posterUrl || fallbackPoster}
             alt={movie.title}
@@ -63,46 +67,40 @@ export const MovieDetailsPage: React.FC = () => {
         <div className="md:col-span-2 lg:col-span-3 space-y-6 flex flex-col justify-between">
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
-              <span className={`text-xs font-bold px-2.5 py-1 rounded shadow ${ageBadge.color}`}>
+              <span className={`text-xs font-bold px-3 py-1 rounded-full border-none shadow ${ageBadge.color}`}>
                 {ageBadge.label}
               </span>
-              <span
-                className={`text-xs font-semibold px-2.5 py-1 rounded shadow ${
-                  movie.status === 'SHOWING' ? 'bg-rose-600 text-white' : 'bg-amber-600 text-white'
-                }`}
-              >
-                {movie.status === 'SHOWING' ? 'Đang chiếu tại các rạp' : 'Sắp khởi chiếu'}
-              </span>
+              <StatusBadge status={movie.status} size="sm" />
             </div>
 
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+            <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
               {movie.title}
             </h1>
 
-            <div className="flex flex-wrap items-center gap-6 text-sm text-slate-300">
+            <div className="flex flex-wrap items-center gap-6 text-sm text-zinc-300">
               <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-rose-500" />
+                <Clock className="w-4 h-4 text-[#e6e2c1]" />
                 <span>{movie.durationMinutes} phút</span>
               </div>
               {movie.releaseDate && (
                 <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-rose-500" />
+                  <Calendar className="w-4 h-4 text-[#e6e2c1]" />
                   <span>Khởi chiếu: {formatDate(movie.releaseDate)}</span>
                 </div>
               )}
               {movie.genre && (
                 <div className="flex items-center gap-2">
-                  <Film className="w-4 h-4 text-rose-500" />
+                  <Film className="w-4 h-4 text-[#e6e2c1]" />
                   <span>{movie.genre}</span>
                 </div>
               )}
             </div>
 
-            <div className="space-y-2 pt-4 border-t border-slate-800">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
+            <div className="space-y-2 pt-4 border-t border-[#20232e]">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
                 Nội dung phim
               </h3>
-              <p className="text-slate-300 leading-relaxed text-sm sm:text-base">
+              <p className="text-zinc-300 leading-relaxed text-sm sm:text-base">
                 {movie.description || 'Chưa có thông tin mô tả chi tiết cho bộ phim này.'}
               </p>
             </div>
@@ -112,39 +110,40 @@ export const MovieDetailsPage: React.FC = () => {
 
       {/* Showtimes Section */}
       <section className="space-y-6">
-        <div className="border-b border-slate-800 pb-4">
+        <div className="border-b border-[#20232e] pb-4">
           <h2 className="text-2xl font-bold text-white">Lịch chiếu tại các rạp</h2>
-          <p className="text-sm text-slate-400 mt-1">Chọn suất chiếu phù hợp để tiếp tục chọn ghế</p>
+          <p className="text-sm text-zinc-400 mt-1">Chọn suất chiếu phù hợp để tiếp tục chọn ghế</p>
         </div>
 
         {showtimes.length === 0 ? (
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-8 text-center text-slate-400">
-            <Film className="w-10 h-10 mx-auto opacity-50 mb-3" />
-            <p>Hiện tại chưa có suất chiếu mở bán cho bộ phim này.</p>
-          </div>
+          <EmptyState
+            icon={Film}
+            title="Chưa có suất chiếu mở bán"
+            description="Hiện tại chưa có suất chiếu nào cho bộ phim này. Vui lòng quay lại sau hoặc tham khảo phim khác."
+          />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {showtimes.map((st) => (
               <div
                 key={st.id}
-                className="bg-slate-900 border border-slate-800 rounded-xl p-4 hover:border-rose-500/50 transition-all flex flex-col justify-between space-y-4"
+                className="bg-[#13151d] border border-[#242733] rounded-2xl p-5 hover:border-[#e6e2c1]/60 transition-all flex flex-col justify-between space-y-4 shadow-lg shadow-black/30"
               >
                 <div>
-                  <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
-                    <span className="font-semibold text-rose-400">{st.cinemaName || 'CGV Cinema'}</span>
+                  <div className="flex items-center justify-between text-xs text-zinc-400 mb-2">
+                    <span className="font-bold text-[#e6e2c1]">{st.cinemaName || 'CGV Cinema'}</span>
                     <span>{st.roomName || 'Phòng chiếu'}</span>
                   </div>
                   <div className="text-xl font-bold text-white">
                     {formatDateTime(st.startsAt)}
                   </div>
-                  <div className="text-xs text-slate-400 mt-2">
-                    Giá từ: <span className="text-slate-200 font-semibold">{formatCurrency(st.basePrice)}</span>
+                  <div className="text-xs text-zinc-400 mt-2">
+                    Giá từ: <span className="text-zinc-200 font-bold">{formatCurrency(st.basePrice)}</span>
                   </div>
                 </div>
 
                 <Link
                   to={`/showtimes?showtimeId=${st.id}`}
-                  className="block text-center py-2 px-3 text-xs font-semibold rounded-lg bg-rose-600 hover:bg-rose-500 text-white transition-colors"
+                  className="block text-center py-2.5 px-4 text-xs font-bold rounded-full bg-[#e6e2c1] hover:bg-[#dad6b2] text-black shadow-md transition-all duration-200 active:scale-[0.98] border-none"
                 >
                   Chọn suất này
                 </Link>

@@ -27,16 +27,23 @@ export const CinemaDetailModal: React.FC<CinemaDetailModalProps> = ({ cinema, on
   const [rooms, setRooms] = useState<CinemaRoom[]>([]);
   const [activeImage, setActiveImage] = useState<string | null>(null);
   const [loadingRooms, setLoadingRooms] = useState(false);
+  const [prevCinemaId, setPrevCinemaId] = useState<number | null>(null);
+
+  if (cinema && cinema.id !== prevCinemaId) {
+    setPrevCinemaId(cinema.id);
+    setActiveImage(null);
+  }
 
   useEffect(() => {
     if (!cinema) return;
 
-    setActiveImage(null);
+    let isMounted = true;
     setLoadingRooms(true);
 
     cinemasApi
       .getById(cinema.id)
       .then((detail) => {
+        if (!isMounted) return;
         if (detail.rooms && detail.rooms.length > 0) {
           setRooms(detail.rooms);
         } else {
@@ -44,11 +51,17 @@ export const CinemaDetailModal: React.FC<CinemaDetailModalProps> = ({ cinema, on
         }
       })
       .catch(() => {
+        if (!isMounted) return;
         setRooms(getFallbackRooms(cinema));
       })
       .finally(() => {
+        if (!isMounted) return;
         setLoadingRooms(false);
       });
+
+    return () => {
+      isMounted = false;
+    };
   }, [cinema]);
 
   if (!cinema) return null;
@@ -70,13 +83,13 @@ export const CinemaDetailModal: React.FC<CinemaDetailModalProps> = ({ cinema, on
       role="dialog"
       aria-modal="true"
       aria-labelledby="cinema-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
     >
-      <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl text-slate-100 flex flex-col">
+      <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl bg-[#12141c] border border-[#242733] shadow-2xl text-zinc-100 flex flex-col">
         {/* Header with Close */}
-        <div className="sticky top-0 z-20 flex items-center justify-between px-6 py-4 bg-slate-900/95 backdrop-blur border-b border-slate-800">
+        <div className="sticky top-0 z-20 flex items-center justify-between px-6 py-4 bg-[#12141c]/95 backdrop-blur border-b border-[#242733]">
           <div>
-            <span className="text-xs font-semibold uppercase tracking-wider text-rose-500">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#e6e2c1]">
               Chi tiết cụm rạp
             </span>
             <h2 id="cinema-modal-title" className="text-xl sm:text-2xl font-bold text-white">
@@ -87,7 +100,7 @@ export const CinemaDetailModal: React.FC<CinemaDetailModalProps> = ({ cinema, on
             type="button"
             onClick={onClose}
             aria-label="Đóng"
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            className="p-2 rounded-full text-zinc-400 hover:text-white hover:bg-[#1a1d28] transition-colors cursor-pointer border-none"
           >
             <X className="w-5 h-5" />
           </button>
@@ -97,7 +110,7 @@ export const CinemaDetailModal: React.FC<CinemaDetailModalProps> = ({ cinema, on
         <div className="p-6 space-y-6 flex-1">
           {/* Main Gallery */}
           <div className="space-y-3">
-            <div className="overflow-hidden rounded-xl bg-slate-950 aspect-[21/9] border border-slate-800/80">
+            <div className="overflow-hidden rounded-2xl bg-[#090a0f] aspect-[21/9] border border-[#242733]">
               <img
                 src={currentBanner}
                 alt={cinema.name}
@@ -112,8 +125,8 @@ export const CinemaDetailModal: React.FC<CinemaDetailModalProps> = ({ cinema, on
                     key={idx}
                     type="button"
                     onClick={() => setActiveImage(img)}
-                    className={`relative shrink-0 rounded-lg overflow-hidden border-2 transition-all aspect-video w-24 cursor-pointer ${
-                      currentBanner === img ? 'border-rose-500 scale-95' : 'border-transparent opacity-70 hover:opacity-100'
+                    className={`relative shrink-0 rounded-xl overflow-hidden border-2 transition-all aspect-video w-24 cursor-pointer ${
+                      currentBanner === img ? 'border-[#e6e2c1] scale-95' : 'border-transparent opacity-70 hover:opacity-100'
                     }`}
                   >
                     <img src={img} alt={`Hình ${idx + 1}`} className="w-full h-full object-cover" />
@@ -125,39 +138,39 @@ export const CinemaDetailModal: React.FC<CinemaDetailModalProps> = ({ cinema, on
 
           {/* Key Information Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-3">
-              <h4 className="text-sm font-semibold text-rose-400 flex items-center gap-1.5">
+            <div className="p-4 rounded-2xl bg-[#090a0f]/80 border border-[#242733] space-y-3">
+              <h4 className="text-sm font-bold text-[#e6e2c1] flex items-center gap-1.5">
                 <MapPin className="w-4 h-4" /> Địa chỉ & Liên hệ
               </h4>
-              <p className="text-sm text-slate-300 leading-relaxed">{cinema.address}</p>
-              <div className="pt-2 border-t border-slate-800/60 flex flex-wrap gap-4 text-xs text-slate-400">
+              <p className="text-sm text-zinc-300 leading-relaxed">{cinema.address}</p>
+              <div className="pt-2 border-t border-[#20232e] flex flex-wrap gap-4 text-xs text-zinc-400">
                 <div>
                   Hotline: <strong className="text-white">{meta.hotline}</strong>
                 </div>
                 {meta.fax && (
                   <div>
-                    Fax: <strong className="text-slate-300">{meta.fax}</strong>
+                    Fax: <strong className="text-zinc-300">{meta.fax}</strong>
                   </div>
                 )}
                 <div>
-                  Khu vực: <strong className="text-rose-400">{meta.city}</strong>
+                  Khu vực: <strong className="text-[#e6e2c1]">{meta.city}</strong>
                 </div>
               </div>
             </div>
 
-            <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-3">
-              <h4 className="text-sm font-semibold text-rose-400 flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-amber-400" /> Đặc điểm & Tiện ích
+            <div className="p-4 rounded-2xl bg-[#090a0f]/80 border border-[#242733] space-y-3">
+              <h4 className="text-sm font-bold text-[#e6e2c1] flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-[#e6e2c1]" /> Đặc điểm & Tiện ích
               </h4>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 {meta.features.map((feat, i) => (
-                  <div key={i} className="flex items-center gap-1.5 text-slate-300">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <div key={i} className="flex items-center gap-1.5 text-zinc-300">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-[#e6e2c1] shrink-0" />
                     <span>{feat}</span>
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-slate-400 pt-2 border-t border-slate-800/60">
+              <p className="text-xs text-zinc-400 pt-2 border-t border-[#20232e]">
                 Rạp đạt tiêu chuẩn quốc tế với hệ thống âm thanh Dolby Surround 7.1, ghế ngồi bọc nệm cao cấp.
               </p>
             </div>
@@ -167,14 +180,14 @@ export const CinemaDetailModal: React.FC<CinemaDetailModalProps> = ({ cinema, on
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <Tv className="w-5 h-5 text-indigo-400" />
+                <Tv className="w-5 h-5 text-zinc-400" />
                 Danh sách phòng chiếu ({rooms.length} phòng)
               </h3>
-              <span className="text-xs text-slate-400">Tất cả phòng hoạt động 100%</span>
+              <span className="text-xs text-zinc-400">Tất cả phòng hoạt động 100%</span>
             </div>
 
             {loadingRooms ? (
-              <div className="py-6 text-center text-sm text-slate-400">Đang tải danh sách phòng...</div>
+              <div className="py-6 text-center text-sm text-zinc-400">Đang tải danh sách phòng...</div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                 {rooms.map((room) => {
@@ -187,16 +200,16 @@ export const CinemaDetailModal: React.FC<CinemaDetailModalProps> = ({ cinema, on
                         isGoldClass
                           ? 'bg-amber-950/30 border-amber-500/40 text-amber-200'
                           : is3D
-                          ? 'bg-indigo-950/30 border-indigo-500/40 text-indigo-200'
-                          : 'bg-slate-950/80 border-slate-800 text-slate-300'
+                          ? 'bg-[#181a26] border-[#32364c] text-zinc-200'
+                          : 'bg-[#090a0f] border-[#242733] text-zinc-300'
                       }`}
                     >
                       <div className="flex items-center justify-between">
                         <span className="font-semibold text-sm text-white">{room.name}</span>
                         {isGoldClass && <Sparkles className="w-3.5 h-3.5 text-amber-400" />}
                       </div>
-                      <div className="mt-2 flex items-center justify-between text-[11px] text-slate-400">
-                        <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-1.5" />
+                      <div className="mt-2 flex items-center justify-between text-[11px] text-zinc-400">
+                        <span className="inline-block w-2 h-2 rounded-full bg-[#e6e2c1] mr-1.5" />
                         <span>Sẵn sàng phục vụ</span>
                       </div>
                     </div>
@@ -210,9 +223,9 @@ export const CinemaDetailModal: React.FC<CinemaDetailModalProps> = ({ cinema, on
           {meta.mapEmbedUrl && (
             <div className="space-y-2">
               <h4 className="text-sm font-semibold text-white flex items-center gap-2">
-                <Navigation className="w-4 h-4 text-rose-500" /> Vị trí trên Google Maps
+                <Navigation className="w-4 h-4 text-[#e6e2c1]" /> Vị trí trên Google Maps
               </h4>
-              <div className="rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[21/9]">
+              <div className="rounded-2xl overflow-hidden border border-[#242733] bg-[#090a0f] aspect-[21/9]">
                 <iframe
                   title={`Bản đồ ${cinema.name}`}
                   src={meta.mapEmbedUrl}
@@ -228,18 +241,18 @@ export const CinemaDetailModal: React.FC<CinemaDetailModalProps> = ({ cinema, on
         </div>
 
         {/* Modal Footer */}
-        <div className="sticky bottom-0 z-20 px-6 py-4 bg-slate-900/95 backdrop-blur border-t border-slate-800 flex items-center justify-between gap-4">
+        <div className="sticky bottom-0 z-20 px-6 py-4 bg-[#12141c]/95 backdrop-blur border-t border-[#242733] flex items-center justify-between gap-4">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer"
+            className="px-6 py-2.5 text-sm font-semibold rounded-full bg-[#181a24] hover:bg-[#222530] text-zinc-300 transition-colors cursor-pointer border-none"
           >
             Đóng
           </button>
           <Link
             to={`/showtimes?cinemaId=${cinema.id}`}
             onClick={onClose}
-            className="px-6 py-2.5 text-sm font-semibold rounded-xl bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-950/40 transition-colors flex items-center gap-2"
+            className="px-7 py-2.5 text-sm font-bold rounded-full bg-[#e6e2c1] hover:bg-[#dad6b2] text-black shadow-lg transition-all duration-200 flex items-center gap-2 active:scale-[0.98] border-none"
           >
             <Film className="w-4 h-4" />
             <span>Xem lịch chiếu & Đặt vé</span>

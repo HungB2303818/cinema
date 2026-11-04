@@ -52,16 +52,16 @@ export function formatDate(dateString: string | null | undefined): string {
 export function getAgeRatingBadge(rating: string | null | undefined): { label: string; color: string } {
   switch (rating) {
     case 'P':
-      return { label: 'P - Phổ biến', color: 'bg-emerald-600 text-white' };
+      return { label: 'P - Phổ biến', color: 'bg-[#e6e2c1] text-black font-bold' };
     case 'K':
-      return { label: 'K - Dưới 13 tuổi có bảo hộ', color: 'bg-blue-600 text-white' };
+      return { label: 'K - Dưới 13 tuổi có bảo hộ', color: 'bg-blue-600 text-white font-semibold' };
     case 'T13':
-      return { label: 'T13 - Khán giả 13+', color: 'bg-amber-600 text-white' };
+      return { label: 'T13 - Khán giả 13+', color: 'bg-amber-500 text-black font-bold' };
     case 'T16':
-      return { label: 'T16 - Khán giả 16+', color: 'bg-orange-600 text-white' };
+      return { label: 'T16 - Khán giả 16+', color: 'bg-orange-600 text-white font-semibold' };
     case 'T18':
-      return { label: 'T18 - Khán giả 18+', color: 'bg-rose-700 text-white' };
+      return { label: 'T18 - Khán giả 18+', color: 'bg-red-600 text-white font-semibold' };
     default:
-      return { label: rating || 'P', color: 'bg-slate-700 text-slate-200' };
+      return { label: rating || 'P', color: 'bg-zinc-800 text-zinc-300' };
   }
 }
