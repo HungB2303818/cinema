@@ -1,0 +1,142 @@
+[
+  {
+    "name": "CGV Sense City Cần Thơ",
+    "address": "Tầng 3, TTTM Sense City, Số 1 Đại Lộ Hòa Bình, Phường Tân An, Quận Ninh Kiều, Cần Thơ",
+    "status": "ACTIVE",
+    "site_code": "013",
+    "raw_name": "CGV Sense City",
+    "raw_address": "Lầu 3, Sense City 1 Đại Lộ Hòa Bình Quận Ninh Kiều TP. Cần Thơ",
+    "hotline": "1900 6017",
+    "fax": "+84 4 6 275 5240",
+    "map_embed_url": "https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d3928.7908824104866!2d105.78596999999999!3d10.034108000000002!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31a062a1b96326ad%3A0xfbd180a2dbc512c4!2sCGV+Sense+City!5e0!3m2!1sen!2s!4v1423116739120",
+    "source_url": "https://www.cgv.vn/default/cinox/site/cgv-sense-city",
+    "images": [
+      "https://static-cgv.vncdn.vn/media/site/cache/1/980x415/b58515f018eb873dafa430b6f9ae0c1e/1/_/1_2_.png",
+      "https://static-cgv.vncdn.vn/media/site/cache/1/980x415/b58515f018eb873dafa430b6f9ae0c1e/1/_/1_1_.png",
+      "https://static-cgv.vncdn.vn/media/site/cache/1/980x415/b58515f018eb873dafa430b6f9ae0c1e/1/_/1_3_.jpg"
+    ],
+    "rooms_count": 6,
+    "room_types": [
+      "2D",
+      "3D",
+      "Sweetbox"
+    ],
+    "rooms": [
+      {
+        "name": "Phòng 01 (2D)",
+        "status": "ACTIVE"
+      },
+      {
+        "name": "Phòng 02 (2D)",
+        "status": "ACTIVE"
+      },
+      {
+        "name": "Phòng 03 (3D)",
+        "status": "ACTIVE"
+      },
+      {
+        "name": "Phòng 04 (2D)",
+        "status": "ACTIVE"
+      },
+      {
+        "name": "Phòng 05 (2D)",
+        "status": "ACTIVE"
+      },
+      {
+        "name": "Phòng 06 (3D/Sweetbox)",
+        "status": "ACTIVE"
+      }
+    ]
+  },
+  {
+    "name": "CGV Vincom Xuân Khánh",
+    "address": "Tầng 5, TTTM Vincom Plaza Xuân Khánh, Số 209 Đường 30/04, Phường Xuân Khánh, Quận Ninh Kiều, Cần Thơ",
+    "status": "ACTIVE",
+    "site_code": "036",
+    "raw_name": "CGV Vincom Xuân Khánh",
+    "raw_address": "Tầng 5, Tòa nhà 209, Đường 30/04, Phường Xuân Khánh, Quận Ninh Kiều, Tp. Cần Thơ",
+    "hotline": "1900 6017",
+    "fax": "+84 4 6 275 5240",
+    "map_embed_url": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3928.90118651547!2d105.77325511479431!3d10.02501259283402!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31a08825cac18fad%3A0xf069d6c6dcc6cf98!2sCGV+Vincom+Xu%C3%A2n+Kh%C3%A1nh!5e0!3m2!1sen!2s!4v1473402809463",
+    "source_url": "https://www.cgv.vn/default/cinox/site/cgv-vincom-xuan-khanh",
+    "images": [
+      "https://static-cgv.vncdn.vn/media/site/cache/1/980x415/b58515f018eb873dafa430b6f9ae0c1e/v/x/vxk-1_1.png",
+      "https://static-cgv.vncdn.vn/media/site/cache/1/980x415/b58515f018eb873dafa430b6f9ae0c1e/v/x/vxk-3_1.png",
+      "https://static-cgv.vncdn.vn/media/site/cache/1/980x415/b58515f018eb873dafa430b6f9ae0c1e/v/x/vxk-2_1.png",
+      "https://static-cgv.vncdn.vn/media/site/cache/1/980x415/b58515f018eb873dafa430b6f9ae0c1e/v/x/vxk-4_1.png",
+      "https://static-cgv.vncdn.vn/media/site/cache/1/980x415/b58515f018eb873dafa430b6f9ae0c1e/v/x/vxk-5_1.png",
+      "https://static-cgv.vncdn.vn/media/site/cache/1/980x415/b58515f018eb873dafa430b6f9ae0c1e/v/x/vxk-6_1.png"
+    ],
+    "rooms_count": 6,
+    "room_types": [
+      "2D",
+      "3D",
+      "Gold Class",
+      "Sweetbox"
+    ],
+    "rooms": [
+      {
+        "name": "Phòng 01 (2D)",
+        "status": "ACTIVE"
+      },
+      {
+        "name": "Phòng 02 (2D)",
+        "status": "ACTIVE"
+      },
+      {
+        "name": "Phòng 03 (3D)",
+        "status": "ACTIVE"
+      },
+      {
+        "name": "Phòng 04 (3D)",
+        "status": "ACTIVE"
+      },
+      {
+        "name": "Phòng 05 (Gold Class)",
+        "status": "ACTIVE"
+      },
+      {
+        "name": "Phòng 06 (2D/Sweetbox)",
+        "status": "ACTIVE"
+      }
+    ]
+  },
+  {
+    "name": "CGV Vincom Hùng Vương",
+    "address": "Tầng 6, TTTM Vincom Plaza Hùng Vương, Số 2 Hùng Vương, Phường Thới Bình, Quận Ninh Kiều, Cần Thơ",
+    "status": "ACTIVE",
+    "site_code": "029",
+    "raw_name": "CGV Vincom Hùng Vương",
+    "raw_address": "02 Hùng Vương, Quận Ninh Kiều, TP. Cần Thơ",
+    "hotline": "1900 6017",
+    "fax": "+84 4 6 275 5240",
+    "map_embed_url": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d7857.314378475995!2d105.77869384301852!3d10.045121085541775!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31a0880320a68e11%3A0x480ddc735b87a1fe!2zVHJ1bmcgVMOibSBUaMawxqFuZyBN4bqhaSBWaW5jb20gSMO5bmcgVsawxqFuZy1D4bqnbiBUaMah!5e0!3m2!1svi!2s!4v1449047435061",
+    "source_url": "https://www.cgv.vn/default/cinox/site/cgv-vincom-hung-vuong",
+    "images": [
+      "https://static-cgv.vncdn.vn/media/site/cache/1/980x415/b58515f018eb873dafa430b6f9ae0c1e/v/h/vhv-980-500_4.png"
+    ],
+    "rooms_count": 4,
+    "room_types": [
+      "2D",
+      "3D"
+    ],
+    "rooms": [
+      {
+        "name": "Phòng 01 (2D)",
+        "status": "ACTIVE"
+      },
+      {
+        "name": "Phòng 02 (2D)",
+        "status": "ACTIVE"
+      },
+      {
+        "name": "Phòng 03 (3D)",
+        "status": "ACTIVE"
+      },
+      {
+        "name": "Phòng 04 (2D)",
+        "status": "ACTIVE"
+      }
+    ]
+  }
+]
