@@ -115,14 +115,14 @@ P0 = luồng đặt vé cốt lõi; P1 = hoàn chỉnh nghiệp vụ MVP; P2 = n
 
 **Đối chiếu:** FR-01/02/15; UC-01; BR-01/04/08; TC-19/26/27/28/37.
 
-- [ ] Hoàn thiện danh sách phim: tìm kiếm có debounce, lọc trạng thái/thể loại, phân trang; lưu bộ lọc trong URL.
-- [ ] Hoàn thiện chi tiết phim: poster fallback, dữ liệu tùy chọn, trạng thái ENDED/UPCOMING/SHOWING đúng nghĩa, 404 phim ẩn/không tồn tại.
-- [ ] Tích hợp rạp public hiện có; dữ liệu fallback nếu giữ phải gắn nhãn demo, không cho dùng ID fallback để đặt vé thật.
-- [ ] Chọn phim + ngày Việt Nam + rạp tùy chọn, gọi `GET /movies/{id}/showtimes`; đọc page envelope thay vì giả định mảng.
-- [ ] Trang `/showtimes` chưa chọn phim hiển thị bộ chọn phim, không gọi endpoint lịch tổng chưa có.
-- [ ] Có ngày mặc định theo `Asia/Ho_Chi_Minh`, không dùng `toISOString().split('T')[0]` làm ngày Việt Nam.
-- [ ] Nút chọn suất đi tới `/showtimes/:showtimeId/seats`; vô hiệu hóa tạo hold mới khi đã đến cutoff.
-- [ ] Phân biệt loading/error/empty lịch chiếu; không biến lỗi API thành thông báo “không có suất”.
+- [x] Hoàn thiện danh sách phim: tìm kiếm có debounce, lọc trạng thái/thể loại, phân trang; lưu bộ lọc trong URL.
+- [x] Hoàn thiện chi tiết phim: poster fallback, dữ liệu tùy chọn, trạng thái ENDED/UPCOMING/SHOWING đúng nghĩa, 404 phim ẩn/không tồn tại.
+- [x] Tích hợp rạp public hiện có; dữ liệu fallback nếu giữ phải gắn nhãn demo, không cho dùng ID fallback để đặt vé thật.
+- [x] Chọn phim + ngày Việt Nam + rạp tùy chọn, gọi `GET /movies/{id}/showtimes`; đọc page envelope thay vì giả định mảng.
+- [x] Trang `/showtimes` chưa chọn phim hiển thị bộ chọn phim, không gọi endpoint lịch tổng chưa có.
+- [x] Có ngày mặc định theo `Asia/Ho_Chi_Minh`, không dùng `toISOString().split('T')[0]` làm ngày Việt Nam.
+- [x] Nút chọn suất đi tới `/showtimes/:showtimeId/seats`; vô hiệu hóa tạo hold mới khi đã đến cutoff.
+- [x] Phân biệt loading/error/empty lịch chiếu; không biến lỗi API thành thông báo “không có suất”.
 
 **Nghiệm thu:** Guest đi từ danh sách phim đến đúng suất; bộ lọc hoạt động khi refresh/back; ngày và giờ Việt Nam không lệch tại ranh giới UTC.
 
@@ -130,14 +130,14 @@ P0 = luồng đặt vé cốt lõi; P1 = hoàn chỉnh nghiệp vụ MVP; P2 = n
 
 **Đối chiếu:** FR-02/06/07; UC-01/03; BR-05/06/08/09/11; TC-02/12/19/20/38.
 
-- [ ] Tạo `SeatSelectionPage`, `SeatMap`, `Seat`, `SeatLegend`, `BookingSummary` và hook lấy seat map.
-- [ ] Dùng `seatId`, `label`, `seatType`, effective `status`, `price` từ response; không yêu cầu các field hàng/số/ID inventory mà API chưa trả.
-- [ ] Hiển thị AVAILABLE/HELD/BOOKED; `selected` là state cục bộ riêng, không phải ghế đã được giữ.
-- [ ] Chỉ chọn ghế AVAILABLE, không trùng, tối đa 8; đổi suất phải reset lựa chọn.
-- [ ] Dùng giá API để tạm tính; luôn ghi rõ tổng chính thức được xác định khi server tạo booking.
-- [ ] Poll/refetch khi focus và khi có xung đột; ví dụ chu kỳ 10 giây, dừng khi rời trang. Không cần websocket cho MVP.
-- [ ] Khi refresh ghế, loại lựa chọn không còn khả dụng và báo cho người dùng; GET không đảm bảo POST sẽ thành công.
-- [ ] Cho Guest xem ghế; khi tiếp tục đặt, yêu cầu CUSTOMER đăng nhập rồi tải lại dữ liệu trước khi xác nhận.
+- [x] Tạo `SeatSelectionPage`, `SeatMap`, `Seat`, `SeatLegend`, `BookingSummary` và hook lấy seat map.
+- [x] Dùng `seatId`, `label`, `seatType`, effective `status`, `price` từ response; không yêu cầu các field hàng/số/ID inventory mà API chưa trả.
+- [x] Hiển thị AVAILABLE/HELD/BOOKED; `selected` là state cục bộ riêng, không phải ghế đã được giữ.
+- [x] Chỉ chọn ghế AVAILABLE, không trùng, tối đa 8; đổi suất phải reset lựa chọn.
+- [x] Dùng giá API để tạm tính; luôn ghi rõ tổng chính thức được xác định khi server tạo booking.
+- [x] Poll/refetch khi focus và khi có xung đột; ví dụ chu kỳ 10 giây, dừng khi rời trang. Không cần websocket cho MVP.
+- [x] Khi refresh ghế, loại lựa chọn không còn khả dụng và báo cho người dùng; GET không đảm bảo POST sẽ thành công.
+- [x] Cho Guest xem ghế; khi tiếp tục đặt, yêu cầu CUSTOMER đăng nhập rồi tải lại dữ liệu trước khi xác nhận.
 
 **Nghiệm thu:** Mobile chọn/bỏ ghế được, có mô tả truy cập bằng bàn phím; ghế bị giữ/bán không thể chọn; chưa có POST thì không tuyên bố giữ chỗ thành công.
 

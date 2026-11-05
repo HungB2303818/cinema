@@ -2,6 +2,8 @@ export * from './HomePage';
 export * from './MovieDetailsPage';
 export * from './CinemasPage';
 export * from './ShowtimesPage';
+export * from './SeatSelectionPage';
+export * from './SeatSelectionPlaceholderPage';
 export * from './MyTicketsPage';
 export * from './LoginPage';
 export * from './RegisterPage';

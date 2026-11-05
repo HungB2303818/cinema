@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Film, Lock, Mail, AlertCircle } from 'lucide-react';
 import { useAuth, authApi } from '@/features/auth';
 
@@ -10,6 +10,9 @@ export const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const from = (location.state as { from?: string } | null)?.from || '/';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,7 +22,7 @@ export const LoginPage: React.FC = () => {
     try {
       const res = await authApi.login({ email, password });
       login(res.token, res.user);
-      navigate('/');
+      navigate(from, { replace: true });
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : 'Đăng nhập không thành công.';
       setError(errorMsg);

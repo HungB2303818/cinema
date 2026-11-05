@@ -4,12 +4,21 @@ export interface PageResponse<T> {
   size: number;
   totalElements: number;
   totalPages: number;
-  last: boolean;
+  last?: boolean;
+}
+
+export interface FieldErrorItem {
+  field: string;
+  rejectedValue?: unknown;
+  message: string;
 }
 
 export interface ApiError {
   code: string;
   message: string;
-  details?: Record<string, string>;
+  status?: number;
   timestamp?: string;
+  path?: string;
+  fieldErrors?: FieldErrorItem[];
+  details?: Record<string, string>;
 }

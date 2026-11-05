@@ -3,12 +3,11 @@ export type ShowtimeStatus = 'SCHEDULED' | 'CANCELLED' | 'COMPLETED';
 export interface Showtime {
   id: number;
   movieId: number;
-  movieTitle?: string;
+  cinemaId: number;
+  cinemaName: string;
   roomId: number;
-  roomName?: string;
-  cinemaId?: number;
-  cinemaName?: string;
-  startsAt: string;
+  roomName: string;
+  startsAt: string; // ISO 8601 UTC timestamp
   endsAt: string;
   cleanupMinutes: number;
   basePrice: number;
@@ -16,16 +15,29 @@ export interface Showtime {
   status: ShowtimeStatus;
 }
 
+export interface ShowtimeQueryParams {
+  movieId: number;
+  date: string; // YYYY-MM-DD in Asia/Ho_Chi_Minh
+  cinemaId?: number;
+  page?: number;
+  size?: number;
+  sort?: string;
+}
+
 export type SeatType = 'STANDARD' | 'VIP';
 export type SeatState = 'AVAILABLE' | 'HELD' | 'BOOKED';
 
-export interface ShowtimeSeat {
-  id: number;
-  showtimeId: number;
+export interface SeatItem {
   seatId: number;
-  seatRow: string;
-  seatNumber: number;
+  label: string;
   seatType: SeatType;
   status: SeatState;
   price: number;
+}
+
+export interface SeatMapResponse {
+  showtimeId: number;
+  startsAt: string;
+  bookingClosesAt: string;
+  seats: SeatItem[];
 }

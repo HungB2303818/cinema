@@ -1,34 +1,94 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Clock, Calendar, Film, ArrowLeft } from 'lucide-react';
+import { Clock, Calendar, Film, ArrowLeft, Building2 } from 'lucide-react';
 import { useMovieDetail } from '@/features/movies';
-import { useShowtimes } from '@/features/showtimes';
-import { formatDate, formatDateTime, formatCurrency, getAgeRatingBadge } from '@/shared/utils/format';
-import { LoadingSpinner, ErrorState, EmptyState, StatusBadge } from '@/shared/components/ui';
+import { useMovieShowtimes, useCurrentTime, ShowtimeCard } from '@/features/showtimes';
+import { useCinemas } from '@/features/cinemas';
+import {
+  formatDate,
+  getAgeRatingBadge,
+  getMovieStatusBadge,
+  getVietnamDateString,
+} from '@/shared/utils/format';
+import { LoadingSpinner, ErrorState, EmptyState, Button } from '@/shared/components/ui';
+import type { ApiErrorResponse } from '@/shared/api/http-client';
 
 export const MovieDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const movieId = Number(id);
 
-  const { data: movie, isLoading: loadingMovie, error: movieError, refetch } = useMovieDetail(movieId);
-  const { data: showtimes = [] } = useShowtimes({ movieId });
+  const {
+    data: movie,
+    isLoading: loadingMovie,
+    error: movieError,
+    refetch: refetchMovie,
+  } = useMovieDetail(movieId);
 
-  if (loadingMovie) return <LoadingSpinner message="Đang tải thông tin phim..." />;
+  // Date selection in Asia/Ho_Chi_Minh
+  const [selectedDate, setSelectedDate] = useState<string>(() => getVietnamDateString());
+  const [selectedCinemaId, setSelectedCinemaId] = useState<number | undefined>(undefined);
 
+  // Query showtimes for this movie
+  const {
+    data: showtimeData,
+    isLoading: loadingShowtimes,
+    error: showtimeError,
+    refetch: refetchShowtimes,
+  } = useMovieShowtimes(
+    !isNaN(movieId) && movieId > 0 && selectedDate
+      ? {
+          movieId,
+          date: selectedDate,
+          cinemaId: selectedCinemaId,
+          page: 0,
+          size: 50,
+        }
+      : null
+  );
+
+  const { data: cinemas = [] } = useCinemas();
+  const showtimes = showtimeData?.content || [];
+  const now = useCurrentTime(15_000); // live updates every 15s
+
+  const fallbackPoster =
+    'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=400&q=80';
+  const [posterSrc, setPosterSrc] = useState<string | null>(null);
+
+  // Loading state
+  if (loadingMovie) {
+    return (
+      <div className="py-20 flex justify-center">
+        <LoadingSpinner message="Đang tải thông tin phim..." />
+      </div>
+    );
+  }
+
+  // Error handling: Distinguish 404 from network / 500 error
   if (movieError || !movie) {
+    const apiErr = movieError as ApiErrorResponse | undefined;
+    const is404 =
+      apiErr?.status === 404 ||
+      apiErr?.code === 'RESOURCE_NOT_FOUND' ||
+      isNaN(movieId) ||
+      movieId <= 0;
+
     return (
       <div className="py-16">
         <ErrorState
-          title="Không tìm thấy bộ phim này"
-          message={movieError instanceof Error ? movieError.message : 'Bộ phim bạn tìm kiếm không tồn tại hoặc đã bị ẩn khỏi hệ thống.'}
-          onRetry={() => refetch()}
+          title={is404 ? 'Không tìm thấy bộ phim này' : 'Lỗi kết nối máy chủ'}
+          message={
+            is404
+              ? 'Bộ phim bạn tìm kiếm không tồn tại hoặc đã bị ẩn khỏi hệ thống.'
+              : apiErr?.message || 'Không thể tải thông tin phim. Vui lòng kiểm tra lại kết nối mạng và thử lại.'
+          }
+          onRetry={!is404 ? () => refetchMovie() : undefined}
           action={
             <Link
-              to="/"
+              to="/movies"
               className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-[#181a24] hover:bg-[#222530] text-zinc-200 text-xs font-semibold rounded-full border-none transition-colors"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Quay lại trang chủ</span>
+              <span>Quay lại danh sách phim</span>
             </Link>
           }
         />
@@ -37,38 +97,38 @@ export const MovieDetailsPage: React.FC = () => {
   }
 
   const ageBadge = getAgeRatingBadge(movie.ageRating);
-  const fallbackPoster =
-    'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=400&q=80';
+  const statusBadge = getMovieStatusBadge(movie.status);
+  const currentPoster = posterSrc || movie.posterUrl || fallbackPoster;
 
   return (
     <div className="space-y-12 pb-16">
       {/* Back button */}
       <Link
-        to="/"
+        to="/movies"
         className="inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-[#e6e2c1] transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
-        <span>Quay lại</span>
+        <span>Quay lại danh sách phim</span>
       </Link>
 
       {/* Movie Hero Info */}
       <section className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8 bg-[#13151d] border border-[#242733] rounded-3xl p-6 sm:p-8 shadow-2xl">
         <div className="relative aspect-[7/10] w-full rounded-2xl overflow-hidden bg-[#090a0f] shadow-xl flex items-center justify-center">
-          {/* Ambient blurred backdrop so any slight aspect difference blends seamlessly */}
           <img
-            src={movie.posterUrl || fallbackPoster}
+            src={currentPoster}
             alt=""
             aria-hidden="true"
             className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-30 scale-110 pointer-events-none select-none"
           />
 
-          {/* Main movie poster - 100% visible, never clipped or cut off */}
           <img
-            src={movie.posterUrl || fallbackPoster}
+            src={currentPoster}
             alt={movie.title}
             className="relative z-10 w-full h-full object-contain"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = fallbackPoster;
+            onError={() => {
+              if (currentPoster !== fallbackPoster) {
+                setPosterSrc(fallbackPoster);
+              }
             }}
           />
         </div>
@@ -79,7 +139,9 @@ export const MovieDetailsPage: React.FC = () => {
               <span className={`text-xs font-bold px-3 py-1 rounded-full border-none shadow ${ageBadge.color}`}>
                 {ageBadge.label}
               </span>
-              <StatusBadge status={movie.status} size="sm" />
+              <span className={`text-xs font-bold px-3 py-1 rounded-full border-none shadow ${statusBadge.color}`}>
+                {statusBadge.label}
+              </span>
             </div>
 
             <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
@@ -119,44 +181,93 @@ export const MovieDetailsPage: React.FC = () => {
 
       {/* Showtimes Section */}
       <section className="space-y-6">
-        <div className="border-b border-[#20232e] pb-4">
-          <h2 className="text-2xl font-bold text-white">Lịch chiếu tại các rạp</h2>
-          <p className="text-sm text-zinc-400 mt-1">Chọn suất chiếu phù hợp để tiếp tục chọn ghế</p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#20232e] pb-4">
+          <div>
+            <h2 className="text-2xl font-bold text-white">Lịch chiếu tại các rạp</h2>
+            <p className="text-sm text-zinc-400 mt-1">
+              Chọn ngày và cụm rạp để xem các suất chiếu khả dụng
+            </p>
+          </div>
+
+          {/* Filters: Date Picker & Cinema Filter */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Cinema Filter */}
+            {cinemas.length > 0 && (
+              <div className="flex items-center gap-2 bg-[#13151d] border border-[#242733] rounded-full px-3.5 py-1.5 text-xs">
+                <Building2 className="w-4 h-4 text-[#e6e2c1]" />
+                <select
+                  value={selectedCinemaId ?? ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSelectedCinemaId(val ? Number(val) : undefined);
+                  }}
+                  className="bg-transparent text-zinc-200 text-xs focus:outline-none cursor-pointer"
+                >
+                  <option value="" className="bg-[#13151d] text-zinc-200">
+                    Tất cả cụm rạp
+                  </option>
+                  {cinemas.map((c) => (
+                    <option key={c.id} value={c.id} className="bg-[#13151d] text-zinc-200">
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Date Picker */}
+            <div className="flex items-center gap-2 bg-[#13151d] border border-[#242733] rounded-full px-4 py-2">
+              <Calendar className="w-4 h-4 text-[#e6e2c1]" />
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => {
+                  if (e.target.value) {
+                    setSelectedDate(e.target.value);
+                  }
+                }}
+                className="bg-transparent text-zinc-200 text-xs sm:text-sm focus:outline-none cursor-pointer"
+              />
+            </div>
+          </div>
         </div>
 
-        {showtimes.length === 0 ? (
+        {/* Showtime Statuses: Loading / Error / Empty / List */}
+        {loadingShowtimes ? (
+          <div className="py-12">
+            <LoadingSpinner message="Đang tải lịch chiếu phim..." />
+          </div>
+        ) : showtimeError ? (
+          <ErrorState
+            title="Không thể tải lịch chiếu"
+            message={
+              showtimeError instanceof Error
+                ? showtimeError.message
+                : 'Đã có lỗi xảy ra khi truy vấn lịch chiếu từ máy chủ.'
+            }
+            onRetry={() => refetchShowtimes()}
+          />
+        ) : showtimes.length === 0 ? (
           <EmptyState
             icon={Film}
-            title="Chưa có suất chiếu mở bán"
-            description="Hiện tại chưa có suất chiếu nào cho bộ phim này. Vui lòng quay lại sau hoặc tham khảo phim khác."
+            title={`Chưa có suất chiếu trong ngày ${formatDate(selectedDate)}`}
+            description="Hiện tại chưa có suất chiếu nào phù hợp với bộ lọc bạn chọn. Vui lòng chọn ngày chiếu khác hoặc chuyển đổi cụm rạp."
+            action={
+              selectedCinemaId ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setSelectedCinemaId(undefined)}
+                >
+                  Xem tất cả rạp
+                </Button>
+              ) : undefined
+            }
           />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {showtimes.map((st) => (
-              <div
-                key={st.id}
-                className="bg-[#13151d] border border-[#242733] rounded-2xl p-5 hover:border-[#e6e2c1]/60 transition-all flex flex-col justify-between space-y-4 shadow-lg shadow-black/30"
-              >
-                <div>
-                  <div className="flex items-center justify-between text-xs text-zinc-400 mb-2">
-                    <span className="font-bold text-[#e6e2c1]">{st.cinemaName || 'CGV Cinema'}</span>
-                    <span>{st.roomName || 'Phòng chiếu'}</span>
-                  </div>
-                  <div className="text-xl font-bold text-white">
-                    {formatDateTime(st.startsAt)}
-                  </div>
-                  <div className="text-xs text-zinc-400 mt-2">
-                    Giá từ: <span className="text-zinc-200 font-bold">{formatCurrency(st.basePrice)}</span>
-                  </div>
-                </div>
-
-                <Link
-                  to={`/showtimes?showtimeId=${st.id}`}
-                  className="block text-center py-2.5 px-4 text-xs font-bold rounded-full bg-[#e6e2c1] hover:bg-[#dad6b2] text-black shadow-md transition-all duration-200 active:scale-[0.98] border-none"
-                >
-                  Chọn suất này
-                </Link>
-              </div>
+              <ShowtimeCard key={st.id} showtime={st} now={now} />
             ))}
           </div>
         )}

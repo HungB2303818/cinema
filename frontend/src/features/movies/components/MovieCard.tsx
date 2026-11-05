@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Clock, Calendar } from 'lucide-react';
 import type { Movie } from '../types/movie.types';
-import { formatDate, getAgeRatingBadge } from '@/shared/utils/format';
+import { formatDate, getAgeRatingBadge, getMovieStatusBadge } from '@/shared/utils/format';
 
 interface MovieCardProps {
   movie: Movie;
@@ -10,29 +10,34 @@ interface MovieCardProps {
 
 export const MovieCard: React.FC<MovieCardProps> = ({ movie }) => {
   const ageBadge = getAgeRatingBadge(movie.ageRating);
+  const statusBadge = getMovieStatusBadge(movie.status);
   const fallbackPoster =
     'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=400&q=80';
 
+  const [imageSrc, setImageSrc] = useState<string>(movie.posterUrl || fallbackPoster);
+
   return (
     <article className="group flex flex-col bg-[#13151d] border border-[#242733] rounded-2xl overflow-hidden hover:border-[#e6e2c1]/60 transition-all duration-300 hover:shadow-xl hover:shadow-black/40">
-      {/* Compact Poster frame: ensures entire card fits on screen so "Đặt vé ngay" is visible with poster */}
+      {/* Compact Poster frame */}
       <div className="relative h-[240px] sm:h-[280px] md:h-[300px] w-full overflow-hidden bg-[#090a0f] flex items-center justify-center">
-        {/* Ambient blurred backdrop so any slight aspect difference blends seamlessly */}
+        {/* Ambient blurred backdrop */}
         <img
-          src={movie.posterUrl || fallbackPoster}
+          src={imageSrc}
           alt=""
           aria-hidden="true"
           className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-25 scale-110 pointer-events-none select-none"
         />
 
-        {/* Main movie poster - 100% visible, never clipped or cut off */}
+        {/* Main movie poster */}
         <img
-          src={movie.posterUrl || fallbackPoster}
+          src={imageSrc}
           alt={`Poster phim ${movie.title}`}
           loading="lazy"
           className="relative z-10 w-full h-full object-contain transition-transform duration-500 group-hover:scale-[1.02]"
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = fallbackPoster;
+          onError={() => {
+            if (imageSrc !== fallbackPoster) {
+              setImageSrc(fallbackPoster);
+            }
           }}
         />
 
@@ -45,17 +50,13 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie }) => {
 
         {/* Status Badge */}
         <span
-          className={`absolute top-2.5 right-2.5 z-20 text-[11px] font-bold px-2.5 py-0.5 rounded-full border-none shadow-md ${
-            movie.status === 'SHOWING'
-              ? 'bg-[#e6e2c1] text-black'
-              : 'bg-zinc-800/90 text-zinc-200 backdrop-blur'
-          }`}
+          className={`absolute top-2.5 right-2.5 z-20 text-[11px] font-bold px-2.5 py-0.5 rounded-full border-none shadow-md ${statusBadge.color}`}
         >
-          {movie.status === 'SHOWING' ? 'Đang chiếu' : 'Sắp chiếu'}
+          {statusBadge.label}
         </span>
       </div>
 
-      {/* Info Section - compact & clean */}
+      {/* Info Section */}
       <div className="flex flex-col flex-1 p-4 justify-between">
         <div>
           <h3
@@ -83,7 +84,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie }) => {
           </div>
         </div>
 
-        {/* Action Button: always visible together with the poster */}
+        {/* Action Button */}
         <div className="mt-3">
           <Link
             to={`/movies/${movie.id}`}
@@ -93,7 +94,11 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie }) => {
                 : 'bg-[#181a24] hover:bg-[#222530] text-zinc-200'
             }`}
           >
-            {movie.status === 'SHOWING' ? 'Đặt vé ngay' : 'Xem thông tin'}
+            {movie.status === 'SHOWING'
+              ? 'Đặt vé ngay'
+              : movie.status === 'UPCOMING'
+              ? 'Xem thông tin'
+              : 'Chi tiết phim'}
           </Link>
         </div>
       </div>

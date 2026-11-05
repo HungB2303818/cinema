@@ -1,19 +1,31 @@
 import { httpClient } from '@/shared/api/http-client';
-import type { Showtime, ShowtimeSeat } from '../types/showtime.types';
+import type { PageResponse } from '@/shared/types/api.types';
+import type { Showtime, ShowtimeQueryParams, SeatMapResponse } from '../types/showtime.types';
 
 export const showtimesApi = {
-  list: async (params?: { movieId?: number; date?: string; cinemaId?: number }): Promise<Showtime[]> => {
+  /**
+   * GET /api/movies/{id}/showtimes?date=...&cinemaId=...&page=...&size=...&sort=...
+   * Note: date is required by backend, cinemaId is optional.
+   */
+  getMovieShowtimes: async (params: ShowtimeQueryParams): Promise<PageResponse<Showtime>> => {
     const query = new URLSearchParams();
-    if (params?.movieId) query.append('movieId', params.movieId.toString());
-    if (params?.date) query.append('date', params.date);
-    if (params?.cinemaId) query.append('cinemaId', params.cinemaId.toString());
+    query.append('date', params.date);
+    if (params.cinemaId) query.append('cinemaId', params.cinemaId.toString());
+    if (params.page !== undefined) query.append('page', params.page.toString());
+    if (params.size !== undefined) query.append('size', params.size.toString());
+    if (params.sort) query.append('sort', params.sort);
 
-    const res = await httpClient.get<Showtime[]>(`/showtimes?${query.toString()}`);
+    const res = await httpClient.get<PageResponse<Showtime>>(
+      `/movies/${params.movieId}/showtimes?${query.toString()}`
+    );
     return res.data;
   },
 
-  getSeats: async (showtimeId: number): Promise<ShowtimeSeat[]> => {
-    const res = await httpClient.get<ShowtimeSeat[]>(`/showtimes/${showtimeId}/seats`);
+  /**
+   * GET /api/showtimes/{id}/seats
+   */
+  getSeats: async (showtimeId: number): Promise<SeatMapResponse> => {
+    const res = await httpClient.get<SeatMapResponse>(`/showtimes/${showtimeId}/seats`);
     return res.data;
   },
 };

@@ -15,9 +15,10 @@ export interface Movie {
 }
 
 export interface MovieQueryParams {
+  keyword?: string;
   status?: MovieStatus;
-  search?: string;
   genre?: string;
   page?: number;
   size?: number;
+  sort?: string;
 }
