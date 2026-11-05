@@ -22,6 +22,8 @@
 | POST | `/api/bookings/{id}/payments/mock` | Owner | Mock payment | 04 |
 | GET | `/api/bookings/{id}/tickets` | Owner/Admin | Vé đã cấp | 08 |
 | POST | `/api/staff/tickets/check-in` | STAFF/ADMIN | Check-in một vé | 07 |
+| GET | `/api/admin/movies` | ADMIN | Danh sách phim quản trị (kể cả HIDDEN) | 02 |
+| GET | `/api/admin/movies/{id}` | ADMIN | Chi tiết phim quản trị (kể cả HIDDEN) | 02 |
 | POST | `/api/admin/movies` | ADMIN | Thêm phim | 02 |
 | PUT | `/api/admin/movies/{id}` | ADMIN | Sửa phim | 02 |
 | POST | `/api/admin/movies/{id}/poster` | ADMIN | Upload poster JPEG/PNG bằng multipart lên Cloudinary | 02 |
@@ -85,6 +87,13 @@ Response 200:
 - Thiếu JWT → 401; CUSTOMER/STAFF → 403; JSON/enum/ngày/validation sai → 400 `VALIDATION_ERROR` theo error envelope chung.
 - Ẩn phim bằng PUT với `status=HIDDEN`; không có DELETE, không xóa lịch sử (BR-19). UPCOMING/SHOWING/ENDED đều công khai.
 - Cập nhật cùng phim đồng thời dùng hành vi mặc định DB: lần ghi sau cùng có hiệu lực; chưa có version/ETag trong schema. Không cam kết phát hiện lost update metadata.
+
+### 1.1.0 Tra cứu phim quản trị — bổ sung FE-09 (FR-04/15, UC-02)
+
+`GET /api/admin/movies` và `GET /api/admin/movies/{id}` chỉ dành cho `ADMIN`:
+- `GET /api/admin/movies`: Hỗ trợ `keyword`, `genre`, `status`, `page`, `size`, `sort` tương tự `GET /api/movies`. Điểm khác biệt quan trọng: không loại trừ phim `HIDDEN`. Nếu không truyền `status`, trả toàn bộ phim ở mọi trạng thái (`UPCOMING`, `SHOWING`, `ENDED`, `HIDDEN`). Nếu truyền `status=HIDDEN`, trả danh sách phim ẩn. Trả về envelope `MoviePageResponse` `{content, page, size, totalElements, totalPages, last}`.
+- `GET /api/admin/movies/{id}`: Trả về chi tiết `MovieResponse` cho bất kỳ phim nào, kể cả phim đang ở trạng thái `HIDDEN`. Phim không tồn tại → 404 `RESOURCE_NOT_FOUND`.
+- Phân quyền: Chưa đăng nhập → 401 `UNAUTHENTICATED`; vai trò `CUSTOMER` hoặc `STAFF` → 403 `ACCESS_DENIED`. Tham số sai định dạng hoặc ngoài miền cho phép → 400 `VALIDATION_ERROR`.
 
 Đây là phần chi tiết hóa payload Movie trước đây chưa được mô tả, không đổi DDL/migration. API suất chiếu theo phim và seat map được triển khai ở TASK-08.
 

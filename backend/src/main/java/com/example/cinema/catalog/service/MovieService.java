@@ -53,11 +53,42 @@ public class MovieService {
                 PageRequest.of(page, size, parseSort(sort))).map(MovieResponse::from));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
+    public MoviePageResponse listAdmin(String keyword, MovieStatus status, String genre,
+                                       int page, int size, String sort) {
+        if (page < 0 || size < 1 || size > 100) {
+            throw invalid("page phải >= 0; size phải từ 1 đến 100.");
+        }
+        if ((keyword != null && keyword.length() > 255) || (genre != null && genre.length() > 100)) {
+            throw invalid("Từ khóa tối đa 255 ký tự; thể loại tối đa 100 ký tự.");
+        }
+        Specification<Movie> filter = (root, query, cb) -> cb.conjunction();
+        if (status != null) {
+            filter = filter.and((root, query, cb) -> cb.equal(root.get("status"), status));
+        }
+        if (keyword != null && !keyword.isBlank()) {
+            String pattern = "%" + escapeLike(keyword.strip().toLowerCase(Locale.ROOT)) + "%";
+            filter = filter.and((root, query, cb) -> cb.like(cb.lower(root.get("title")), pattern, '\\'));
+        }
+        if (genre != null && !genre.isBlank()) {
+            String value = genre.strip().toLowerCase(Locale.ROOT);
+            filter = filter.and((root, query, cb) -> cb.equal(cb.lower(root.get("genre")), value));
+        }
+        return MoviePageResponse.from(movieRepository.findAll(filter,
+                PageRequest.of(page, size, parseSort(sort))).map(MovieResponse::from));
+    }
+
     public MovieResponse getPublic(Long id) {
         Movie movie = find(id);
         if (movie.getStatus() == MovieStatus.HIDDEN) {
             throw notFound();
         }
+        return MovieResponse.from(movie);
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    public MovieResponse getAdmin(Long id) {
+        Movie movie = find(id);
         return MovieResponse.from(movie);
     }
 

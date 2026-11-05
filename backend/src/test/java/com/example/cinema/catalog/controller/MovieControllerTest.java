@@ -79,7 +79,9 @@ class MovieControllerTest {
     }
 
     @Test
-    void guestCannotWrite() throws Exception {
+    void guestCannotReadOrWriteAdmin() throws Exception {
+        mvc.perform(get("/api/admin/movies")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/admin/movies/1")).andExpect(status().isUnauthorized());
         mvc.perform(post("/api/admin/movies").contentType(MediaType.APPLICATION_JSON).content(BODY))
                 .andExpect(status().isUnauthorized());
         mvc.perform(put("/api/admin/movies/1").contentType(MediaType.APPLICATION_JSON).content(BODY))
@@ -89,14 +91,44 @@ class MovieControllerTest {
 
     @Test
     @WithMockUser(roles = "CUSTOMER")
-    void customerCannotWrite() throws Exception {
-        assertWriteForbidden();
+    void customerCannotReadOrWriteAdmin() throws Exception {
+        assertAdminForbidden();
     }
 
     @Test
     @WithMockUser(roles = "STAFF")
-    void staffCannotWrite() throws Exception {
-        assertWriteForbidden();
+    void staffCannotReadOrWriteAdmin() throws Exception {
+        assertAdminForbidden();
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminCanListAndReadAdminMoviesIncludingHidden() throws Exception {
+        MovieResponse hiddenMovie = new MovieResponse(10L, "Phim ẩn", null, 90, null, null, null, null, MovieStatus.HIDDEN);
+        when(service.listAdmin(null, null, null, 0, 20, "releaseDate,desc"))
+                .thenReturn(new MoviePageResponse(List.of(hiddenMovie), 0, 20, 1, 1));
+        when(service.getAdmin(10L)).thenReturn(hiddenMovie);
+
+        mvc.perform(get("/api/admin/movies"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].status").value("HIDDEN"));
+
+        mvc.perform(get("/api/admin/movies/10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(10))
+                .andExpect(jsonPath("$.status").value("HIDDEN"));
+
+        verify(service).listAdmin(null, null, null, 0, 20, "releaseDate,desc");
+        verify(service).getAdmin(10L);
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminGetNonExistentMovieReturns404() throws Exception {
+        when(service.getAdmin(999L)).thenThrow(new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Không tìm thấy phim."));
+        mvc.perform(get("/api/admin/movies/999"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"));
     }
 
     @Test
@@ -126,7 +158,11 @@ class MovieControllerTest {
         verifyNoInteractions(service);
     }
 
-    private void assertWriteForbidden() throws Exception {
+    private void assertAdminForbidden() throws Exception {
+        mvc.perform(get("/api/admin/movies"))
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+        mvc.perform(get("/api/admin/movies/1"))
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
         mvc.perform(post("/api/admin/movies").contentType(MediaType.APPLICATION_JSON).content(BODY))
                 .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
         mvc.perform(put("/api/admin/movies/1").contentType(MediaType.APPLICATION_JSON).content(BODY))

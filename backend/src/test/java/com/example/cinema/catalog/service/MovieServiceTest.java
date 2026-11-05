@@ -61,6 +61,21 @@ class MovieServiceTest {
     }
 
     @Test
+    void adminCanReadHiddenMovie() {
+        when(repository.findById(1L)).thenReturn(Optional.of(movie(MovieStatus.HIDDEN)));
+        var response = service.getAdmin(1L);
+        assertThat(response.title()).isEqualTo("Phim A");
+        assertThat(response.status()).isEqualTo(MovieStatus.HIDDEN);
+    }
+
+    @Test
+    void adminGetNonExistentMovieThrows404() {
+        when(repository.findById(2L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.getAdmin(2L)).isInstanceOfSatisfying(AppException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.RESOURCE_NOT_FOUND));
+    }
+
+    @Test
     @SuppressWarnings("unchecked")
     void mapsPageAndUsesStableWhitelistedSort() {
         when(repository.findAll(any(Specification.class), any(Pageable.class)))
@@ -72,6 +87,18 @@ class MovieServiceTest {
         verify(repository).findAll(any(Specification.class), argThat((Pageable pageable) ->
                 pageable.getSort().getOrderFor("title").isAscending()
                         && pageable.getSort().getOrderFor("id") != null));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void listAdminMapsPageAndAllowsHiddenMovies() {
+        when(repository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenAnswer(invocation -> new PageImpl<>(List.of(movie(MovieStatus.HIDDEN)),
+                        invocation.getArgument(1), 1));
+        var page = service.listAdmin("Phim", MovieStatus.HIDDEN, "Hành động", 0, 20, "title,asc");
+        assertThat(page.content()).hasSize(1);
+        assertThat(page.content().get(0).status()).isEqualTo(MovieStatus.HIDDEN);
+        verify(repository).findAll(any(Specification.class), any(Pageable.class));
     }
 
     @ParameterizedTest
@@ -88,6 +115,7 @@ class MovieServiceTest {
         assertThatThrownBy(() -> service.list(null, null, null, 0, 101, "id,asc")).isInstanceOf(AppException.class);
         assertThatThrownBy(() -> service.list(null, null, null, 0, 0, "id,asc")).isInstanceOf(AppException.class);
         assertThatThrownBy(() -> service.getPublic(0L)).isInstanceOf(AppException.class);
+        assertThatThrownBy(() -> service.getAdmin(0L)).isInstanceOf(AppException.class);
         verifyNoInteractions(repository);
     }
 

@@ -15,6 +15,9 @@ import {
   LoginPage,
   RegisterPage,
   AdminDashboardPage,
+  AdminMoviesPage,
+  AdminMovieCreatePage,
+  AdminMovieEditPage,
   NotFoundPage,
 } from '@/pages';
 import { ProtectedRoute } from './ProtectedRoute';
@@ -102,6 +105,9 @@ export const AppRouter: React.FC = () => {
         }
       >
         <Route index element={<AdminDashboardPage />} />
+        <Route path="movies" element={<AdminMoviesPage />} />
+        <Route path="movies/new" element={<AdminMovieCreatePage />} />
+        <Route path="movies/:movieId/edit" element={<AdminMovieEditPage />} />
       </Route>
     </Routes>
   );

@@ -17,8 +17,10 @@ export const AdminDashboardPage: React.FC = () => {
       title: 'Quản lý Phim & Poster',
       description: 'Thêm, sửa, ẩn phim và tải ảnh poster độ phân giải cao lên Cloudinary.',
       icon: Film,
-      count: '37 phim',
+      count: 'Danh mục',
       color: 'text-[#e6e2c1]',
+      link: '/admin/movies',
+      linkText: 'Quản lý danh sách phim',
     },
     {
       title: 'Quản lý Suất Chiếu',
@@ -31,7 +33,7 @@ export const AdminDashboardPage: React.FC = () => {
       title: 'Phòng Chiếu & Sơ Đồ Ghế',
       description: 'Cấu hình phòng chiếu (Standard, VIP, Sweetbox, Gold Class) và bảo trì.',
       icon: Tv,
-      count: '16 phòng',
+      count: 'Cấu hình',
       color: 'text-[#e6e2c1]',
     },
     {

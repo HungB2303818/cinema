@@ -119,8 +119,21 @@ export const Header: React.FC<HeaderProps> = ({ variant = 'customer' }) => {
               </span>
             </div>
 
-            {/* Right: Soát vé + Switch to Store + Admin Info */}
+            {/* Right: Quản lý phim + Soát vé + Switch to Store + Admin Info */}
             <div className="flex items-center gap-3">
+              <Link
+                to="/admin/movies"
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold rounded-full border-none transition-colors ${
+                  pathname.startsWith('/admin/movies')
+                    ? 'bg-[#e6e2c1] text-black font-bold'
+                    : 'text-zinc-300 hover:text-white bg-[#161821] hover:bg-[#20232d]'
+                }`}
+                title="Quản lý phim"
+              >
+                <Film className="w-3.5 h-3.5" />
+                <span>Quản lý phim</span>
+              </Link>
+
               <Link
                 to="/staff/check-in"
                 className="inline-flex items-center gap-1.5 px-3.5 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold text-zinc-300 hover:text-white bg-[#161821] hover:bg-[#20232d] rounded-full border-none transition-colors"

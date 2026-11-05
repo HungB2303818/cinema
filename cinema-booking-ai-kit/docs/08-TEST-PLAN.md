@@ -43,6 +43,7 @@
 | TC-28 | Guest xem chi tiết phim ẩn/không tồn tại | Cùng 404, không lộ metadata phim ẩn | FR-01, UC-01 |
 | TC-29 | Admin tạo/sửa metadata, chuyển HIDDEN | 201/200; lưu đúng dữ liệu; phim ẩn không công khai; không xóa lịch sử | FR-04, UC-02, BR-19 |
 | TC-30 | Guest/Customer/Staff gọi API ghi phim | 401/403; service cũng kiểm tra ADMIN | FR-04, BR-21, ma trận phân quyền |
+| TC-30a | Admin đọc danh sách/chi tiết phim (kể cả HIDDEN); Guest/Customer/Staff bị từ chối | 200 MoviePageResponse/MovieResponse; lọc đúng HIDDEN; 401/403 với vai trò không phải ADMIN | FR-04, BR-21 |
 | TC-31 | JSON, enum, ngày, độ dài, thời lượng, phân trang/sort sai | 400 VALIDATION_ERROR, không ghi DB | FR-15 |
 
 Mã kiểm thử tại `backend/src/test/java/com/example/cinema/catalog/`: unit service, MockMvc với SecurityConfig thật, integration MySQL Testcontainers chạy Flyway và validate schema. Integration tự skip khi Docker không khả dụng; skip không được coi là pass kiểm chứng MySQL. Movie không có hold/expiry; các TC hết hạn và tranh ghế thuộc module booking, không áp dụng TASK-05. Cập nhật metadata đồng thời theo last-write-wins của DB, chưa có version/ETag; không dùng kiểm thử Movie để chứng minh an toàn concurrency đặt ghế.

@@ -41,6 +41,10 @@ const statusConfigMap: Record<string, { label: string; className: string }> = {
     label: 'Đã kết thúc',
     className: 'bg-zinc-900 text-zinc-500 border-none',
   },
+  HIDDEN: {
+    label: 'Đã ẩn',
+    className: 'bg-zinc-800/80 text-zinc-400 border border-zinc-700/50',
+  },
 
   // Booking statuses
   CONFIRMED: {

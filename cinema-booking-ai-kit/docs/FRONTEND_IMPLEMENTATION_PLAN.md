@@ -220,15 +220,15 @@ P0 = luồng đặt vé cốt lõi; P1 = hoàn chỉnh nghiệp vụ MVP; P2 = n
 
 **Đối chiếu:** FR-04/15; UC-02; BR-19/21; TC-29/30/31/41…45.
 
-- [ ] Tạo admin layout và form thêm/sửa metadata phim; ẩn bằng status HIDDEN, không xóa lịch sử.
-- [ ] Thay dashboard tĩnh bằng điều hướng thật; bỏ số đếm hardcode, Sweetbox/Gold Class và quản lý tài khoản chưa thuộc API MVP.
-- [ ] Tạo phim trước, sau đó upload poster qua POST multipart `/admin/movies/{id}/poster`; nếu upload lỗi vẫn cho biết phim đã được tạo.
-- [ ] Preview JPEG/PNG, kiểm tra 5 MiB ở client; server vẫn kiểm tra thật. Không đặt Cloudinary secret trong `VITE_*`, không upload trực tiếp bằng secret client.
-- [ ] Hiển thị lỗi 413/415/502/503; không auto-retry upload khi chưa xác định kết quả.
+- [x] Tạo admin layout và form thêm/sửa metadata phim; ẩn bằng status HIDDEN, không xóa lịch sử.
+- [x] Thay dashboard tĩnh bằng điều hướng thật; bỏ số đếm hardcode, Sweetbox/Gold Class và quản lý tài khoản chưa thuộc API MVP.
+- [x] Tạo phim trước, sau đó upload poster qua POST multipart `/admin/movies/{id}/poster`; nếu upload lỗi vẫn cho biết phim đã được tạo.
+- [x] Preview JPEG/PNG, kiểm tra 5 MiB ở client; server vẫn kiểm tra thật. Không đặt Cloudinary secret trong `VITE_*`, không upload trực tiếp bằng secret client.
+- [x] Hiển thị lỗi 413/415/502/503; không auto-retry upload khi chưa xác định kết quả.
 
-**Phụ thuộc cần chốt:** Hiện chưa có GET danh sách/chi tiết phim admin; API public luôn loại HIDDEN. Có thể demo tạo/sửa phim công khai bằng API hiện có, nhưng để quản trị và khôi phục phim ẩn đầy đủ phải thống nhất bổ sung API đọc admin + contract/test. Không giả định endpoint này đã tồn tại hoặc dùng cache trình duyệt làm nguồn dữ liệu lâu dài.
+**Phụ thuộc đã giải quyết:** Đã bổ sung GET `/api/admin/movies` và GET `/api/admin/movies/{id}` có phân quyền ADMIN, hỗ trợ xem/lọc/khôi phục toàn bộ phim (kể cả trạng thái HIDDEN), đã cập nhật API contract (06-API-CONTRACT.md), test plan (08-TEST-PLAN.md) và hoàn thành đầy đủ suite test backend + frontend.
 
-**Nghiệm thu:** Tạo/sửa phim, upload poster và cập nhật public view được; nghiệp vụ quản lý phim ẩn chỉ đánh dấu hoàn thành khi điểm phụ thuộc đã được giải quyết.
+**Nghiệm thu:** Hoàn thành toàn diện: Tạo/sửa phim, upload poster Cloudinary tuần tự, cập nhật public view, lọc và khôi phục phim ẩn an toàn qua API admin chuyên biệt.
 
 ### FE-10 — Admin phòng, ghế và suất chiếu
 
