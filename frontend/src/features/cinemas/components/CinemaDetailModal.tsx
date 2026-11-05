@@ -1,6 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { X, MapPin, Tv, Film, Building2, AlertCircle } from 'lucide-react';
+import { X, MapPin, Tv, Building2, AlertCircle } from 'lucide-react';
 import type { Cinema } from '../types/cinema.types';
 import { useCinemaDetail } from '../hooks/useCinemaDetail';
 import { LoadingSpinner, ErrorState } from '@/shared/components/ui';
@@ -127,14 +126,6 @@ export const CinemaDetailModal: React.FC<CinemaDetailModalProps> = ({ cinema, on
           >
             Đóng
           </button>
-          <Link
-            to={`/showtimes?cinemaId=${cinema.id}`}
-            onClick={onClose}
-            className="px-6 py-2.5 text-sm font-bold rounded-full bg-[#e6e2c1] hover:bg-[#dad6b2] text-black shadow-lg transition-all duration-200 flex items-center gap-2 active:scale-[0.98] border-none"
-          >
-            <Film className="w-4 h-4" />
-            <span>Xem lịch chiếu</span>
-          </Link>
         </div>
       </div>
     </div>

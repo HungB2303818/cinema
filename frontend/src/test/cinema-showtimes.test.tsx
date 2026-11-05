@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
 import { ShowtimesPage } from '@/pages/ShowtimesPage';
 import { renderWithProviders } from './test-utils';
 import { showtimesApi } from '@/features/showtimes/api/showtimes.api';
@@ -124,6 +124,19 @@ describe('Cinema Showtimes (Part A / TC-46..49)', () => {
 
     expect(showtime101Link).toBeDefined();
     expect(showtime102Link).toBeDefined();
+  });
+
+  it('selects a date from the horizontal strip, keeps cinema and resets pagination', async () => {
+    vi.spyOn(cinemasApi, 'list').mockResolvedValue(mockCinemas);
+    const scheduleSpy = vi.spyOn(showtimesApi, 'getCinemaShowtimes').mockResolvedValue(mockCinemaSchedule);
+    renderWithProviders(<ShowtimesPage />, { initialEntries: ['/showtimes?cinemaId=1&date=2026-11-10&page=2'] });
+    const selected = screen.getByRole('button', { name: 'Chọn ngày 10/11/2026' });
+    expect(selected).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'Chọn ngày 11/11/2026' }));
+    await waitFor(() => expect(scheduleSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ cinemaId: 1, date: '2026-11-11', page: 0 })
+    ));
+    expect(screen.getByRole('button', { name: 'Chọn ngày 11/11/2026' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('TC-49: disables showtime that has reached cutoff', async () => {

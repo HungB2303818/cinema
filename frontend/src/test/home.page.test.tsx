@@ -11,7 +11,7 @@ describe('HomePage (FE-03, Section A)', () => {
     vi.restoreAllMocks();
   });
 
-  it('restores filters and pagination from URL search params', async () => {
+  it('restores the visible status and pagination but ignores removed genre/search filters', async () => {
     const listSpy = vi.spyOn(moviesApi, 'list').mockResolvedValueOnce({
       content: [
         {
@@ -38,23 +38,28 @@ describe('HomePage (FE-03, Section A)', () => {
       initialEntries: ['/?status=UPCOMING&genre=Khoa%20h%E1%BB%8Dc%20vi%E1%BB%85n%20t%C6%B0%E1%BB%9Fng&page=1'],
     });
 
-    // Check that moviesApi.list was called with restored URL params
+    // Old links must not apply invisible genre/search filters.
     await waitFor(() => {
       expect(listSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           status: 'UPCOMING',
-          genre: 'Khoa học viễn tưởng',
           page: 1,
         })
       );
     });
+    expect(listSpy.mock.calls[0][0]).not.toHaveProperty('genre');
+    expect(listSpy.mock.calls[0][0]).not.toHaveProperty('keyword');
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(screen.queryByText('Thể loại:')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Đã kết thúc' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Tất cả phim' })).not.toBeInTheDocument();
 
     // Movie card rendered
     expect(await screen.findByText('Dune')).toBeInTheDocument();
     expect(screen.getAllByText('Sắp chiếu').length).toBeGreaterThan(0);
   });
 
-  it('switches tabs between SHOWING, UPCOMING, ENDED and queries backend', async () => {
+  it('switches between SHOWING and UPCOMING and queries backend', async () => {
     const listSpy = vi.spyOn(moviesApi, 'list').mockResolvedValue({
       content: [],
       page: 0,
@@ -90,5 +95,12 @@ describe('HomePage (FE-03, Section A)', () => {
         })
       );
     });
+  });
+
+  it.each(['ENDED', 'ALL'])('defaults legacy status %s to SHOWING', async (status) => {
+    const listSpy = vi.spyOn(moviesApi, 'list').mockResolvedValue({ content: [], page: 0, size: 12, totalElements: 0, totalPages: 0 });
+    vi.spyOn(cinemasApi, 'list').mockResolvedValue([]);
+    renderWithProviders(<HomePage />, { initialEntries: [`/?status=${status}&keyword=test&genre=Horror`] });
+    await waitFor(() => expect(listSpy).toHaveBeenCalledWith({ status: 'SHOWING', page: 0, size: 12 }));
   });
 });

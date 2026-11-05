@@ -40,7 +40,6 @@ export const Header: React.FC<HeaderProps> = ({ variant = 'customer' }) => {
   const isHomeActive = pathname === '/' && search === '';
   const isMoviesActive = pathname === '/movies' || pathname.startsWith('/movies/');
   const isCinemasActive = pathname.startsWith('/cinemas');
-  const isShowtimesActive = pathname.startsWith('/showtimes');
   const isTicketsActive = pathname.startsWith('/my-tickets');
   const isCheckinActive = pathname === '/staff/check-in' || pathname.startsWith('/staff/check-in/');
   const isAdminActive = pathname.startsWith('/admin');
@@ -230,9 +229,6 @@ export const Header: React.FC<HeaderProps> = ({ variant = 'customer' }) => {
             <Link to="/cinemas" className={getNavLinkClass(isCinemasActive)}>
               Rạp phim
             </Link>
-            <Link to="/showtimes" className={getNavLinkClass(isShowtimesActive)}>
-              Lịch chiếu
-            </Link>
             {isCustomer && (
               <Link to="/my-tickets" className={getNavLinkClass(isTicketsActive)}>
                 Vé của tôi
@@ -343,9 +339,6 @@ export const Header: React.FC<HeaderProps> = ({ variant = 'customer' }) => {
               </Link>
               <Link to="/cinemas" className={getMobileNavLinkClass(isCinemasActive)}>
                 Rạp phim
-              </Link>
-              <Link to="/showtimes" className={getMobileNavLinkClass(isShowtimesActive)}>
-                Lịch chiếu
               </Link>
               {isCustomer && (
                 <Link to="/my-tickets" className={getMobileNavLinkClass(isTicketsActive)}>

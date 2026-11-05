@@ -382,10 +382,10 @@ export const CheckoutPage: React.FC = () => {
           title="Mã đơn đặt vé không hợp lệ"
           message="Đường dẫn không đúng hoặc thiếu mã đơn. Vui lòng kiểm tra lại."
         />
-        <Link to="/showtimes">
+        <Link to="/movies">
           <Button variant="secondary" size="md">
             <ArrowLeft className="w-4 h-4 mr-2" />
-            <span>Quay lại lịch chiếu</span>
+            <span>Chọn phim khác</span>
           </Button>
         </Link>
       </div>
@@ -415,10 +415,10 @@ export const CheckoutPage: React.FC = () => {
           onRetry={() => refetch()}
         />
         <div className="flex justify-center">
-          <Link to="/showtimes">
+          <Link to="/movies">
             <Button variant="secondary" size="md">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              <span>Quay lại lịch chiếu</span>
+              <span>Chọn phim khác</span>
             </Button>
           </Link>
         </div>
@@ -512,7 +512,7 @@ export const CheckoutPage: React.FC = () => {
               cho khách hàng khác có thể đặt.
             </p>
             <div className="pt-2">
-              <Link to="/showtimes">
+              <Link to="/movies">
                 <Button variant="primary" size="sm">
                   <ArrowLeft className="w-3.5 h-3.5 mr-1.5" />
                   <span>Chọn suất chiếu khác</span>
@@ -738,10 +738,10 @@ export const CheckoutPage: React.FC = () => {
                 </div>
               )}
 
-              <Link to="/showtimes" className="block w-full pt-1">
+              <Link to="/movies" className="block w-full pt-1">
                 <Button variant="secondary" size="md" className="w-full">
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  <span>Xem lịch chiếu khác</span>
+                  <span>Chọn phim khác</span>
                 </Button>
               </Link>
             </div>

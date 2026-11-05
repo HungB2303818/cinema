@@ -161,6 +161,10 @@ describe('FE-10: Admin Quản Lý Suất Chiếu (Showtimes)', () => {
       totalPages: 1,
     });
 
+    vi.spyOn(adminCinemasApi, 'listSeats').mockResolvedValue([
+      { id: 1, roomId: 10, seatRow: 'A', seatNumber: 1, label: 'A1', seatType: 'STANDARD', status: 'ACTIVE' },
+    ]);
+
     vi.spyOn(moviesApi, 'getAdminMovies').mockResolvedValue({
       content: mockMovies,
       page: 0,
@@ -306,6 +310,50 @@ describe('FE-10: Admin Quản Lý Suất Chiếu (Showtimes)', () => {
   });
 
   describe('3. Form Tạo Suất Chiếu Mới (AdminShowtimeFormPage - Create)', () => {
+    it('chặn gửi khi tải ghế lỗi và cho phép thử lại', async () => {
+      vi.spyOn(adminCinemasApi, 'listSeats')
+        .mockRejectedValueOnce(new Error('Không thể tải ghế'))
+        .mockResolvedValue([{ id: 1, roomId: 10, seatRow: 'A', seatNumber: 1, label: 'A1', seatType: 'STANDARD', status: 'ACTIVE' }]);
+      renderWithProviders(<AdminShowtimeFormPage />, { initialEntries: ['/admin/showtimes/new?cinemaId=1&roomId=10'] });
+
+      const retryButton = await screen.findByRole('button', { name: 'Thử lại' });
+      expect(screen.getByRole('button', { name: 'Tạo suất chiếu' })).toBeDisabled();
+      fireEvent.click(retryButton);
+      expect(await screen.findByText(/Phòng có 1 ghế ACTIVE/)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Tạo suất chiếu' })).toBeEnabled();
+    });
+
+    it.each(['empty', 'maintenance'] as const)('chặn tạo suất với phòng không có ghế ACTIVE (%s) và dẫn đến cấu hình ghế', async (state) => {
+      vi.spyOn(adminCinemasApi, 'listSeats').mockResolvedValue(state === 'empty' ? [] : [
+        { id: 1, roomId: 10, seatRow: 'A', seatNumber: 1, label: 'A1', seatType: 'STANDARD', status: 'MAINTENANCE' },
+      ]);
+      const createSpy = vi.spyOn(adminShowtimesApi, 'create');
+      renderWithProviders(<AdminShowtimeFormPage />, { initialEntries: ['/admin/showtimes/new?cinemaId=1&roomId=10'] });
+
+      expect(await screen.findByText(/Phòng chiếu chưa có ghế ACTIVE/)).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Cấu hình ghế phòng chiếu' })).toHaveAttribute('href', '/admin/rooms/10/seats');
+      expect(screen.getByRole('button', { name: 'Tạo suất chiếu' })).toBeDisabled();
+      expect(createSpy).not.toHaveBeenCalled();
+    });
+
+    it('kiểm tra lại ghế khi đổi phòng và không giữ cảnh báo của phòng cũ', async () => {
+      vi.spyOn(adminCinemasApi, 'listRooms').mockResolvedValue({
+        content: [...mockRoomsCinema1, { id: 12, cinemaId: 1, name: 'Cinema 3', status: 'ACTIVE' }],
+        page: 0, size: 100, totalElements: 3, totalPages: 1,
+      });
+      vi.spyOn(adminCinemasApi, 'listSeats').mockImplementation(async (id) => id === 10 ? [] : [
+        { id: 2, roomId: id, seatRow: 'A', seatNumber: 1, label: 'A1', seatType: 'STANDARD', status: 'ACTIVE' },
+      ]);
+      renderWithProviders(<AdminShowtimeFormPage />, { initialEntries: ['/admin/showtimes/new?cinemaId=1&roomId=10'] });
+      await screen.findByText(/Phòng chiếu chưa có ghế ACTIVE/);
+      await screen.findByRole('option', { name: 'Cinema 3' });
+      fireEvent.change(screen.getByLabelText(/Phòng chiếu/i), { target: { value: '12' } });
+
+      expect(await screen.findByText(/Phòng có 1 ghế ACTIVE/)).toBeInTheDocument();
+      expect(screen.queryByText(/Phòng chiếu chưa có ghế ACTIVE/)).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Tạo suất chiếu' })).toBeEnabled();
+    });
+
     it('lọc bỏ phim HIDDEN khỏi danh sách chọn phim chiếu', async () => {
       renderWithProviders(<AdminShowtimeFormPage />, { initialEntries: ['/admin/showtimes/new'] });
 
@@ -403,6 +451,7 @@ describe('FE-10: Admin Quản Lý Suất Chiếu (Showtimes)', () => {
 
       // Submit
       const submitBtn = screen.getByRole('button', { name: 'Tạo suất chiếu' });
+      await waitFor(() => expect(submitBtn).toBeEnabled());
       fireEvent.click(submitBtn);
 
       await waitFor(() => {
@@ -450,6 +499,7 @@ describe('FE-10: Admin Quản Lý Suất Chiếu (Showtimes)', () => {
       fireEvent.change(screen.getByLabelText(/Kết thúc chiếu/i), { target: { value: '2026-11-15T10:00' } });
 
       const submitBtn = screen.getByRole('button', { name: 'Tạo suất chiếu' });
+      await waitFor(() => expect(submitBtn).toBeEnabled());
       fireEvent.click(submitBtn);
 
       await waitFor(() => {
@@ -482,6 +532,7 @@ describe('FE-10: Admin Quản Lý Suất Chiếu (Showtimes)', () => {
       fireEvent.change(screen.getByLabelText(/Kết thúc chiếu/i), { target: { value: '2026-11-15T11:00' } });
 
       const submitBtn = screen.getByRole('button', { name: 'Tạo suất chiếu' });
+      await waitFor(() => expect(submitBtn).toBeEnabled());
       fireEvent.click(submitBtn);
 
       await waitFor(() => {

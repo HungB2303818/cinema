@@ -16,7 +16,7 @@ import {
   useUpdateShowtime,
   type ShowtimeCreatedResponse,
 } from '@/features/showtimes';
-import { useAdminCinemas, useAdminRooms } from '@/features/cinemas';
+import { useAdminCinemas, useAdminRooms, useAdminSeats } from '@/features/cinemas';
 import { useAdminMovies } from '@/features/movies';
 import {
   Button,
@@ -83,6 +83,16 @@ export const AdminShowtimeFormPage: React.FC = () => {
   // Mutations
   const createMutation = useCreateShowtime();
   const updateMutation = useUpdateShowtime(numericShowtimeId);
+
+  const needsSeatCheck = !isEdit || (existingShowtime && roomId !== existingShowtime.roomId);
+  const {
+    data: roomSeats,
+    isFetching: isCheckingSeats,
+    isError: isSeatsError,
+    refetch: refetchSeats,
+  } = useAdminSeats(needsSeatCheck && typeof roomId === 'number' ? roomId : undefined);
+  const hasNoActiveSeats = Boolean(needsSeatCheck && roomSeats && !roomSeats.some((seat) => seat.status === 'ACTIVE'));
+  const isSeatCheckBlocked = Boolean(needsSeatCheck && roomId && (isCheckingSeats || isSeatsError || !roomSeats || hasNoActiveSeats));
 
   // Populate data when editing
   const hasInitializedRef = useRef(false);
@@ -153,6 +163,10 @@ export const AdminShowtimeFormPage: React.FC = () => {
     }
     if (!cinemaId || !roomId) {
       setFormError('Vui lòng chọn cụm rạp và phòng chiếu.');
+      return;
+    }
+    if (isSeatCheckBlocked) {
+      setFormError('Phòng phải có ghế ACTIVE trước khi tạo suất chiếu. Vui lòng kiểm tra cấu hình ghế.');
       return;
     }
     if (!startsAt || !endsAt) {
@@ -483,6 +497,25 @@ export const AdminShowtimeFormPage: React.FC = () => {
               <p className="text-[11px] text-zinc-500 mt-1">Chỉ hiển thị các phòng ACTIVE.</p>
             </div>
           </div>
+          {needsSeatCheck && roomId && (
+            <div>
+              {isCheckingSeats ? (
+                <p className="text-xs text-zinc-400">Đang kiểm tra ghế của phòng chiếu...</p>
+              ) : isSeatsError ? (
+                <AlertMessage variant="error">
+                  Không thể kiểm tra ghế của phòng chiếu.{' '}
+                  <button type="button" onClick={() => refetchSeats()} className="underline">Thử lại</button>
+                </AlertMessage>
+              ) : hasNoActiveSeats ? (
+                <AlertMessage variant="warning">
+                  Phòng chiếu chưa có ghế ACTIVE nên chưa thể tạo suất chiếu. Vui lòng thêm ghế hoặc chuyển ghế đang bảo trì sang ACTIVE trước.{' '}
+                  <Link to={`/admin/rooms/${roomId}/seats`} className="font-semibold underline">Cấu hình ghế phòng chiếu</Link>
+                </AlertMessage>
+              ) : roomSeats ? (
+                <p className="text-xs text-emerald-400">Phòng có {roomSeats.filter((seat) => seat.status === 'ACTIVE').length} ghế ACTIVE để khởi tạo tồn kho suất chiếu.</p>
+              ) : null}
+            </div>
+          )}
         </div>
 
         {/* Section 3: Time and Cleanup */}
@@ -623,7 +656,7 @@ export const AdminShowtimeFormPage: React.FC = () => {
               Hủy
             </Button>
           </Link>
-          <Button type="submit" variant="primary" disabled={isSubmitting}>
+          <Button type="submit" variant="primary" disabled={isSubmitting || isSeatCheckBlocked}>
             {isSubmitting ? 'Đang xử lý...' : isEdit ? 'Cập nhật suất chiếu' : 'Tạo suất chiếu'}
           </Button>
         </div>

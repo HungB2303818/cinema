@@ -386,12 +386,12 @@ export const SeatSelectionPage: React.FC = () => {
       <div className="py-16 max-w-xl mx-auto px-4 text-center space-y-6">
         <ErrorState
           title="Mã suất chiếu không hợp lệ"
-          message="Vui lòng kiểm tra lại đường dẫn hoặc chọn suất chiếu từ trang lịch chiếu."
+          message="Vui lòng kiểm tra lại đường dẫn hoặc chọn suất chiếu trong trang chi tiết phim."
         />
-        <Link to="/showtimes">
+        <Link to="/movies">
           <Button variant="secondary" size="md">
             <ArrowLeft className="w-4 h-4 mr-2" />
-            <span>Quay lại lịch chiếu</span>
+            <span>Chọn phim khác</span>
           </Button>
         </Link>
       </div>
@@ -421,10 +421,10 @@ export const SeatSelectionPage: React.FC = () => {
           onRetry={() => refetch()}
         />
         <div className="flex justify-center">
-          <Link to="/showtimes">
+          <Link to="/movies">
             <Button variant="secondary" size="md">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              <span>Quay lại lịch chiếu</span>
+              <span>Chọn phim khác</span>
             </Button>
           </Link>
         </div>
@@ -440,9 +440,9 @@ export const SeatSelectionPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#20232e] pb-6">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-xs font-bold text-[#e6e2c1] uppercase tracking-wider">
-            <Link to="/showtimes" className="hover:underline flex items-center gap-1">
+            <Link to="/movies" className="hover:underline flex items-center gap-1">
               <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Lịch chiếu</span>
+              <span>Phim</span>
             </Link>
             <span>/</span>
             <span>Chọn ghế</span>
@@ -497,7 +497,7 @@ export const SeatSelectionPage: React.FC = () => {
             <p className="font-bold">Đã quá thời gian đặt vé cho suất chiếu này</p>
             <p className="text-amber-300/80 leading-relaxed">
               Theo quy định, hệ thống đóng chức năng giữ chỗ và đặt vé 10 phút trước giờ chiếu.
-              Vui lòng quay lại lịch chiếu để chọn một suất chiếu khác.
+              Vui lòng vào chi tiết phim để chọn một suất chiếu khác.
             </p>
           </div>
         </div>

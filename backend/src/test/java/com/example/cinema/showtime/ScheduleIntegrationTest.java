@@ -236,6 +236,35 @@ class ScheduleIntegrationTest {
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
     }
 
+    @Test void cinemaSchedulePaginatesUniqueMoviesWithStableOrderForMatchingTitles() throws Exception {
+        Instant dayStart = Instant.parse("2026-11-09T17:00:00Z");
+        movie.setTitle("Same title " + UUID.randomUUID());
+        movies.flush();
+        var first = service.create(request(dayStart));
+        service.create(request(dayStart.plusSeconds(7200)));
+        Movie secondMovie = movies.saveAndFlush(Movie.builder().title(movie.getTitle())
+                .durationMinutes(60).status(MovieStatus.SHOWING).build());
+        service.create(new ShowtimeRequest(secondMovie.getId(), room.getId(), dayStart.plusSeconds(14400),
+                dayStart.plusSeconds(18000), 15, new BigDecimal("80000"), BigDecimal.ZERO));
+        Long cinemaId = room.getCinema().getId();
+        em.clear();
+
+        // The first page has two showtimes, but only one movie; force the count query with size=1.
+        mvc.perform(get("/api/cinemas/{id}/showtimes", cinemaId)
+                        .param("date", "2026-11-10").param("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.totalPages").value(2))
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].movie.id").value(first.showtime().movieId()))
+                .andExpect(jsonPath("$.content[0].showtimes.length()").value(2));
+        mvc.perform(get("/api/cinemas/{id}/showtimes", cinemaId)
+                        .param("date", "2026-11-10").param("size", "1").param("page", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.content[0].movie.id").value(secondMovie.getId()));
+    }
+
     @Test void seatMapUsesDatabaseTimeAndDoesNotModifyExpiredHoldOrLeakOwner() throws Exception {
         var created = service.create(request(start));
         Booking booking = booking(created.showtime().id(), BookingStatus.PENDING);

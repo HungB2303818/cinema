@@ -48,9 +48,9 @@ export const SeatSelectionPlaceholderPage: React.FC = () => {
           <ArrowLeft className="w-4 h-4 mr-2" />
           <span>Quay lại trang trước</span>
         </Button>
-        <Link to="/showtimes" className="w-full sm:w-auto">
+        <Link to="/movies" className="w-full sm:w-auto">
           <Button variant="primary" size="md" className="w-full sm:w-auto">
-            Xem lịch chiếu khác
+            Chọn phim khác
           </Button>
         </Link>
       </div>

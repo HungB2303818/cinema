@@ -50,17 +50,19 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
     Page<Showtime> findPublicSchedule(@Param("movieId") Long movieId, @Param("start") Instant start,
             @Param("end") Instant end, @Param("cinemaId") Long cinemaId, Pageable pageable);
 
-    @Query(value = "select distinct s.movie from Showtime s " +
-            "where s.room.cinema.id = :cinemaId and s.status = 'SCHEDULED' " +
+    // Select the movie root once via EXISTS. DISTINCT on s.movie lets Hibernate order by
+    // the showtime FK instead of the selected movie PK, which MySQL rejects.
+    @Query(value = "select m from Movie m where m.status <> 'HIDDEN' and exists (" +
+            "select s.id from Showtime s where s.movie = m " +
+            "and s.room.cinema.id = :cinemaId and s.status = 'SCHEDULED' " +
             "and s.startsAt >= :start and s.startsAt < :end " +
             "and s.room.status = 'ACTIVE' and s.room.cinema.status = 'ACTIVE' " +
-            "and s.movie.status <> 'HIDDEN' " +
-            "order by s.movie.title asc, s.movie.id asc",
-           countQuery = "select count(distinct s.movie.id) from Showtime s " +
-            "where s.room.cinema.id = :cinemaId and s.status = 'SCHEDULED' " +
+            ") order by m.title asc, m.id asc",
+           countQuery = "select count(m.id) from Movie m where m.status <> 'HIDDEN' and exists (" +
+            "select s.id from Showtime s where s.movie = m " +
+            "and s.room.cinema.id = :cinemaId and s.status = 'SCHEDULED' " +
             "and s.startsAt >= :start and s.startsAt < :end " +
-            "and s.room.status = 'ACTIVE' and s.room.cinema.status = 'ACTIVE' " +
-            "and s.movie.status <> 'HIDDEN'")
+            "and s.room.status = 'ACTIVE' and s.room.cinema.status = 'ACTIVE')")
     Page<Movie> findDistinctMoviesForCinemaSchedule(@Param("cinemaId") Long cinemaId,
             @Param("start") Instant start, @Param("end") Instant end, Pageable pageable);
 

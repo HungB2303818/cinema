@@ -75,3 +75,14 @@ cd backend
 - **Admin:** `admin@cinema.com` / `Password@123`
 - **Staff:** `staff@cinema.com` / `Password@123`
 - **Customer:** `customer1@cinema.com` / `Password@123`
+
+### Không tạo được suất chiếu do phòng chưa có ghế
+
+Theo UC-02 (FR-04/FR-05, BR-04), phòng phải có ít nhất một ghế `ACTIVE` để hệ thống khởi tạo tồn kho suất chiếu. Vào **Quản lý phòng → Cấu hình ghế**, thêm sơ đồ ghế đúng thực tế rồi quay lại tạo suất. Phòng `ACTIVE` không đồng nghĩa đã có ghế; các phòng được nhập thêm có thể chưa được cấu hình ghế.
+
+Form tạo suất kiểm tra và cảnh báo ngay khi chọn phòng, kèm liên kết đến `/admin/rooms/{roomId}/seats`. Nếu tải ghế lỗi, dùng **Thử lại**. Backend vẫn kiểm tra lại dưới khóa phòng khi lưu; không thay đổi API/schema nên không cần migration.
+
+### Giao diện danh sách phim và lịch chiếu
+
+- Trang chủ chỉ có hai mục **Đang chiếu** và **Sắp chiếu**; không còn ô tìm phim, lọc thể loại, mục Đã kết thúc hoặc Tất cả phim. Các tham số `keyword`/`genre` trong liên kết cũ không còn lọc ngầm; `status=ENDED`/`ALL` hiển thị Đang chiếu. Các công cụ quản trị không thay đổi.
+- Không hiển thị trang lịch chiếu riêng hoặc liên kết đến trang này trên header desktop/mobile, footer và danh mục rạp. URL cũ `/showtimes` chuyển về `/movies`. Khách chọn suất ngay trong chi tiết phim rồi đến `/showtimes/{showtimeId}/seats`; các liên kết quay lại từ luồng đặt vé dẫn đến danh sách phim. Quản lý suất chiếu admin và API vẫn giữ nguyên; không thay schema và không cần migration.

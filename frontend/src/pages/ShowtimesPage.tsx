@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Calendar, Film, Building2, ArrowLeft, AlertCircle, MapPin } from 'lucide-react';
+import { Film, Building2, ArrowLeft, AlertCircle, MapPin } from 'lucide-react';
 import { useMovies, useMovieDetail } from '@/features/movies';
 import {
   useMovieShowtimes,
@@ -8,6 +8,7 @@ import {
   useCurrentTime,
   ShowtimeCard,
   CinemaMovieGroup,
+  ShowtimeDateStrip,
 } from '@/features/showtimes';
 import { useCinemas } from '@/features/cinemas';
 import {
@@ -240,31 +241,16 @@ export const ShowtimesPage: React.FC = () => {
         )}
       </div>
 
+      {(isCinemaMode || movieId) && (
+        <ShowtimeDateStrip selectedDate={selectedDate} onSelect={handleDateChange} today={todayVietnam} />
+      )}
+
       {/* BRANCH 1: CINEMA MODE (cinemaId present, no movieId) */}
       {isCinemaMode ? (
         <section className="space-y-6">
           {/* Controls Bar: Date Picker & Cinema Switcher */}
           <div className="p-4 sm:p-5 rounded-2xl bg-[#13151d] border border-[#242733] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex flex-wrap items-center gap-3">
-              {/* Date Input in Vietnam Timezone */}
-              <div className="flex items-center gap-2 bg-[#090a0f] border border-[#242733] rounded-full px-4 py-2">
-                <Calendar className="w-4 h-4 text-[#e6e2c1]" />
-                <label htmlFor="cinema-schedule-date" className="sr-only">
-                  Chọn ngày chiếu
-                </label>
-                <input
-                  id="cinema-schedule-date"
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => {
-                    if (e.target.value) {
-                      handleDateChange(e.target.value);
-                    }
-                  }}
-                  className="bg-transparent text-zinc-200 text-xs sm:text-sm focus:outline-none cursor-pointer"
-                />
-              </div>
-
               {/* Cinema Switcher */}
               <div className="flex items-center gap-2 bg-[#090a0f] border border-[#242733] rounded-full px-4 py-2">
                 <Building2 className="w-4 h-4 text-[#e6e2c1]" />
@@ -360,25 +346,6 @@ export const ShowtimesPage: React.FC = () => {
           {/* Controls Bar: Date Picker & Cinema Selector */}
           <div className="p-4 sm:p-5 rounded-2xl bg-[#13151d] border border-[#242733] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex flex-wrap items-center gap-3">
-              {/* Date Input in Vietnam Timezone */}
-              <div className="flex items-center gap-2 bg-[#090a0f] border border-[#242733] rounded-full px-4 py-2">
-                <Calendar className="w-4 h-4 text-[#e6e2c1]" />
-                <label htmlFor="showtime-date" className="sr-only">
-                  Chọn ngày chiếu
-                </label>
-                <input
-                  id="showtime-date"
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => {
-                    if (e.target.value) {
-                      handleDateChange(e.target.value);
-                    }
-                  }}
-                  className="bg-transparent text-zinc-200 text-xs sm:text-sm focus:outline-none cursor-pointer"
-                />
-              </div>
-
               {/* Cinema Selector */}
               <div className="flex items-center gap-2 bg-[#090a0f] border border-[#242733] rounded-full px-4 py-2">
                 <Building2 className="w-4 h-4 text-[#e6e2c1]" />

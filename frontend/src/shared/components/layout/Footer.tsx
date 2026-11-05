@@ -41,11 +41,6 @@ export const Footer: React.FC = () => {
                   Hệ thống cụm rạp CGV
                 </Link>
               </li>
-              <li>
-                <Link to="/showtimes" className="hover:text-[#e6e2c1] transition-colors">
-                  Lịch chiếu phim hôm nay
-                </Link>
-              </li>
             </ul>
           </div>
 

@@ -17,9 +17,9 @@ describe('SeatSelectionPlaceholderPage (FE-04 Connection Point)', () => {
     expect(screen.getByText(/Suất chiếu #105/i)).toBeInTheDocument();
     expect(screen.getAllByText(/FE-04/i).length).toBeGreaterThan(0);
     expect(screen.getByText('Quay lại trang trước')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Xem lịch chiếu khác/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /Chọn phim khác/i })).toHaveAttribute(
       'href',
-      '/showtimes'
+      '/movies'
     );
   });
 });

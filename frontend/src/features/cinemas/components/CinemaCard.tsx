@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, Film, Info, Building2, ImageOff } from 'lucide-react';
+import { MapPin, Info, Building2, ImageOff } from 'lucide-react';
 import type { Cinema } from '../types/cinema.types';
 import { getCinemaImage } from '../utils/cinema-image';
-import { getVietnamDateString } from '@/shared/utils/format';
 
 interface CinemaCardProps {
   cinema: Cinema;
@@ -15,14 +14,12 @@ export const CinemaCard: React.FC<CinemaCardProps> = ({ cinema, onSelectCinema }
   const [imageError, setImageError] = useState(false);
 
   const showImage = imageInfo.imageUrl && !imageError;
-  const showtimesUrl = `/showtimes?cinemaId=${cinema.id}&date=${getVietnamDateString()}`;
 
   return (
     <article className="group flex flex-col justify-between overflow-hidden rounded-2xl bg-[#13151d] border border-[#242733] shadow-xl shadow-black/40 hover:border-[#e6e2c1]/60 hover:shadow-black/60 transition-all duration-300">
-      {/* Cinema Image Frame: 16:9 aspect ratio - Clickable */}
-      <Link
-        to={showtimesUrl}
-        className="relative aspect-video w-full overflow-hidden bg-[#090a0f] border-b border-[#20232e] flex items-center justify-center cursor-pointer"
+      {/* Cinema Image Frame: 16:9 aspect ratio */}
+      <div
+        className="relative aspect-video w-full overflow-hidden bg-[#090a0f] border-b border-[#20232e] flex items-center justify-center"
         aria-label={`Hình ảnh rạp ${cinema.name}`}
       >
         {showImage ? (
@@ -65,7 +62,7 @@ export const CinemaCard: React.FC<CinemaCardProps> = ({ cinema, onSelectCinema }
         >
           {cinema.status === 'ACTIVE' ? 'Đang hoạt động' : 'Tạm dừng'}
         </span>
-      </Link>
+      </div>
 
       {/* Cinema Information */}
       <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
@@ -75,14 +72,14 @@ export const CinemaCard: React.FC<CinemaCardProps> = ({ cinema, onSelectCinema }
             <span>Cụm rạp</span>
           </div>
 
-          <Link to={showtimesUrl} className="block group/title">
+          <div className="block">
             <h3
               className="text-lg font-bold text-white group-hover/title:text-[#e6e2c1] transition-colors line-clamp-1"
               title={cinema.name}
             >
               {cinema.name}
             </h3>
-          </Link>
+          </div>
 
           <p className="flex items-start gap-1.5 text-xs text-zinc-400 line-clamp-2 min-h-[32px]">
             <MapPin className="w-3.5 h-3.5 text-[#e6e2c1] shrink-0 mt-0.5" />
@@ -103,13 +100,13 @@ export const CinemaCard: React.FC<CinemaCardProps> = ({ cinema, onSelectCinema }
             </button>
           )}
 
-          <Link
-            to={showtimesUrl}
+          {!onSelectCinema && <Link
+            to="/cinemas"
             className="flex-1 px-3.5 py-2 text-xs font-bold rounded-full bg-[#e6e2c1] hover:bg-[#dad6b2] text-black transition-all flex items-center justify-center gap-1.5 shadow-md active:scale-[0.98] border-none text-center"
           >
-            <Film className="w-3.5 h-3.5" />
-            <span>Lịch chiếu</span>
-          </Link>
+            <Info className="w-3.5 h-3.5" />
+            <span>Thông tin rạp</span>
+          </Link>}
         </footer>
       </div>
     </article>

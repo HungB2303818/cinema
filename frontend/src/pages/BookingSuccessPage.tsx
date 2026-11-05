@@ -90,10 +90,10 @@ export const BookingSuccessPage: React.FC = () => {
           title="Mã đơn đặt vé không hợp lệ"
           message="Đường dẫn không hợp lệ hoặc thiếu mã đơn đặt vé."
         />
-        <Link to="/showtimes">
+        <Link to="/movies">
           <Button variant="secondary" size="md">
             <ArrowLeft className="w-4 h-4 mr-2" />
-            <span>Quay lại lịch chiếu</span>
+            <span>Chọn phim khác</span>
           </Button>
         </Link>
       </div>
@@ -123,10 +123,10 @@ export const BookingSuccessPage: React.FC = () => {
           onRetry={() => refetchBooking()}
         />
         <div className="flex justify-center">
-          <Link to="/showtimes">
+          <Link to="/movies">
             <Button variant="secondary" size="md">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              <span>Quay lại lịch chiếu</span>
+              <span>Chọn phim khác</span>
             </Button>
           </Link>
         </div>
@@ -153,9 +153,9 @@ export const BookingSuccessPage: React.FC = () => {
                 <span>Tiếp tục thanh toán</span>
               </Button>
             </Link>
-            <Link to="/showtimes" className="w-full sm:w-auto">
+            <Link to="/movies" className="w-full sm:w-auto">
               <Button variant="secondary" size="md" className="w-full">
-                <span>Lịch chiếu</span>
+                <span>Chọn phim khác</span>
               </Button>
             </Link>
           </div>
@@ -181,7 +181,7 @@ export const BookingSuccessPage: React.FC = () => {
             Hệ thống không phát hành vé cho các đơn đã hết hạn hoặc bị hủy.
           </p>
           <div className="pt-2">
-            <Link to="/showtimes">
+            <Link to="/movies">
               <Button variant="primary" size="md">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 <span>Chọn suất chiếu mới</span>
@@ -360,7 +360,7 @@ export const BookingSuccessPage: React.FC = () => {
 
       {/* Navigation Actions */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
-        <Link to="/showtimes" className="w-full sm:w-auto">
+        <Link to="/movies" className="w-full sm:w-auto">
           <Button variant="secondary" size="md" className="w-full">
             <ArrowLeft className="w-4 h-4 mr-2" />
             <span>Tiếp tục xem phim</span>
