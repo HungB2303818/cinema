@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { MapPin, Film, Info, Building2, ImageOff } from 'lucide-react';
 import type { Cinema } from '../types/cinema.types';
 import { getCinemaImage } from '../utils/cinema-image';
+import { getVietnamDateString } from '@/shared/utils/format';
 
 interface CinemaCardProps {
   cinema: Cinema;
@@ -14,11 +15,16 @@ export const CinemaCard: React.FC<CinemaCardProps> = ({ cinema, onSelectCinema }
   const [imageError, setImageError] = useState(false);
 
   const showImage = imageInfo.imageUrl && !imageError;
+  const showtimesUrl = `/showtimes?cinemaId=${cinema.id}&date=${getVietnamDateString()}`;
 
   return (
     <article className="group flex flex-col justify-between overflow-hidden rounded-2xl bg-[#13151d] border border-[#242733] shadow-xl shadow-black/40 hover:border-[#e6e2c1]/60 hover:shadow-black/60 transition-all duration-300">
-      {/* Cinema Image Frame: 16:9 aspect ratio */}
-      <div className="relative aspect-video w-full overflow-hidden bg-[#090a0f] border-b border-[#20232e] flex items-center justify-center">
+      {/* Cinema Image Frame: 16:9 aspect ratio - Clickable */}
+      <Link
+        to={showtimesUrl}
+        className="relative aspect-video w-full overflow-hidden bg-[#090a0f] border-b border-[#20232e] flex items-center justify-center cursor-pointer"
+        aria-label={`Hình ảnh rạp ${cinema.name}`}
+      >
         {showImage ? (
           <>
             <img
@@ -33,7 +39,7 @@ export const CinemaCard: React.FC<CinemaCardProps> = ({ cinema, onSelectCinema }
 
             {/* Illustrative image badge if applicable */}
             {imageInfo.isIllustrative && (
-              <span className="absolute bottom-2.5 left-2.5 z-10 text-[10px] font-medium px-2 py-0.5 rounded-full bg-black/75 text-zinc-300 backdrop-blur border border-zinc-700/60 shadow-sm">
+              <span className="absolute bottom-2.5 left-2.5 z-10 text-[10px] font-medium px-2 py-0.5 rounded-full bg-black/75 text-zinc-300 backdrop-blur border border-zinc-700/60 shadow-sm pointer-events-none">
                 Ảnh minh họa
               </span>
             )}
@@ -51,7 +57,7 @@ export const CinemaCard: React.FC<CinemaCardProps> = ({ cinema, onSelectCinema }
 
         {/* Operating status badge */}
         <span
-          className={`absolute top-2.5 right-2.5 z-10 px-2.5 py-0.5 text-[11px] font-bold rounded-full shadow-md border-none ${
+          className={`absolute top-2.5 right-2.5 z-10 px-2.5 py-0.5 text-[11px] font-bold rounded-full shadow-md border-none pointer-events-none ${
             cinema.status === 'ACTIVE'
               ? 'bg-emerald-500/90 text-white backdrop-blur'
               : 'bg-zinc-800/90 text-zinc-300 backdrop-blur'
@@ -59,7 +65,7 @@ export const CinemaCard: React.FC<CinemaCardProps> = ({ cinema, onSelectCinema }
         >
           {cinema.status === 'ACTIVE' ? 'Đang hoạt động' : 'Tạm dừng'}
         </span>
-      </div>
+      </Link>
 
       {/* Cinema Information */}
       <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
@@ -69,12 +75,14 @@ export const CinemaCard: React.FC<CinemaCardProps> = ({ cinema, onSelectCinema }
             <span>Cụm rạp</span>
           </div>
 
-          <h3
-            className="text-lg font-bold text-white group-hover:text-[#e6e2c1] transition-colors line-clamp-1"
-            title={cinema.name}
-          >
-            {cinema.name}
-          </h3>
+          <Link to={showtimesUrl} className="block group/title">
+            <h3
+              className="text-lg font-bold text-white group-hover/title:text-[#e6e2c1] transition-colors line-clamp-1"
+              title={cinema.name}
+            >
+              {cinema.name}
+            </h3>
+          </Link>
 
           <p className="flex items-start gap-1.5 text-xs text-zinc-400 line-clamp-2 min-h-[32px]">
             <MapPin className="w-3.5 h-3.5 text-[#e6e2c1] shrink-0 mt-0.5" />
@@ -96,7 +104,7 @@ export const CinemaCard: React.FC<CinemaCardProps> = ({ cinema, onSelectCinema }
           )}
 
           <Link
-            to={`/showtimes?cinemaId=${cinema.id}`}
+            to={showtimesUrl}
             className="flex-1 px-3.5 py-2 text-xs font-bold rounded-full bg-[#e6e2c1] hover:bg-[#dad6b2] text-black transition-all flex items-center justify-center gap-1.5 shadow-md active:scale-[0.98] border-none text-center"
           >
             <Film className="w-3.5 h-3.5" />

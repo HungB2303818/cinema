@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { showtimesApi } from '../api/showtimes.api';
 import { useMovieShowtimes } from './useMovieShowtimes';
+import type { CinemaShowtimesQueryParams } from '../types/showtime.types';
 
 export { useMovieShowtimes };
 
@@ -22,6 +23,15 @@ export function useShowtimes(params?: {
         }
       : null
   );
+}
+
+export function useCinemaShowtimes(params: CinemaShowtimesQueryParams | null) {
+  return useQuery({
+    queryKey: ['cinema-showtimes', params?.cinemaId, params?.date, params?.page, params?.size],
+    queryFn: () => showtimesApi.getCinemaShowtimes(params!),
+    enabled: Boolean(params && params.cinemaId && params.date),
+    staleTime: 30_000,
+  });
 }
 
 export function useShowtimeSeats(

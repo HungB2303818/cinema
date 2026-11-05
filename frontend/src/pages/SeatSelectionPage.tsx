@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useLocation, Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import {
   ArrowLeft,
   Clock,
@@ -10,6 +9,8 @@ import {
   Building2,
   CheckCircle2,
   Film,
+  AlertCircle,
+  RefreshCw,
 } from 'lucide-react';
 import { useShowtimeSeats, useCurrentTime } from '@/features/showtimes';
 import type { SeatItem } from '@/features/showtimes';
@@ -17,14 +18,25 @@ import {
   SeatMap,
   SeatLegend,
   BookingSummary,
+  saveBookingIntent,
+  getSavedBookingIntent,
+  updateBookingIntentWithId,
+  isMatchingIntent,
+  bookingsApi,
 } from '@/features/bookings';
+import type { BookingIntent } from '@/features/bookings';
+import { useAuth } from '@/features/auth';
+import { ApiErrorResponse } from '@/shared/api/http-client';
 import { LoadingSpinner, ErrorState, EmptyState, Button } from '@/shared/components/ui';
-import { formatVietnamDateTime } from '@/shared/utils';
+import { formatVietnamDateTime, formatCurrency } from '@/shared/utils';
+import { useQueryClient } from '@tanstack/react-query';
 
 export const SeatSelectionPage: React.FC = () => {
   const { showtimeId: rawShowtimeId } = useParams<{ showtimeId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
+  const { user, isAuthenticated } = useAuth();
 
   // Validate showtimeId
   const isValidId = Boolean(rawShowtimeId && /^\d+$/.test(rawShowtimeId) && parseInt(rawShowtimeId, 10) > 0);
@@ -41,8 +53,21 @@ export const SeatSelectionPage: React.FC = () => {
   const [selectedSeatIds, setSelectedSeatIds] = useState<number[]>([]);
   const [removedAlert, setRemovedAlert] = useState<string | null>(null);
   const [maxWarning, setMaxWarning] = useState<string | null>(null);
-  const [showBoundaryModal, setShowBoundaryModal] = useState(false);
   const [prevShowtimeId, setPrevShowtimeId] = useState(showtimeId);
+
+  // FE-05 Booking Hold States
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeIntent, setActiveIntent] = useState<BookingIntent | null>(null);
+  const [bookingError, setBookingError] = useState<{
+    title: string;
+    message: string;
+    code?: string;
+    canRetryIntent?: boolean;
+  } | null>(null);
+
+  // Synchronous double-click guard
+  const isSubmittingRef = useRef(false);
 
   // Reset selections when showtimeId changes (React 19 pattern)
   if (showtimeId !== prevShowtimeId) {
@@ -50,7 +75,9 @@ export const SeatSelectionPage: React.FC = () => {
     setSelectedSeatIds([]);
     setRemovedAlert(null);
     setMaxWarning(null);
-    setShowBoundaryModal(false);
+    setShowConfirmModal(false);
+    setBookingError(null);
+    setActiveIntent(null);
   }
 
   // Live timer for cutoff check
@@ -83,6 +110,8 @@ export const SeatSelectionPage: React.FC = () => {
   // Check if seats currently selected were held or booked by someone else during polling
   useEffect(() => {
     if (!seatMap?.seats) return;
+    // If submitting or in active intent waiting for retry, do not let polling mutate the payload
+    if (isSubmittingRef.current) return;
 
     const seatMapById = new Map<number, SeatItem>(
       seatMap.seats.map((s) => [s.seatId, s])
@@ -118,7 +147,10 @@ export const SeatSelectionPage: React.FC = () => {
 
   // Toggle seat selection
   const handleToggleSeat = (seat: SeatItem) => {
+    if (isSubmitting) return;
     setMaxWarning(null);
+    setBookingError(null);
+
     if (selectedSeatIds.includes(seat.seatId)) {
       setSelectedSeatIds((prev) => prev.filter((id) => id !== seat.seatId));
     } else {
@@ -131,7 +163,9 @@ export const SeatSelectionPage: React.FC = () => {
   };
 
   const handleRemoveSeat = (seatId: number) => {
+    if (isSubmitting) return;
     setMaxWarning(null);
+    setBookingError(null);
     setSelectedSeatIds((prev) => prev.filter((id) => id !== seatId));
   };
 
@@ -145,6 +179,206 @@ export const SeatSelectionPage: React.FC = () => {
       .map((id) => map.get(id))
       .filter((s): s is SeatItem => Boolean(s));
   }, [allSeats, selectedSeatIds]);
+
+  const estimatedTotal = useMemo(() => {
+    return selectedSeats.reduce((sum, s) => sum + s.price, 0);
+  }, [selectedSeats]);
+
+  // Step 1: User clicks "Đặt vé" / "Tiếp tục" in BookingSummary
+  const handleInitiateBooking = () => {
+    setBookingError(null);
+
+    // 1. Guest check -> redirect to login with safe internal redirect path
+    if (!isAuthenticated || !user) {
+      navigate('/login', {
+        state: { from: location },
+      });
+      return;
+    }
+
+    // 2. Staff/Admin check -> only CUSTOMER can book
+    if (user.role !== 'CUSTOMER') {
+      setBookingError({
+        title: 'Không thể tạo đơn đặt vé',
+        message:
+          'Tài khoản của bạn có vai trò ' +
+          user.role +
+          '. Chỉ tài khoản Khách hàng (CUSTOMER) mới có quyền tạo đơn đặt vé.',
+        code: 'ACCESS_DENIED',
+      });
+      return;
+    }
+
+    // 3. Selection count check
+    if (selectedSeatIds.length < 1 || selectedSeatIds.length > 8) {
+      setMaxWarning('Vui lòng chọn từ 1 đến 8 ghế.');
+      return;
+    }
+
+    // 4. Cutoff check
+    if (isCutoff) {
+      setBookingError({
+        title: 'Đã quá thời gian đặt vé',
+        message: 'Đã quá thời hạn giữ chỗ cho suất chiếu (10 phút trước giờ chiếu).',
+        code: 'BOOKING_CUTOFF_PASSED',
+      });
+      return;
+    }
+
+    // Open confirmation modal
+    setShowConfirmModal(true);
+  };
+
+  // Step 2: Customer confirms hold -> executes POST /api/bookings
+  const handleConfirmHold = async (customIntent?: BookingIntent) => {
+    // Synchronous double-click guard
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
+    setBookingError(null);
+
+    try {
+      if (!user || !showtimeId) {
+        throw new Error('Thiếu thông tin người dùng hoặc suất chiếu.');
+      }
+
+      let intentToUse: BookingIntent;
+
+      if (customIntent) {
+        intentToUse = customIntent;
+      } else {
+        // Normalize seatIds: unique and sorted ascending
+        const sortedSeatIds = Array.from(new Set(selectedSeatIds)).sort((a, b) => a - b);
+
+        // Check if there is an existing intent in sessionStorage
+        const savedIntent = getSavedBookingIntent(user.id);
+        let clientRequestId: string;
+
+        if (savedIntent && isMatchingIntent(savedIntent, showtimeId, sortedSeatIds)) {
+          // Same intent: reuse clientRequestId
+          clientRequestId = savedIntent.clientRequestId;
+        } else {
+          // New intent: generate fresh UUID
+          clientRequestId = crypto.randomUUID();
+        }
+
+        intentToUse = {
+          version: 1,
+          userId: user.id,
+          showtimeId,
+          seatIds: sortedSeatIds,
+          clientRequestId,
+          createdAt: new Date().toISOString(),
+        };
+
+        // Save intent to sessionStorage BEFORE sending POST
+        saveBookingIntent(intentToUse);
+      }
+
+      setActiveIntent(intentToUse);
+
+      // POST /api/bookings
+      const response = await bookingsApi.create({
+        showtimeId: intentToUse.showtimeId,
+        seatIds: intentToUse.seatIds,
+        clientRequestId: intentToUse.clientRequestId,
+      });
+
+      // Update intent with created bookingId
+      updateBookingIntentWithId(user.id, intentToUse.clientRequestId, response.bookingId);
+
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({
+        queryKey: ['showtime-seats', showtimeId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['bookings', user.id],
+      });
+
+      // Navigate to checkout
+      navigate(`/bookings/${response.bookingId}/checkout`, {
+        state: { fromBookingCreation: true },
+      });
+    } catch (err: unknown) {
+      if (err instanceof ApiErrorResponse) {
+        const status = err.status;
+        const code = err.code;
+
+        if (code === 'SEAT_UNAVAILABLE' || (status === 409 && code === 'SEAT_UNAVAILABLE')) {
+          // All-or-nothing: refetch seat map and prompt to select again
+          refetch();
+          setBookingError({
+            title: 'Ghế không còn khả dụng',
+            message:
+              'Một hoặc nhiều ghế bạn chọn đã bị người khác giữ chỗ hoặc đặt mua. Hệ thống không giữ một phần ghế, vui lòng chọn lại.',
+            code: 'SEAT_UNAVAILABLE',
+            canRetryIntent: false,
+          });
+        } else if (code === 'BOOKING_CUTOFF_PASSED' || status === 422 && code === 'BOOKING_CUTOFF_PASSED') {
+          setBookingError({
+            title: 'Đã quá hạn giữ chỗ',
+            message:
+              err.message ||
+              'Suất chiếu đã bước vào khoảng thời gian đóng đặt vé (10 phút trước giờ bắt đầu).',
+            code: 'BOOKING_CUTOFF_PASSED',
+            canRetryIntent: false,
+          });
+        } else if (code === 'BOOKING_EXPIRED') {
+          setBookingError({
+            title: 'Đơn đã hết hạn',
+            message: err.message || 'Thời gian giữ ghế đã kết thúc.',
+            code: 'BOOKING_EXPIRED',
+            canRetryIntent: false,
+          });
+        } else if (code === 'IDEMPOTENCY_CONFLICT') {
+          setBookingError({
+            title: 'Xung đột yêu cầu',
+            message:
+              err.message ||
+              'Yêu cầu đặt vé bị xung đột idempotency. Vui lòng đóng cửa sổ và thử lại.',
+            code: 'IDEMPOTENCY_CONFLICT',
+            canRetryIntent: false,
+          });
+        } else if (code === 'BOOKING_CONCURRENT_CONFLICT') {
+          setBookingError({
+            title: 'Hệ thống đang bận',
+            message:
+              err.message ||
+              'Hệ thống đang xử lý nhiều lượt đặt vé đồng thời. Bạn có thể bấm Thử lại.',
+            code: 'BOOKING_CONCURRENT_CONFLICT',
+            canRetryIntent: true,
+          });
+        } else if (code === 'NETWORK_ERROR' || !status || status >= 500) {
+          // Indeterminate result: timeout / 5xx / connection loss
+          setBookingError({
+            title: 'Chưa xác định kết quả',
+            message:
+              'Yêu cầu đặt vé gặp sự cố kết nối hoặc phản hồi chậm từ máy chủ. Máy chủ có thể đã ghi nhận đơn. Vui lòng bấm "Thử lại đối soát" để kiểm tra kết quả mà không tạo thêm đơn mới.',
+            code: 'INDETERMINATE',
+            canRetryIntent: true,
+          });
+        } else {
+          setBookingError({
+            title: 'Không thể tạo đơn đặt vé',
+            message: err.message || 'Đã có lỗi xảy ra từ máy chủ.',
+            code,
+            canRetryIntent: false,
+          });
+        }
+      } else {
+        setBookingError({
+          title: 'Chưa xác định kết quả',
+          message:
+            'Gặp sự cố kết nối tới máy chủ. Vui lòng bấm "Thử lại đối soát" để gửi lại cùng mã yêu cầu.',
+          code: 'INDETERMINATE',
+          canRetryIntent: true,
+        });
+      }
+    } finally {
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
+    }
+  };
 
   // 1. Invalid showtimeId in URL
   if (!isValidId) {
@@ -167,36 +401,30 @@ export const SeatSelectionPage: React.FC = () => {
   // 2. Loading state
   if (isLoading) {
     return (
-      <div className="py-24 flex flex-col items-center justify-center space-y-4">
+      <div className="py-20">
         <LoadingSpinner message="Đang tải sơ đồ ghế suất chiếu..." />
       </div>
     );
   }
 
-  // 3. Error state (404 vs Network)
-  if (isError) {
-    const isNotFound =
-      axios.isAxiosError(error) && error.response?.status === 404;
-
+  // 3. Error state
+  if (isError || !seatMap) {
     return (
-      <div className="py-16 max-w-xl mx-auto px-4 text-center space-y-6">
+      <div className="py-16 max-w-xl mx-auto px-4 space-y-6">
         <ErrorState
-          title={isNotFound ? 'Suất chiếu không tồn tại' : 'Lỗi tải sơ đồ ghế'}
+          title="Không thể tải sơ đồ ghế"
           message={
-            isNotFound
-              ? 'Suất chiếu này không tồn tại hoặc đã bị hủy khỏi hệ thống.'
-              : 'Không thể kết nối đến máy chủ để tải sơ đồ ghế. Vui lòng kiểm tra kết nối mạng và thử lại.'
+            error instanceof Error
+              ? error.message
+              : 'Đã có lỗi xảy ra khi tải dữ liệu ghế từ máy chủ.'
           }
-          onRetry={isNotFound ? undefined : () => refetch()}
+          onRetry={() => refetch()}
         />
-        <div className="flex justify-center gap-3">
-          <Button variant="secondary" size="md" onClick={() => navigate(-1)}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            <span>Quay lại</span>
-          </Button>
+        <div className="flex justify-center">
           <Link to="/showtimes">
-            <Button variant="primary" size="md">
-              Xem lịch chiếu khác
+            <Button variant="secondary" size="md">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              <span>Quay lại lịch chiếu</span>
             </Button>
           </Link>
         </div>
@@ -204,84 +432,104 @@ export const SeatSelectionPage: React.FC = () => {
     );
   }
 
-  const seats = seatMap?.seats || [];
+  const seats = seatMap.seats || [];
 
   return (
     <div className="space-y-8 pb-16">
-      {/* Top Breadcrumb & Showtime Info Header */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="inline-flex items-center gap-2 text-xs font-semibold text-zinc-400 hover:text-white transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Quay lại</span>
-          </button>
-
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#13151d] border border-[#242733] text-xs text-zinc-300">
-            <Clock className="w-3.5 h-3.5 text-[#e6e2c1]" />
-            <span>Mã suất #{showtimeId}</span>
+      {/* Top Navigation & Breadcrumb */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#20232e] pb-6">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-xs font-bold text-[#e6e2c1] uppercase tracking-wider">
+            <Link to="/showtimes" className="hover:underline flex items-center gap-1">
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Lịch chiếu</span>
+            </Link>
+            <span>/</span>
+            <span>Chọn ghế</span>
           </div>
-        </div>
 
-        {/* Showtime Context Banner */}
-        <div className="rounded-2xl bg-gradient-to-r from-[#13151d] via-[#161924] to-[#10121a] border border-[#242733] p-5 sm:p-6 shadow-xl">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#e6e2c1]">
-                <Film className="w-4 h-4" />
-                <span>Chọn ghế xem phim</span>
-              </div>
-              <h1 className="text-xl sm:text-2xl font-black text-white">
-                {routerState?.movieTitle || 'Sơ đồ ghế xem phim'}
-              </h1>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-400 pt-1">
-                {routerState?.cinemaName && (
-                  <span className="flex items-center gap-1">
-                    <Building2 className="w-3.5 h-3.5 text-zinc-500" />
-                    <span>{routerState.cinemaName}</span>
-                    {routerState.roomName ? ` (${routerState.roomName})` : ''}
-                  </span>
-                )}
-                {startsAt && (
-                  <span className="flex items-center gap-1 text-[#e6e2c1] font-medium">
-                    <Calendar className="w-3.5 h-3.5" />
-                    <span>{formatVietnamDateTime(startsAt)}</span>
-                  </span>
-                )}
-              </div>
-            </div>
+          <h1 className="text-2xl sm:text-3xl font-black text-white">
+            {routerState?.movieTitle || 'Chọn Ghế Xem Phim'}
+          </h1>
 
-            {/* Live Cutoff Status Badge */}
-            <div>
-              {isCutoff ? (
-                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-rose-950/60 border border-rose-800 text-rose-300 text-xs font-bold">
-                  <AlertTriangle className="w-4 h-4 text-rose-400" />
-                  <span>Đã ngừng nhận đặt vé</span>
-                </div>
-              ) : (
-                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-950/40 border border-emerald-800/60 text-emerald-300 text-xs font-medium">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>Đang nhận đặt vé trực tuyến</span>
-                </div>
-              )}
-            </div>
+          <div className="flex flex-wrap items-center gap-4 text-xs text-zinc-400 pt-1">
+            {showtimeId && (
+              <span className="px-2 py-0.5 rounded-full bg-[#181a24] border border-[#242733] text-zinc-300 font-semibold text-xs">
+                Mã suất #{showtimeId}
+              </span>
+            )}
+            {isCutoff ? (
+              <span className="px-2 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-300 font-semibold text-xs">
+                Đã ngừng nhận đặt vé
+              </span>
+            ) : (
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 font-semibold text-xs">
+                Đang nhận đặt vé trực tuyến
+              </span>
+            )}
+            {routerState?.cinemaName && (
+              <span className="flex items-center gap-1.5">
+                <Building2 className="w-3.5 h-3.5 text-[#e6e2c1]" />
+                <strong>{routerState.cinemaName}</strong>
+              </span>
+            )}
+            {routerState?.roomName && (
+              <span className="flex items-center gap-1.5">
+                <Film className="w-3.5 h-3.5 text-zinc-500" />
+                <span>{routerState.roomName}</span>
+              </span>
+            )}
+            {startsAt && (
+              <span className="flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-zinc-500" />
+                <span>{formatVietnamDateTime(startsAt)}</span>
+              </span>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Floating Warnings / Alerts */}
+      {/* Cutoff Warning Banner */}
+      {isCutoff && (
+        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-3 text-amber-200">
+          <Clock className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+          <div className="text-xs sm:text-sm space-y-1">
+            <p className="font-bold">Đã quá thời gian đặt vé cho suất chiếu này</p>
+            <p className="text-amber-300/80 leading-relaxed">
+              Theo quy định, hệ thống đóng chức năng giữ chỗ và đặt vé 10 phút trước giờ chiếu.
+              Vui lòng quay lại lịch chiếu để chọn một suất chiếu khác.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Auto-deselection alert */}
       {removedAlert && (
-        <div className="p-4 rounded-2xl bg-amber-950/50 border border-amber-800/80 text-amber-200 text-xs sm:text-sm flex items-start justify-between gap-3 shadow-lg">
+        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-start justify-between gap-3 text-rose-200">
           <div className="flex items-start gap-2.5">
-            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
-            <span>{removedAlert}</span>
+            <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+            <p className="text-xs sm:text-sm">{removedAlert}</p>
           </div>
           <button
             type="button"
             onClick={() => setRemovedAlert(null)}
+            className="text-xs text-rose-300 hover:text-white shrink-0 cursor-pointer border-none bg-transparent"
+          >
+            Đóng
+          </button>
+        </div>
+      )}
+
+      {/* Maximum seat warning */}
+      {maxWarning && (
+        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-amber-200 text-xs sm:text-sm">
+          <div className="flex items-center gap-2">
+            <Info className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>{maxWarning}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setMaxWarning(null)}
             className="text-amber-400 hover:text-amber-200"
           >
             Đóng
@@ -289,19 +537,49 @@ export const SeatSelectionPage: React.FC = () => {
         </div>
       )}
 
-      {maxWarning && (
-        <div className="p-4 rounded-2xl bg-rose-950/50 border border-rose-800/80 text-rose-200 text-xs sm:text-sm flex items-start justify-between gap-3 shadow-lg">
-          <div className="flex items-start gap-2.5">
-            <Info className="w-4 h-4 shrink-0 mt-0.5 text-rose-400" />
-            <span>{maxWarning}</span>
+      {/* Booking Error Banner */}
+      {bookingError && (
+        <div
+          className={`p-4 sm:p-5 rounded-2xl border flex flex-col sm:flex-row items-start justify-between gap-4 ${
+            bookingError.code === 'INDETERMINATE'
+              ? 'bg-amber-500/10 border-amber-500/40 text-amber-200'
+              : 'bg-rose-500/10 border-rose-500/40 text-rose-200'
+          }`}
+          role="alert"
+        >
+          <div className="flex items-start gap-3">
+            <AlertCircle
+              className={`w-5 h-5 shrink-0 mt-0.5 ${
+                bookingError.code === 'INDETERMINATE' ? 'text-amber-400' : 'text-rose-400'
+              }`}
+            />
+            <div className="space-y-1">
+              <h3 className="font-bold text-sm text-white">{bookingError.title}</h3>
+              <p className="text-xs leading-relaxed text-zinc-300">{bookingError.message}</p>
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setMaxWarning(null)}
-            className="text-rose-400 hover:text-rose-200"
-          >
-            Đóng
-          </button>
+
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+            {bookingError.canRetryIntent && activeIntent && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => handleConfirmHold(activeIntent)}
+                disabled={isSubmitting}
+                className="flex items-center gap-1.5"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isSubmitting ? 'animate-spin' : ''}`} />
+                <span>Thử lại đối soát</span>
+              </Button>
+            )}
+            <button
+              type="button"
+              onClick={() => setBookingError(null)}
+              className="text-xs text-zinc-400 hover:text-white px-2 py-1 cursor-pointer border-none bg-transparent"
+            >
+              Đóng
+            </button>
+          </div>
         </div>
       )}
 
@@ -321,7 +599,7 @@ export const SeatSelectionPage: React.FC = () => {
               seats={seats}
               selectedSeatIds={selectedSeatIds}
               onToggleSeat={handleToggleSeat}
-              isCutoff={isCutoff}
+              isCutoff={isCutoff || isSubmitting}
             />
           )}
         </div>
@@ -336,56 +614,76 @@ export const SeatSelectionPage: React.FC = () => {
             cinemaName={routerState?.cinemaName}
             roomName={routerState?.roomName}
             isCutoff={isCutoff}
-            onContinue={() => setShowBoundaryModal(true)}
+            onContinue={handleInitiateBooking}
           />
         </div>
       </div>
 
-      {/* FE-05 Boundary Modal */}
-      {showBoundaryModal && (
+      {/* FE-05 Hold Confirmation Modal */}
+      {showConfirmModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
           role="dialog"
           aria-modal="true"
         >
-          <div className="bg-[#13151d] border border-[#242733] rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-5">
+          <div className="bg-[#13151d] border border-[#242733] rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-6">
             <div className="w-12 h-12 rounded-full bg-[#e6e2c1]/10 text-[#e6e2c1] flex items-center justify-center mx-auto">
               <CheckCircle2 className="w-6 h-6" />
             </div>
 
             <div className="text-center space-y-2">
-              <h3 className="text-lg font-bold text-white">
-                Đã chọn ghế thành công (FE-04)
-              </h3>
+              <h3 className="text-lg font-bold text-white">Xác nhận giữ ghế</h3>
               <p className="text-xs text-zinc-400 leading-relaxed">
-                Bạn đã chọn {selectedSeats.length} ghế:{' '}
-                <strong className="text-[#e6e2c1]">
-                  {selectedSeats.map((s) => s.label).join(', ')}
-                </strong>
-                .
+                Bạn đang tiến hành giữ chỗ cho{' '}
+                <strong className="text-white">{selectedSeats.length} ghế</strong>:
               </p>
+              <div className="flex flex-wrap justify-center gap-1.5 py-1">
+                {selectedSeats.map((s) => (
+                  <span
+                    key={s.seatId}
+                    className="px-2.5 py-1 rounded-lg bg-[#181a24] text-[#e6e2c1] font-bold text-xs border border-[#242733]"
+                  >
+                    {s.label} ({s.seatType})
+                  </span>
+                ))}
+              </div>
             </div>
 
+            {/* Hold notice */}
             <div className="p-4 rounded-2xl bg-[#090a0f] border border-[#20232e] text-xs text-zinc-300 space-y-2">
               <div className="flex items-center gap-1.5 font-semibold text-[#e6e2c1]">
-                <Info className="w-4 h-4" />
-                <span>Ranh giới tính năng:</span>
+                <Clock className="w-4 h-4" />
+                <span>Thời hạn giữ chỗ: 5 phút</span>
               </div>
               <p className="text-zinc-400 leading-relaxed">
-                Chức năng tạo đơn đặt vé, giữ chỗ và thanh toán thuộc phạm vi tính năng{' '}
-                <strong className="text-zinc-200">FE-05</strong> và đang được phát triển.
-                Hệ thống chưa tạo đơn hay trừ tiền.
+                Sau khi bấm xác nhận, hệ thống sẽ thực hiện giữ ghế trong vòng{' '}
+                <strong className="text-zinc-200">5 phút</strong> để bạn tiến hành thanh toán.
+                Sau 5 phút nếu chưa hoàn tất, ghế sẽ tự động được giải phóng cho người khác.
               </p>
+              <div className="pt-2 border-t border-[#20232e] flex items-center justify-between font-bold text-sm text-white">
+                <span>Tạm tính:</span>
+                <span className="text-[#e6e2c1]">{formatCurrency(estimatedTotal)}</span>
+              </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-2">
+            <div className="flex items-center gap-3 pt-2">
               <Button
                 variant="secondary"
                 size="md"
-                onClick={() => setShowBoundaryModal(false)}
-                className="w-full"
+                onClick={() => setShowConfirmModal(false)}
+                disabled={isSubmitting}
+                className="flex-1"
               >
-                Đóng
+                Hủy
+              </Button>
+              <Button
+                variant="primary"
+                size="md"
+                onClick={() => handleConfirmHold()}
+                disabled={isSubmitting}
+                className="flex-1"
+              >
+                {isSubmitting ? 'Đang giữ ghế...' : 'Xác nhận giữ ghế'}
               </Button>
             </div>
           </div>

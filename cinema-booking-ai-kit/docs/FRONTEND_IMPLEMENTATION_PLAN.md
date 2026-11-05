@@ -2,6 +2,7 @@
 
 > Ngày lập: 04/11/2026. Kế hoạch dựa trên source hiện tại, không phải checklist cho dự án bắt đầu từ số 0.
 > Phạm vi thay đổi ở bước lập kế hoạch: chỉ tài liệu, chưa triển khai feature hoặc chạy kiểm thử.
+> Cập nhật thiết kế 05/11/2026: thêm nhánh lịch theo rạp hiển thị ngay phim + poster + giờ chiếu và chi tiết FE-05. Các mục hiện trạng ở phần 2 là snapshot lúc lập kế hoạch, không thay thế source hiện tại; phần bổ sung chưa được đánh dấu hoàn thành.
 
 ## 1. Mục tiêu và nguyên tắc sắp thứ tự
 
@@ -25,7 +26,7 @@ Chuẩn hóa tích hợp + UI dùng chung
 - Kiểm thử đi cùng từng feature; giai đoạn cuối dành cho hồi quy, không phải lúc bắt đầu viết test.
 - Dùng dữ liệu seed để hoàn thiện luồng khách hàng trước; không bắt buộc xây xong admin mới làm được booking.
 - Backend quyết định tồn kho ghế, giá chính thức, quyền, hạn giữ và kết quả thanh toán. Frontend chỉ hỗ trợ UX.
-- Mọi task bên dưới đều chưa được đánh dấu hoàn thành; có file/component không đồng nghĩa feature đã nghiệm thu.
+- Checklist có thể được cập nhật theo từng lần triển khai; có file/component hoặc một thiết kế mới không đồng nghĩa feature đã nghiệm thu.
 
 ## 2. Hiện trạng cần tính đến
 
@@ -119,12 +120,24 @@ P0 = luồng đặt vé cốt lõi; P1 = hoàn chỉnh nghiệp vụ MVP; P2 = n
 - [x] Hoàn thiện chi tiết phim: poster fallback, dữ liệu tùy chọn, trạng thái ENDED/UPCOMING/SHOWING đúng nghĩa, 404 phim ẩn/không tồn tại.
 - [x] Tích hợp rạp public hiện có; dữ liệu fallback nếu giữ phải gắn nhãn demo, không cho dùng ID fallback để đặt vé thật.
 - [x] Chọn phim + ngày Việt Nam + rạp tùy chọn, gọi `GET /movies/{id}/showtimes`; đọc page envelope thay vì giả định mảng.
-- [x] Trang `/showtimes` chưa chọn phim hiển thị bộ chọn phim, không gọi endpoint lịch tổng chưa có.
+- [x] Nhánh theo phim: `/showtimes` chưa có cả phim lẫn rạp hiển thị bộ chọn, không gọi endpoint lịch tổng chưa có. Nhánh rạp mới được đặc tả riêng bên dưới, chưa coi là hoàn thành.
 - [x] Có ngày mặc định theo `Asia/Ho_Chi_Minh`, không dùng `toISOString().split('T')[0]` làm ngày Việt Nam.
 - [x] Nút chọn suất đi tới `/showtimes/:showtimeId/seats`; vô hiệu hóa tạo hold mới khi đã đến cutoff.
 - [x] Phân biệt loading/error/empty lịch chiếu; không biến lỗi API thành thông báo “không có suất”.
 
 **Nghiệm thu:** Guest đi từ danh sách phim đến đúng suất; bộ lọc hoạt động khi refresh/back; ngày và giờ Việt Nam không lệch tại ranh giới UTC.
+
+#### FE-03 bổ sung — Rạp → phim kèm giờ chiếu (thiết kế 05/11/2026)
+
+**Đối chiếu:** FR-02/15, UC-01, BR-01/04/08, TC-26/37/46…49; kiến trúc frontend mục 8.1; API contract mục 1.4. Phần này mở rộng yêu cầu sau FE-03 hiện hữu, không phủ nhận kết quả nhánh theo phim đã làm.
+
+- [x] Ảnh/tên rạp và nút lịch trên danh mục dẫn tới `/showtimes?cinemaId=:id&date=YYYY-MM-DD`, không mang movieId/page cũ. Giữ ảnh rạp; thông tin rạp/modal là hành động riêng.
+- [x] Bổ sung backend `GET /api/cinemas/{id}/showtimes` trả page nhóm phim theo contract; chưa có trong controller khi thiết kế. Không cần migration vì chỉ đọc dữ liệu hiện có; thêm DTO/service/repository/controller và tests.
+- [x] Khi có rạp mà chưa có phim, hiện ngay tên phim + tuổi, poster trái, các nút giờ phải như ảnh tham chiếu; không bắt chọn phim trước. Không fetch toàn danh sách phim rồi gọi lịch từng phim; không group một trang suất thành “toàn bộ lịch”.
+- [x] Phân trang theo nhóm phim, đủ các suất trong nhóm; chọn giờ đi thẳng màn chọn ghế. Cùng giờ khác phòng vẫn là các suất riêng. Giữ nhánh theo phim cũ và URL ngày Việt Nam; phân biệt loading/error/empty/404 rạp.
+- [x] Không hardcode 2D/3D/ngôn ngữ/phụ đề chưa có trong schema; chỉ dùng bố cục của ảnh, giữ theme hiện tại. Cập nhật cutoff theo thời gian và hỗ trợ mobile/bàn phím.
+
+**Nghiệm thu bổ sung:** Guest chọn rạp rồi thấy giờ của các phim trong cùng trang, chọn trực tiếp một giờ để tới đúng showtimeId; rạp/ngày/page giữ qua refresh/Back; endpoint mới có tests nhưng không coi là đã có chỉ vì được ghi tài liệu.
 
 ### FE-04 — Chọn ghế theo suất
 
@@ -145,15 +158,20 @@ P0 = luồng đặt vé cốt lõi; P1 = hoàn chỉnh nghiệp vụ MVP; P2 = n
 
 **Đối chiếu:** FR-06/07/10/14; UC-03/06; BR-06…12/15; TC-01/03/04/05/07/17/19/20.
 
-- [ ] Tạo mutation POST `/bookings`; gửi duy nhất `showtimeId`, tập `seatIds` vật lý và `clientRequestId`.
-- [ ] Sinh key mới cho intent mới; giữ nguyên key và payload khi retry timeout/click lặp cùng intent. Thay phim/suất/tập ghế là intent mới.
-- [ ] Lưu intent đủ để khôi phục sau refresh trong phiên, có scope tài khoản; không lưu JWT/mã vé vào URL hoặc log.
-- [ ] Disable nút khi submit; thành công nhận `bookingId`, giá server và `expiresAt`, chuyển `/bookings/:bookingId/checkout`.
-- [ ] Tải lại trực tiếp checkout bằng GET booking; không phụ thuộc dữ liệu truyền qua router state hoặc tạo booking tự động khi mount.
-- [ ] Đếm ngược từ `expiresAt`, không khởi động lại 5 phút sau refresh. Timer chỉ là UX; GET/effectiveStatus và kiểm tra của backend quyết định trạng thái thật.
-- [ ] Hết giờ: chặn thao tác mới, refetch booking/seat map; không cần đợi scheduler đổi persisted status.
-- [ ] `SEAT_UNAVAILABLE`: refresh ghế, báo xung đột; all-or-nothing, không tự coi ghế còn lại đã được giữ.
-- [ ] Xử lý riêng cutoff, expired, idempotency conflict và concurrent conflict; replay có thể trả booking terminal, không mặc định luôn là PENDING.
+- [x] Tạo mutation POST `/bookings`; gửi duy nhất `showtimeId`, tập `seatIds` vật lý và `clientRequestId`.
+- [x] Sinh key mới cho intent mới; giữ nguyên key và payload khi retry timeout/click lặp cùng intent. Thay phim/suất/tập ghế là intent mới.
+- [x] Lưu intent đủ để khôi phục sau refresh trong phiên, có scope tài khoản; không lưu JWT/mã vé vào URL hoặc log.
+- [x] Disable nút khi submit; thành công nhận `bookingId`, giá server và `expiresAt`, chuyển `/bookings/:bookingId/checkout`.
+- [x] Tải lại trực tiếp checkout bằng GET booking; không phụ thuộc dữ liệu truyền qua router state hoặc tạo booking tự động khi mount.
+- [x] Đếm ngược từ `expiresAt`, không khởi động lại 5 phút sau refresh. Timer chỉ là UX; GET/effectiveStatus và kiểm tra của backend quyết định trạng thái thật.
+- [x] Hết giờ: chặn thao tác mới, refetch booking/seat map; không cần đợi scheduler đổi persisted status.
+- [x] `SEAT_UNAVAILABLE`: refresh ghế, báo xung đột; all-or-nothing, không tự coi ghế còn lại đã được giữ.
+- [x] Xử lý riêng cutoff, expired, idempotency conflict và concurrent conflict; replay có thể trả booking terminal, không mặc định luôn là PENDING.
+- [x] Intent đóng băng khi đang gửi/chưa rõ kết quả; lưu trước POST, retry có chủ đích cùng key/payload, không để polling đổi tập ghế của request cũ. Không tự POST khi mount/refresh.
+- [x] Checkout dùng detail DTO (`bookingId`, `label`, `unitPrice`, `effectiveStatus`), poll/refetch khi focus khi còn PENDING; callback phiên cũ không được ghi cache/điều hướng sau đổi tài khoản.
+- [x] Phân biệt cutoff tạo hold với expiresAt hold đã tạo; không áp cutoff để cắt ngắn hạn checkout. Không tự hủy khi rời trang hoặc tự giải phóng ghế; payment/vé để FE-06, hủy để FE-07.
+
+**Thiết kế chi tiết:** `react-frontend-architecture.md` mục 8.2 và `04-WORKFLOWS.md` mục 8.1. Có thể triển khai FE-03 bổ sung và FE-05 thành hai phần độc lập; chỉ ghép nghiệm thu cuối luồng khi cả hai sẵn sàng.
 
 **Nghiệm thu:** Hai trình duyệt tranh ghế có thông báo đúng; double click/retry không tạo đơn đôi; refresh không gia hạn hold và không tạo đơn mới.
 
@@ -259,6 +277,7 @@ Các route mới là đề xuất triển khai, không mô tả tính năng đã
 | Route | Quyền |
 |---|---|
 | `/`, `/movies`, `/movies/:id`, `/cinemas`, `/showtimes` | Public |
+| `/showtimes?cinemaId=:id&date=YYYY-MM-DD&page=0` | Public; lịch rạp nhóm phim, không yêu cầu movieId (thiết kế bổ sung) |
 | `/showtimes/:showtimeId/seats` | Public xem ghế; CUSTOMER mới tạo booking |
 | `/login`, `/register` | Public |
 | `/bookings/:bookingId/checkout` | CUSTOMER owner |
@@ -280,6 +299,7 @@ Các route mới là đề xuất triển khai, không mô tả tính năng đã
 |---|---|---|
 | Register → login → reload → logout; role sai bị chặn | FE-02 | FR-03, TC-25/30/39 |
 | Tìm/lọc/phân trang phim, phim ẩn 404, lịch đúng ngày Việt Nam | FE-03 | TC-26/27/28/37 |
+| Chọn rạp thấy ngay poster/phim/giờ; đủ giờ mỗi nhóm, đúng phòng và cutoff; không bịa định dạng/phụ đề | FE-03 bổ sung | TC-46…49 |
 | Chọn 1–8 ghế, không chọn HELD/BOOKED, tổng giá tạm tính đúng | FE-04 | TC-02/20/38 |
 | Hai customer tranh một ghế, bên thua thấy conflict và refresh | FE-05 | TC-03/04 |
 | Double click, timeout rồi retry, refresh checkout dùng cùng intent | FE-05/06 | TC-08/17/22 |

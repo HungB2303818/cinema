@@ -6,7 +6,10 @@ Các sơ đồ Mermaid có thể xem trực tiếp trong GitHub Markdown. Đây 
 
 ```mermaid
 flowchart TD
-    A[Khách chọn phim và suất chiếu] --> B[GET sơ đồ ghế]
+    A0[Khách chọn phim] --> A[Chọn suất chiếu]
+    R[Khách chọn rạp và ngày] --> RG[Hiện từng phim: poster và các nút giờ chiếu]
+    RG --> A
+    A --> B[GET sơ đồ ghế]
     B --> C[Chọn 1 đến 8 ghế]
     C --> D[POST booking + clientRequestId]
     D --> E{Có đủ ghế và chưa quá cutoff?}
@@ -164,6 +167,15 @@ sequenceDiagram
 - Khi màn hình đếm ngược đến 0, frontend phải gọi lại API lấy trạng thái chính thức. Đồng hồ frontend không có quyền quyết định booking có thể xác nhận hay không.
 - UI cần phân biệt: ghế trống, đang giữ, đã bán; không hiển thị thông tin khách giữ ghế.
 - Đọc JSON thời gian ISO 8601 có `Z`/offset; chuyển giờ hiển thị sang `Asia/Ho_Chi_Minh`.
+
+### 8.1 Bổ sung thiết kế FE-05 — khôi phục và kết quả chưa xác định (05/11/2026)
+
+- Chỉ POST khi CUSTOMER chủ động xác nhận giữ ghế. Lưu intent theo tài khoản trước request: cùng key, showtimeId và tập seatIds đã chuẩn hóa; khóa payload khi request đang gửi hoặc chưa rõ kết quả. Không gửi userId/giá từ client.
+- Timeout/mất mạng/5xx có thể xảy ra sau commit: không khẳng định thất bại, không tự sinh key mới. Nếu biết bookingId thì GET để đối soát; nếu chưa biết, cho khách chủ động retry POST đúng key/payload để nhận replay, kể cả đã tới cutoff hoặc seat map chuyển HELD; không suy HELD là của mình. Mount/refresh không tự POST.
+- Thành công hoặc replay nhận bookingId rồi GET chi tiết tại `/bookings/:bookingId/checkout`; replay terminal không được xem như giữ ghế mới. Thay đổi tập ghế/suất là intent mới, không tái sử dụng key cũ với payload khác.
+- Đếm ngược từ expiresAt tuyệt đối, không trừ dần từ 300 giây trong state; refetch khi focus và khi đến 0. Tại 0, khóa thao tác và đối soát effectiveStatus; không tự ghi EXPIRED vào server hoặc chờ scheduler mới chặn. CONFIRMED/terminal từ server được ưu tiên, lỗi mạng không phải bằng chứng đã hết hạn.
+- Cutoff áp dụng tạo hold mới, không rút ngắn expiresAt của hold đã được server cấp; điều kiện thanh toán riêng thuộc FE-06.
+- Logout/đổi tài khoản phải xóa intent và cache riêng, chặn callback request cũ điều hướng hoặc khôi phục dữ liệu sang phiên người dùng mới. Rời trang/đóng tab không tự hủy hoặc giải phóng ghế.
 
 ## 9. Chi tiết triển khai TASK-09..12
 

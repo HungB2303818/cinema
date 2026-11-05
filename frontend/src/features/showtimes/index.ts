@@ -4,3 +4,4 @@ export * from './hooks/useMovieShowtimes';
 export * from './hooks/useShowtimes';
 export * from './hooks/useCurrentTime';
 export * from './components/ShowtimeCard';
+export * from './components/CinemaMovieGroup';

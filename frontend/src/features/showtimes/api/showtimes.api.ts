@@ -1,6 +1,12 @@
 import { httpClient } from '@/shared/api/http-client';
 import type { PageResponse } from '@/shared/types/api.types';
-import type { Showtime, ShowtimeQueryParams, SeatMapResponse } from '../types/showtime.types';
+import type {
+  Showtime,
+  ShowtimeQueryParams,
+  SeatMapResponse,
+  CinemaMovieShowtimeGroup,
+  CinemaShowtimesQueryParams,
+} from '../types/showtime.types';
 
 export const showtimesApi = {
   /**
@@ -17,6 +23,24 @@ export const showtimesApi = {
 
     const res = await httpClient.get<PageResponse<Showtime>>(
       `/movies/${params.movieId}/showtimes?${query.toString()}`
+    );
+    return res.data;
+  },
+
+  /**
+   * GET /api/cinemas/{id}/showtimes?date=...&page=...&size=...
+   * Note: date is required by backend, groups by movie.
+   */
+  getCinemaShowtimes: async (
+    params: CinemaShowtimesQueryParams
+  ): Promise<PageResponse<CinemaMovieShowtimeGroup>> => {
+    const query = new URLSearchParams();
+    query.append('date', params.date);
+    if (params.page !== undefined) query.append('page', params.page.toString());
+    if (params.size !== undefined) query.append('size', params.size.toString());
+
+    const res = await httpClient.get<PageResponse<CinemaMovieShowtimeGroup>>(
+      `/cinemas/${params.cinemaId}/showtimes?${query.toString()}`
     );
     return res.data;
   },

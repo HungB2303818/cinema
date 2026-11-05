@@ -6,6 +6,7 @@ import { SeatSelectionPage } from '@/pages/SeatSelectionPage';
 import { showtimesApi } from '@/features/showtimes/api/showtimes.api';
 import type { SeatMapResponse } from '@/features/showtimes';
 import * as authModule from '@/features/auth';
+import { bookingsApi } from '@/features/bookings';
 import { renderWithProviders } from './test-utils';
 
 vi.mock('@/features/showtimes/api/showtimes.api', () => ({
@@ -231,7 +232,7 @@ describe('SeatSelectionPage (FE-04)', () => {
     expect(continueBtn).toBeDisabled();
   });
 
-  it('shows FE-05 boundary modal when logged-in CUSTOMER clicks continue', async () => {
+  it('shows FE-05 hold confirmation modal and creates booking when confirmed', async () => {
     vi.spyOn(authModule, 'useAuth').mockReturnValue({
       user: { id: 3, fullName: 'Customer One', email: 'cust@example.com', role: 'CUSTOMER', status: 'ACTIVE' },
       token: 'fake-token',
@@ -240,6 +241,16 @@ describe('SeatSelectionPage (FE-04)', () => {
       login: vi.fn(),
       logout: vi.fn(),
       hasRole: (r) => r === 'CUSTOMER',
+    });
+
+    const createBookingSpy = vi.spyOn(bookingsApi, 'create').mockResolvedValue({
+      bookingId: 999,
+      bookingCode: 'BK000999',
+      showtimeId: 101,
+      status: 'PENDING',
+      seatIds: [1],
+      totalAmount: 90000,
+      expiresAt: new Date(Date.now() + 300000).toISOString(),
     });
 
     const user = userEvent.setup();
@@ -258,10 +269,21 @@ describe('SeatSelectionPage (FE-04)', () => {
 
     await user.click(continueBtn);
 
-    // FE-05 boundary confirmation dialog should appear
-    expect(screen.getByText('Đã chọn ghế thành công (FE-04)')).toBeInTheDocument();
-    expect(screen.getByText(/Ranh giới tính năng:/i)).toBeInTheDocument();
-    expect(screen.getByText(/Chức năng tạo đơn đặt vé/i)).toBeInTheDocument();
+    // FE-05 Hold confirmation dialog should appear
+    expect(screen.getByRole('heading', { name: 'Xác nhận giữ ghế' })).toBeInTheDocument();
+    expect(screen.getByText(/Thời hạn giữ chỗ: 5 phút/i)).toBeInTheDocument();
+
+    // Confirm hold
+    const confirmBtn = screen.getByRole('button', { name: 'Xác nhận giữ ghế' });
+    await user.click(confirmBtn);
+
+    expect(createBookingSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        showtimeId: 101,
+        seatIds: [1],
+        clientRequestId: expect.any(String),
+      })
+    );
   });
 
   it('disables booking and seats when showtime is past cutoff time', async () => {

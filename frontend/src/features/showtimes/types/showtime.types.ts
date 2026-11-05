@@ -24,6 +24,26 @@ export interface ShowtimeQueryParams {
   sort?: string;
 }
 
+export interface MovieSummary {
+  id: number;
+  title: string;
+  posterUrl: string | null;
+  ageRating: string | null;
+  durationMinutes: number;
+}
+
+export interface CinemaMovieShowtimeGroup {
+  movie: MovieSummary;
+  showtimes: Showtime[];
+}
+
+export interface CinemaShowtimesQueryParams {
+  cinemaId: number;
+  date: string; // YYYY-MM-DD in Asia/Ho_Chi_Minh
+  page?: number;
+  size?: number;
+}
+
 export type SeatType = 'STANDARD' | 'VIP';
 export type SeatState = 'AVAILABLE' | 'HELD' | 'BOOKED';
 

@@ -11,6 +11,7 @@
 | GET | `/api/movies` | Public | Lọc/phân trang phim | 01 |
 | GET | `/api/movies/{id}` | Public | Chi tiết phim | 01 |
 | GET | `/api/movies/{id}/showtimes?date=YYYY-MM-DD` | Public | Lịch chiếu của phim theo ngày local | 01 |
+| GET | `/api/cinemas/{id}/showtimes?date=YYYY-MM-DD` | Public | **Thiết kế bổ sung 05/11/2026, chưa triển khai:** lịch rạp theo ngày, nhóm/phân trang theo phim | 01 |
 | GET | `/api/showtimes/{id}/seats` | Public | Sơ đồ ghế, effective status | 01 |
 | POST | `/api/auth/register` | Public | Tạo CUSTOMER | — |
 | POST | `/api/auth/login` | Public | Đăng nhập và JWT | — |
@@ -132,6 +133,46 @@ Batch 1–1000 phần tử, không null, không trùng vị trí với nhau/DB. 
 - Phim không tồn tại/HIDDEN → 404. Không có suất phù hợp → page rỗng, kể cả bộ lọc cinemaId không tồn tại.
 - Page envelope giống mục 1.2; page/size có giới hạn như trên; sort whitelist `id/startsAt/basePrice`, mặc định `startsAt,asc`.
 - Phần tử Showtime response: `{id,movieId,cinemaId,cinemaName,roomId,roomName,startsAt,endsAt,cleanupMinutes,basePrice,vipSurcharge,status}`. Timestamp ISO UTC có Z, tiền BigDecimal.
+
+### 1.4 Lịch theo rạp, nhóm phim — thiết kế bổ sung 05/11/2026
+
+**Trạng thái:** Contract mới cho FR-02, UC-01, TC-46…49; chưa có endpoint tương ứng trong controller khi cập nhật tài liệu. Không đổi API lịch theo phim, không thay schema/migration: dữ liệu cần thiết đã có trong movies/showtimes/rooms/cinemas.
+
+`GET /api/cinemas/{id}/showtimes?date=2026-11-10&page=0&size=20`
+
+- Public, không yêu cầu movieId. ID rạp là số nguyên dương; date bắt buộc, ngày Việt Nam, năm 1000–9998. Thiếu/sai tham số → 400 VALIDATION_ERROR.
+- Rạp không tồn tại hoặc không ACTIVE → 404 RESOURCE_NOT_FOUND. Rạp hợp lệ nhưng ngày đó không có lịch → 200 page rỗng, không fallback sang rạp/phim demo.
+- Chỉ lấy suất SCHEDULED có startsAt trong khoảng ngày Việt Nam nửa mở như mục 1.3, phòng ACTIVE, phim không HIDDEN. Không giới hạn riêng phim SHOWING; không tự loại UPCOMING/ENDED nếu còn suất đáp ứng điều kiện public.
+- Phân trang **nhóm phim**, không phân trang các suất rồi nhóm ở frontend. page 0-based, size mặc định 20, từ 1–100. totalElements là số phim có lịch phù hợp; totalPages theo số nhóm. Mỗi nhóm có toàn bộ suất phù hợp của phim đó trong rạp/ngày, không cắt mất giờ chiếu qua các trang.
+- Thứ tự cố định: nhóm theo title tăng dần theo collation DB, rồi movieId; suất trong nhóm theo startsAt rồi id tăng dần. Phiên bản đầu không nhận sort tùy chỉnh (gửi sort → 400 VALIDATION_ERROR). Chỉ phân trang ID phim có lịch rồi tải metadata và các suất cho nhóm đã chọn; tránh N+1 và không gọi lịch riêng cho từng phim từ frontend. Tập dữ liệu/count trong một response đọc nhất quán.
+- Giữ các suất đã qua cutoff trong kết quả; UI disable nút theo startsAt - 10 phút, backend tiếp tục kiểm tra khi POST booking. Không trả inventory owner/booking/ticket code.
+- Không có dữ liệu định dạng 2D/3D, ngôn ngữ hoặc phụ đề trong schema hiện tại. Không thêm nhãn “2D Phụ Đề Anh” mặc định chỉ để giống ảnh; nếu cần dữ liệu thật phải có thay đổi contract/schema riêng.
+
+Response 200 dùng page envelope hiện có, ví dụ rút gọn một nhóm/một suất:
+
+```json
+{
+  "content": [{
+    "movie": {
+      "id": 10,
+      "title": "Phim mẫu",
+      "posterUrl": "https://example.test/poster.jpg",
+      "ageRating": "T18",
+      "durationMinutes": 120
+    },
+    "showtimes": [{
+      "id": 101, "movieId": 10, "cinemaId": 1, "cinemaName": "Rạp mẫu",
+      "roomId": 20, "roomName": "Phòng 01",
+      "startsAt": "2026-11-10T11:00:00Z", "endsAt": "2026-11-10T13:00:00Z",
+      "cleanupMinutes": 15, "basePrice": 75000.00, "vipSurcharge": 20000.00,
+      "status": "SCHEDULED"
+    }]
+  }],
+  "page": 0, "size": 20, "totalElements": 1, "totalPages": 1
+}
+```
+
+Movie summary gồm đúng các field trên; posterUrl/ageRating có thể null. showtimes tái sử dụng Showtime response mục 1.3, mỗi nút giờ gắn một showtimeId riêng; cùng giờ nhưng khác phòng không bị gộp mất. Header rạp dùng API chi tiết public hiện có, không giả định metadata rạp nằm ngoài page envelope này.
 
 ## 2. Standard Error Response
 

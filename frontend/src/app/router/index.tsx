@@ -7,6 +7,7 @@ import {
   CinemasPage,
   ShowtimesPage,
   SeatSelectionPage,
+  CheckoutPage,
   MyTicketsPage,
   LoginPage,
   RegisterPage,
@@ -27,6 +28,16 @@ export const AppRouter: React.FC = () => {
         <Route path="/cinemas" element={<CinemasPage />} />
         <Route path="/showtimes" element={<ShowtimesPage />} />
         <Route path="/showtimes/:showtimeId/seats" element={<SeatSelectionPage />} />
+
+        {/* Customer Protected Route - Recoverable Checkout (FE-05) */}
+        <Route
+          path="/bookings/:bookingId/checkout"
+          element={
+            <ProtectedRoute requiredRole="CUSTOMER">
+              <CheckoutPage />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Customer Protected Route */}
         <Route

@@ -207,6 +207,35 @@ class ScheduleIntegrationTest {
         assertCode(() -> service.schedule(movie.getId(), LocalDate.of(2026, 11, 10), null, 0, 20, "id,asc"), ErrorCode.RESOURCE_NOT_FOUND);
     }
 
+    @Test void publicCinemaScheduleUsesHalfOpenVietnamDayAndPaginatesByMovie() throws Exception {
+        Instant dayStart = Instant.parse("2026-11-09T17:00:00Z");
+        service.create(request(dayStart));
+        service.create(request(dayStart.plusSeconds(86400))); // Next day in VN time
+
+        // Second movie in same cinema, same room, different time
+        Movie movie2 = movies.saveAndFlush(Movie.builder().title("IT movie 2 " + UUID.randomUUID())
+                .durationMinutes(60).status(MovieStatus.SHOWING).build());
+        service.create(new ShowtimeRequest(movie2.getId(), room.getId(), dayStart.plusSeconds(7200),
+                dayStart.plusSeconds(10800), 15, new BigDecimal("80000"), BigDecimal.ZERO));
+
+        var page = service.cinemaSchedule(room.getCinema().getId(), LocalDate.of(2026, 11, 10), 0, 20);
+        assertThat(page.totalElements()).isEqualTo(2);
+        assertThat(page.content()).hasSize(2);
+
+        // Test through HTTP MVC endpoint
+        mvc.perform(get("/api/cinemas/{id}/showtimes", room.getCinema().getId()).param("date", "2026-11-10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.content[0].movie.id").exists())
+                .andExpect(jsonPath("$.content[0].showtimes[0].startsAt").value("2026-11-09T17:00:00Z"));
+
+        // Reject custom sort
+        mvc.perform(get("/api/cinemas/{id}/showtimes", room.getCinema().getId())
+                        .param("date", "2026-11-10").param("sort", "startsAt,asc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
     @Test void seatMapUsesDatabaseTimeAndDoesNotModifyExpiredHoldOrLeakOwner() throws Exception {
         var created = service.create(request(start));
         Booking booking = booking(created.showtime().id(), BookingStatus.PENDING);

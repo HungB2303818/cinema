@@ -361,6 +361,50 @@ Quy tắc:
 - Protected routes chỉ cải thiện UX; **Spring Security phải kiểm tra quyền ở API**.
 - Thiết kế đủ trạng thái: loading, empty, error, disabled, expired hold và seat conflict.
 
+### 8.1 Thiết kế lịch theo rạp — cập nhật 05/11/2026
+
+**Yêu cầu mới, chưa xác nhận triển khai:** chọn rạp phải thấy ngay lịch của từng phim theo bố cục ảnh người dùng cung cấp, không hiện bộ chọn phim bắt buộc trước giờ chiếu.
+
+**Điều hướng và dữ liệu:**
+
+- `/cinemas`: thẻ có ảnh đúng rạp. Ảnh/tên rạp và “Lịch chiếu” dẫn tới `/showtimes?cinemaId=:id&date=YYYY-MM-DD`; bỏ movieId/page cũ khi chọn rạp từ danh mục. Nút “Thông tin rạp” mở chi tiết/modal riêng, không biến cả thẻ thành link chứa button/link lồng nhau.
+- `/showtimes` có cinemaId nhưng không movieId: chế độ lịch theo rạp, gọi endpoint mới `GET /api/cinemas/{id}/showtimes` (contract mục 1.4). Không cần chọn phim, không fetch danh sách phim rồi fan-out một request lịch cho mỗi phim.
+- Có movieId: giữ chế độ lịch theo phim hiện hữu, cinemaId nếu có chỉ là bộ lọc; endpoint `/movies/{id}/showtimes` không thay đổi. Không có cả hai ID: hiển thị lựa chọn phim hoặc rạp, không gọi endpoint lịch tổng chưa tồn tại.
+- Ngày mặc định theo Asia/Ho_Chi_Minh; URL chứa ngày/trang để refresh/Back/Forward đúng. Đổi rạp/ngày reset page; cache key tách chế độ rạp/phim và chứa đủ ID, ngày, page, size. Không cho response cũ hiển thị như dữ liệu rạp/ngày mới.
+
+**Bố cục tham chiếu:**
+
+```text
+Tên rạp + địa chỉ/ảnh đại diện rạp (khi có)
+Chọn ngày                                  Phân trang nhóm phim
+
+TÊN PHIM A [T18]
+[ Poster phim ]   [18:00 · Phòng 1] [19:00 · Phòng 2] [20:20 · Phòng 1]
+
+TÊN PHIM B [T13]
+[ Poster phim ]   [17:30 · Phòng 3] [21:10 · Phòng 2]
+```
+
+- Mỗi nhóm là một phim có suất phù hợp: tên + nhãn tuổi phía trên, poster trái, dãy nút giờ bên phải tự xuống dòng. Mobile xếp lại gọn, không tràn trang; giữ theme của hệ thống, ảnh mẫu định hướng bố cục chứ không buộc đổi toàn bộ màu nền.
+- Poster là ảnh phim; ảnh header/card rạp là ảnh rạp, không tráo hai loại. Ảnh có alt, kích thước ổn định, fallback cục bộ không lặp onError; không lấy dữ liệu demo làm ID nghiệp vụ.
+- Không bắt buộc mở chi tiết phim/accordion mới thấy giờ. Có thể có link chi tiết phim phụ. Mỗi nút giờ đi thẳng `/showtimes/:showtimeId/seats`; phân biệt các suất trùng giờ bằng phòng trong nhãn hiển thị/accessible name.
+- Chỉ hiển thị “2D”, ngôn ngữ, phụ đề nếu có dữ liệu đã được đặc tả; hiện schema chưa có, bỏ dòng này thay vì hardcode “2D Phụ Đề Anh”.
+- Disable suất tới cutoff với mô tả rõ và cập nhật theo thời gian; không suy đoán “hết ghế” từ dữ liệu lịch không có tồn kho. Tách loading/error-retry/empty; phân trang theo phim với đầy đủ giờ trong từng nhóm.
+- Component gợi ý: `CinemaSchedule`, `MovieShowtimeGroup`, `ShowtimeButton`, hook `useCinemaShowtimes`; phối hợp tại page, không chuyển logic giao dịch vào shared.
+
+### 8.2 Thiết kế FE-05 — tạo booking và checkout giữ ghế
+
+- Thay thông báo “chưa triển khai FE-05” ở màn chọn ghế bằng xác nhận giữ 1–8 ghế cho CUSTOMER. Chỉ POST `/bookings` theo hành động người dùng, không theo mount/useEffect/refresh.
+- Tách DTO create/replay và detail đúng API contract mục 4/7.1 (`bookingId`, không phải `id`; detail seats có `label`, không yêu cầu seatRow/seatNumber). Backend quyết định giá snapshot, tổng và expiresAt.
+- Intent lưu sessionStorage có version và scope userId: showtimeId, tập seatIds sắp tăng dần không trùng, clientRequestId; có bookingId sau khi biết. Lưu trước POST, giữ nguyên payload/key khi retry. Không lưu JWT/mã vé trong intent, URL hoặc log; dữ liệu storage phải được kiểm tra lại, không phải bằng chứng ownership.
+- Khóa submit ngay trong handler để chống click đôi trước re-render. Khi pending/kết quả chưa xác định, đóng băng intent đã gửi; polling seat map không được âm thầm đổi payload retry. Timeout/5xx/mất mạng hiển thị “Chưa xác định kết quả”, cho đối soát/retry cùng intent; không tự tạo key mới hoặc thông báo ghế đã được giữ.
+- Biết bookingId thì GET đối soát; chưa biết thì người dùng chủ động retry POST cùng key/payload để lấy replay. Không chặn retry đối soát chỉ vì đã tới cutoff hoặc seat map nay trả HELD: server có thể đã tạo đơn trước đó; cũng không suy từ HELD rằng đó là ghế của mình. Đổi suất/tập ghế là intent mới, nhưng không âm thầm thay thế intent chưa rõ kết quả; cảnh báo đơn cũ có thể vẫn đang giữ ghế. Không bảo đảm chống trùng giữa các tab khác intent, không thêm workflow giỏ hàng nhiều suất.
+- Thành công/replay chuyển `/bookings/:bookingId/checkout`, GET detail là nguồn dữ liệu chính; trang private CUSTOMER owner, chờ khôi phục auth trước khi fetch. Refresh/deep-link chỉ GET, không tự tạo đơn; replay terminal phải hiển thị trạng thái thực, không hồi sinh hold.
+- Checkout có mã đơn, phim/phòng/giờ, ghế/đơn giá snapshot, tổng server, trạng thái hiệu lực, hạn giữ và đồng hồ từ `max(0, expiresAt - now)`. Tính lại theo timestamp ở mỗi tick/focus, không reset 300 giây sau reload/tab ngủ. Không hứa chính xác đồng hồ DB nếu API chưa cung cấp serverNow; server/effectiveStatus có thẩm quyền.
+- Khi đến 0: chặn thao tác cần hold, refetch booking/seat map, không đợi scheduler và không tự PATCH trạng thái. CONFIRMED/terminal từ server được ưu tiên. Cutoff tạo mới không làm hết hạn sớm hold hiện hữu.
+- Refetch khi focus và định kỳ hợp lý khi booking PENDING; dừng khi rời trang/terminal. Invalidate seat map và cache booking liên quan sau create. Logout/đổi tài khoản xóa cache/intent cũ; bỏ qua callback của request thuộc phiên cũ.
+- `SEAT_UNAVAILABLE`: all-or-nothing, refetch ghế và yêu cầu chọn lại, không tuyên bố giữ được một phần. Xử lý riêng cutoff/expired/idempotency conflict/concurrent conflict/401/403/404. Rời trang không tự hủy; hủy thuộc FE-07, payment/vé thuộc FE-06. Nếu FE-06 chưa có thì hiển thị rõ, không dựng nút thanh toán giả.
+
 ## 9. Testing strategy
 
 - **Unit tests:** Hàm format giá tiền, tính dữ liệu hiển thị, validation và pure functions.

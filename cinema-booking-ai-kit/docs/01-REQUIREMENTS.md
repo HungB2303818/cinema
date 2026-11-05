@@ -5,7 +5,7 @@
 | ID | Yêu cầu | Vai trò | Độ ưu tiên | UC |
 |---|---|---|---|---|
 | FR-01 | Khách xem, tìm kiếm, lọc danh sách phim và xem chi tiết. | Guest+ | Must | UC-01 |
-| FR-02 | Khách xem suất theo phim/ngày và sơ đồ ghế với trạng thái **hiệu lực**. | Guest+ | Must | UC-01 |
+| FR-02 | Khách xem suất theo phim/ngày hoặc chọn rạp/ngày để thấy ngay từng phim kèm các giờ chiếu, không cần chọn phim trước; xem sơ đồ ghế với trạng thái **hiệu lực**. | Guest+ | Must | UC-01 |
 | FR-03 | Đăng ký customer, đăng nhập JWT và kiểm tra quyền. | Guest/Customer | Must | — |
 | FR-04 | Admin quản lý phim, cụm rạp, phòng và ghế vật lý. | Admin | Must | UC-02 |
 | FR-05 | Admin tạo/sửa suất chiếu và chống trùng phòng/thời gian dọn phòng. | Admin | Must | UC-02 |
@@ -22,6 +22,8 @@
 | FR-16 | Gửi thông báo, websocket ghế, quét QR bằng camera. | Various | Could | — |
 
 `Guest+` = các vai trò cũng có thể xem dữ liệu public.
+
+**Cập nhật thiết kế 05/11/2026 — FR-02:** Bấm ảnh/tên rạp hoặc nút “Lịch chiếu” trong danh mục rạp phải mở lịch của rạp theo ngày Việt Nam. Mỗi nhóm hiển thị tên phim + nhãn tuổi, poster bên trái và các nút giờ chiếu bên phải, theo bố cục ảnh tham chiếu của người dùng; không có bước trung gian bắt buộc chọn phim. Giữ ảnh đại diện đúng rạp trong danh mục. Đây là yêu cầu cần triển khai, không phải xác nhận source đã hỗ trợ. Chi tiết tại `react-frontend-architecture.md` mục 8.1 và `06-API-CONTRACT.md` mục 1.4.
 
 ## 2. Ma trận phân quyền
 

@@ -41,7 +41,7 @@ describe('CinemasPage (FE-03, Section B)', () => {
     expect(screen.getAllByText('Đang hoạt động').length).toBeGreaterThan(0);
 
     const showtimeLink = screen.getByRole('link', { name: /Lịch chiếu/i });
-    expect(showtimeLink).toHaveAttribute('href', '/showtimes?cinemaId=1');
+    expect(showtimeLink.getAttribute('href')).toMatch(/^\/showtimes\?cinemaId=1&date=\d{4}-\d{2}-\d{2}$/);
   });
 
   it('opens room modal and displays real rooms', async () => {

@@ -39,12 +39,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = (newToken: string, newUser: User) => {
+    try {
+      Object.keys(sessionStorage).forEach((key) => {
+        if (key.startsWith('cinema_booking_intent_')) {
+          sessionStorage.removeItem(key);
+        }
+      });
+    } catch {
+      // Ignore
+    }
     localStorage.setItem('token', newToken);
     setToken(newToken);
     setUser(newUser);
   };
 
   const logout = () => {
+    try {
+      Object.keys(sessionStorage).forEach((key) => {
+        if (key.startsWith('cinema_booking_intent_')) {
+          sessionStorage.removeItem(key);
+        }
+      });
+    } catch {
+      // Ignore
+    }
     localStorage.removeItem('token');
     setToken(null);
     setUser(null);

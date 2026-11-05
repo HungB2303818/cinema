@@ -1,5 +1,6 @@
 package com.example.cinema.showtime.repository;
 
+import com.example.cinema.catalog.entity.Movie;
 import com.example.cinema.showtime.entity.Showtime;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -47,5 +48,28 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
             "and (:cinemaId is null or s.room.cinema.id = :cinemaId)")
     Page<Showtime> findPublicSchedule(@Param("movieId") Long movieId, @Param("start") Instant start,
             @Param("end") Instant end, @Param("cinemaId") Long cinemaId, Pageable pageable);
+
+    @Query(value = "select distinct s.movie from Showtime s " +
+            "where s.room.cinema.id = :cinemaId and s.status = 'SCHEDULED' " +
+            "and s.startsAt >= :start and s.startsAt < :end " +
+            "and s.room.status = 'ACTIVE' and s.room.cinema.status = 'ACTIVE' " +
+            "and s.movie.status <> 'HIDDEN' " +
+            "order by s.movie.title asc, s.movie.id asc",
+           countQuery = "select count(distinct s.movie.id) from Showtime s " +
+            "where s.room.cinema.id = :cinemaId and s.status = 'SCHEDULED' " +
+            "and s.startsAt >= :start and s.startsAt < :end " +
+            "and s.room.status = 'ACTIVE' and s.room.cinema.status = 'ACTIVE' " +
+            "and s.movie.status <> 'HIDDEN'")
+    Page<Movie> findDistinctMoviesForCinemaSchedule(@Param("cinemaId") Long cinemaId,
+            @Param("start") Instant start, @Param("end") Instant end, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"room", "room.cinema", "movie"})
+    @Query("select s from Showtime s where s.room.cinema.id = :cinemaId and s.movie.id in :movieIds " +
+            "and s.status = 'SCHEDULED' and s.startsAt >= :start and s.startsAt < :end " +
+            "and s.room.status = 'ACTIVE' and s.room.cinema.status = 'ACTIVE' " +
+            "and s.movie.status <> 'HIDDEN' " +
+            "order by s.startsAt asc, s.id asc")
+    List<Showtime> findShowtimesForCinemaMovies(@Param("cinemaId") Long cinemaId,
+            @Param("movieIds") List<Long> movieIds, @Param("start") Instant start, @Param("end") Instant end);
 
 }

@@ -19,6 +19,7 @@ Trang này phân biệt **quyết định đã khóa cho MVP** với **chủ đ�
 | ADR-011 | Một booking thuộc một suất, 1–8 ghế | Giảm phức tạp giỏ hàng qua nhiều suất. |
 | ADR-012 | Không xóa dữ liệu đã phát sinh giao dịch | Bảo toàn khóa ngoại, lịch sử và audit. |
 | ADR-013 | HTTP 200 cho retry payment FAILED giả lập; 409 cho payment key mới sau CONFIRMED | Hợp đồng nhất quán, không tạo payment SUCCESS mới. |
+| ADR-014 | Chọn rạp/ngày hiển thị ngay các phim kèm poster và nút giờ, không bắt chọn phim trước | Yêu cầu bố cục người dùng 05/11/2026; bổ sung API đọc theo rạp, phân trang nhóm phim; chưa triển khai khi ghi nhận. |
 
 ## 2. Điểm dễ cần chốt khi viết code
 
@@ -65,6 +66,14 @@ Trang này phân biệt **quyết định đã khóa cho MVP** với **chủ đ�
 - GAP-10: ticket 192 bit SecureRandom, mã hex 48 ký tự vừa VARCHAR(48), không chứa PII. Collision/write failure rollback toàn bộ payment, không tự đổi key. Không có QR camera/email trong tuần 4.
 - GAP-03: owner/ADMIN GET vé, ADMIN support read có audit; STAFF chỉ check-in. Check-in serialize trên booking row và vẫn có UNIQUE DB, cửa sổ bao gồm hai biên. Không thêm quyền impersonation/payment cho ADMIN.
 - Báo cáo nhóm ngày UTC+07, chỉ ngày có SUCCESS, tổng từ paid_at trong khoảng nửa mở. Không đổi schema: generated UNIQUE payment, ticket UNIQUE và check-in UNIQUE đã có trong V1; không cần migration mới.
+
+### Cập nhật thiết kế lịch theo rạp và FE-05 (05/11/2026)
+
+- ADR-014 mở rộng FR-02/UC-01; không thay đổi các bất biến giữ ghế. Giữ `/showtimes?cinemaId=...&date=...` làm điểm vào từ rạp; có movieId thì giữ nhánh theo phim hiện hữu. Bố cục poster trái/giờ phải theo ảnh tham chiếu, không yêu cầu đổi theme.
+- Chọn bổ sung `GET /api/cinemas/{id}/showtimes` với page các nhóm phim và đầy đủ suất trong từng nhóm, thay vì fan-out API theo từng phim hoặc nhóm từ một trang suất bị cắt. Contract tại mục 1.4; controller hiện chưa có endpoint này. Chỉ đọc các bảng hiện có nên không cần migration.
+- Không tự bổ sung định dạng chiếu/ngôn ngữ/phụ đề hoặc hardcode nhãn trong ảnh mẫu; schema chưa có các trường đó. Ảnh rạp và poster phim là hai metadata khác nhau; giữ ảnh đúng danh tính, fallback không tạo dữ liệu giao dịch giả.
+- FE-05 lưu intent theo tài khoản trong phiên, không tự POST khi mount. Retry kỹ thuật giữ nguyên key/payload, timeout là kết quả chưa xác định; checkout GET detail và expiresAt/effectiveStatus là nguồn dữ liệu, không reset TTL. Payment/vé vẫn ở FE-06; hủy ở FE-07. Không thêm API cleanup/extend hold hay thay policy cutoff/TTL.
+- Toàn bộ phần này là cập nhật thiết kế và acceptance (TC-46…49 cùng các TC booking hiện có), không xác nhận implementation hoặc test đã chạy.
 
 ## 3. Ngoài phạm vi — không tự thêm
 

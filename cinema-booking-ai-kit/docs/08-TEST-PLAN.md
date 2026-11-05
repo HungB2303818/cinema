@@ -153,6 +153,24 @@ $env:DB_NAME = 'cinema_week4_it_20261104' # context smoke test cũ cũng dùng s
 
 **BUILD SUCCESS, 251 tests: 247 đạt, 0 failures/errors, 4 skipped** (MovieIntegrationTest cũ cần Docker). **59/59 test mới đạt**, gồm 29 integration thực sự chạy MySQL/Flyway V1/V2 + Hibernate validate. JAR tại `backend/target/cinema-backend-1.0.0-SNAPSHOT.jar`. Chưa kiểm chứng Docker/Testcontainers trên máy này; không coi 4 skipped là pass. Không dùng kết quả này để đánh dấu UI/E2E manual Tuần 5 hoàn thành.
 
+### Thiết kế bổ sung 05/11/2026 — lịch theo rạp và FE-05 frontend
+
+**Trạng thái:** Các tiêu chí dưới đây cần được triển khai/chạy kiểm thử; không phải kết quả test đã chạy. Không đánh dấu hoàn thành từ tài liệu thiết kế.
+
+| TC | Kịch bản | Kỳ vọng | Traceability |
+|---|---|---|---|
+| TC-46 | Guest bấm ảnh/tên rạp hoặc lịch, đổi ngày và refresh/Back | Hiện ngay các nhóm phim, poster/tuổi và nút giờ; không cần chọn phim; URL/cache đúng rạp/ngày/trang; chọn giờ đi đúng màn ghế | FR-02/15, UC-01 |
+| TC-47 | API lịch rạp có nhiều phim/nhiều suất và page nhỏ; hai phòng cùng giờ | Phân trang theo phim, totalElements đếm phim; mỗi nhóm đủ suất, thứ tự ổn định; không mất suất trùng giờ; tránh N+1/fan-out frontend | API 1.4, NFR-03/08 |
+| TC-48 | Rạp không tồn tại/INACTIVE, phòng MAINTENANCE, phim HIDDEN, suất hủy, ngày giáp UTC | 404 rạp; chỉ trả suất public phù hợp đúng ngày Việt Nam; 400 input/sort sai; page rỗng khác lỗi, không lộ dữ liệu riêng | UC-01, TC-26/37, BR-21 |
+| TC-49 | Cutoff xảy ra khi đang xem; thiếu poster/tuổi/định dạng/phụ đề, mobile và bàn phím | Nút hết hạn bị disable theo thời gian; fallback ảnh không loop; không bịa “2D Phụ Đề Anh”; nhận diện đúng phim/phòng/giờ và thao tác bàn phím được | BR-08, FR-02/15 |
+
+Frontend FE-05 bổ sung test theo các TC hiện có:
+
+- TC-01/17: click đôi chỉ một intent; retry timeout/5xx và reload dùng key/payload cũ, kể cả thứ tự chọn ghế khác; storage hỏng được xử lý an toàn. Không tự POST khi mount/refresh; replay EXPIRED/CANCELLED/CONFIRMED không tạo hold mới.
+- TC-03/04: xung đột một ghế không có giữ một phần; thông báo/refetch và chọn lại. Mock UI không thay thế backend concurrency test MySQL thật.
+- TC-05/07/18/19: timestamp countdown không reset sau refresh/tab ngủ; đến 0 refetch effectiveStatus dù persisted còn PENDING; network error không bị coi là EXPIRED; cutoff tạo mới không cắt ngắn hold hiện hữu.
+- TC-15/20: checkout deep link chỉ GET, hiển thị giá snapshot/tổng server; CUSTOMER owner, 401/403/404, logout/đổi tài khoản xóa intent/cache và chặn response phiên cũ điều hướng vào tài khoản mới.
+
 ## 2. Fixture tối thiểu
 
 - Một cinema ACTIVE, hai room ACTIVE; mỗi room 30–50 ghế STANDARD/VIP.

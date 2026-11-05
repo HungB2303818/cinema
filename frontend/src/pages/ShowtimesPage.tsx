@@ -1,8 +1,14 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Calendar, Film, Building2, ArrowLeft, AlertCircle } from 'lucide-react';
+import { Calendar, Film, Building2, ArrowLeft, AlertCircle, MapPin } from 'lucide-react';
 import { useMovies, useMovieDetail } from '@/features/movies';
-import { useMovieShowtimes, useCurrentTime, ShowtimeCard } from '@/features/showtimes';
+import {
+  useMovieShowtimes,
+  useCinemaShowtimes,
+  useCurrentTime,
+  ShowtimeCard,
+  CinemaMovieGroup,
+} from '@/features/showtimes';
 import { useCinemas } from '@/features/cinemas';
 import {
   getVietnamDateString,
@@ -35,10 +41,10 @@ export const ShowtimesPage: React.FC = () => {
   // Live timer for cutoff evaluation
   const now = useCurrentTime(15_000);
 
-  // Fetch list of public cinemas for the filter dropdown
+  // Fetch list of public cinemas
   const { data: cinemas = [], isLoading: loadingCinemas } = useCinemas();
 
-  // Fetch movie list for the movie selector (when no movie is selected)
+  // Fetch movie list for the picker (when neither is selected, or for movie schedule)
   const {
     data: allMoviesData,
     isLoading: loadingMoviesList,
@@ -50,11 +56,11 @@ export const ShowtimesPage: React.FC = () => {
   });
   const availableMovies = allMoviesData?.content || [];
 
-  // Fetch selected movie detail if movieId is selected
+  // 1. Movie details (if in movie mode)
   const { data: selectedMovie } = useMovieDetail(movieId ?? 0);
 
-  // Query showtimes ONLY when movieId and date are valid
-  const showtimesParams = useMemo(() => {
+  // 2. Movie-based showtimes (when movieId is present)
+  const movieShowtimesParams = useMemo(() => {
     if (!movieId) return null;
     return {
       movieId,
@@ -66,26 +72,50 @@ export const ShowtimesPage: React.FC = () => {
   }, [movieId, selectedDate, cinemaId, currentPage]);
 
   const {
-    data: showtimeData,
-    isLoading: loadingShowtimes,
-    error: showtimeError,
-    refetch: refetchShowtimes,
-  } = useMovieShowtimes(showtimesParams);
+    data: movieShowtimeData,
+    isLoading: loadingMovieShowtimes,
+    error: movieShowtimeError,
+    refetch: refetchMovieShowtimes,
+  } = useMovieShowtimes(movieShowtimesParams);
 
-  const showtimes = showtimeData?.content || [];
-  const totalPages = showtimeData?.totalPages || 0;
-  const totalElements = showtimeData?.totalElements || 0;
+  // 3. Cinema-based showtimes (when cinemaId is present and movieId is absent)
+  const isCinemaMode = Boolean(cinemaId && !movieId);
+  const cinemaShowtimesParams = useMemo(() => {
+    if (!isCinemaMode || !cinemaId) return null;
+    return {
+      cinemaId,
+      date: selectedDate,
+      page: currentPage,
+      size: 20,
+    };
+  }, [isCinemaMode, cinemaId, selectedDate, currentPage]);
+
+  const {
+    data: cinemaShowtimeData,
+    isLoading: loadingCinemaShowtimes,
+    error: cinemaShowtimeError,
+    refetch: refetchCinemaShowtimes,
+  } = useCinemaShowtimes(cinemaShowtimesParams);
+
+  // Selected cinema object for header and context
+  const selectedCinema = cinemaId ? cinemas.find((c) => c.id === cinemaId) : undefined;
+
+  // Selector tab when neither is selected (default to movies for backward compatibility with existing tests)
+  const [browseMode, setBrowseMode] = useState<'MOVIES' | 'CINEMAS'>('MOVIES');
 
   // Param update handlers
   const handleSelectMovie = (newMovieId: number) => {
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      next.set('movieId', newMovieId.toString());
-      if (!next.get('date')) {
-        next.set('date', selectedDate);
-      }
-      next.delete('page');
-      return next;
+    setSearchParams({
+      movieId: newMovieId.toString(),
+      date: selectedDate,
+      ...(cinemaId ? { cinemaId: cinemaId.toString() } : {}),
+    });
+  };
+
+  const handleSelectCinema = (newCinemaId: number) => {
+    setSearchParams({
+      cinemaId: newCinemaId.toString(),
+      date: selectedDate,
     });
   };
 
@@ -93,6 +123,15 @@ export const ShowtimesPage: React.FC = () => {
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
       next.delete('movieId');
+      next.delete('page');
+      return next;
+    });
+  };
+
+  const handleClearCinema = () => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete('cinemaId');
       next.delete('page');
       return next;
     });
@@ -107,7 +146,7 @@ export const ShowtimesPage: React.FC = () => {
     });
   };
 
-  const handleCinemaChange = (newCinemaId?: number) => {
+  const handleCinemaFilterChange = (newCinemaId?: number) => {
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
       if (newCinemaId) {
@@ -134,9 +173,6 @@ export const ShowtimesPage: React.FC = () => {
     window.scrollTo({ top: 200, behavior: 'smooth' });
   };
 
-  // Selected cinema object for display context
-  const selectedCinema = cinemaId ? cinemas.find((c) => c.id === cinemaId) : undefined;
-
   return (
     <div className="space-y-8 pb-16">
       {/* Header bar */}
@@ -147,14 +183,41 @@ export const ShowtimesPage: React.FC = () => {
             <span>Lịch Chiếu Phim</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white">
-            {selectedMovie ? selectedMovie.title : 'Tra cứu lịch chiếu'}
+            {isCinemaMode
+              ? selectedCinema?.name || 'Lịch chiếu theo rạp'
+              : selectedMovie
+              ? selectedMovie.title
+              : 'Tra cứu lịch chiếu'}
           </h1>
           <p className="text-zinc-400 text-sm mt-1">
-            {selectedCinema
+            {isCinemaMode
+              ? selectedCinema?.address || 'Danh sách các phim và suất chiếu tại rạp'
+              : selectedCinema
               ? `Lịch chiếu tại ${selectedCinema.name}`
-              : 'Chọn phim, ngày và cụm rạp để hiển thị các suất chiếu'}
+              : 'Chọn rạp hoặc phim để xem lịch chiếu các suất khả dụng'}
           </p>
         </div>
+
+        {/* Action button if cinema mode is active */}
+        {isCinemaMode && (
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleClearCinema}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-full bg-[#181a24] hover:bg-[#222530] text-zinc-300 hover:text-white transition-colors cursor-pointer border-none"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Chọn rạp khác</span>
+            </button>
+            <Link
+              to="/cinemas"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-full bg-[#181a24] hover:bg-[#222530] text-[#e6e2c1] transition-colors"
+            >
+              <Building2 className="w-3.5 h-3.5" />
+              <span>Danh mục rạp</span>
+            </Link>
+          </div>
+        )}
 
         {/* Action button if movie is currently selected */}
         {movieId && (
@@ -177,86 +240,122 @@ export const ShowtimesPage: React.FC = () => {
         )}
       </div>
 
-      {/* CASE 1: No Movie Selected -> Show Movie Picker (Do NOT call showtime endpoint) */}
-      {!movieId ? (
+      {/* BRANCH 1: CINEMA MODE (cinemaId present, no movieId) */}
+      {isCinemaMode ? (
         <section className="space-y-6">
-          <div className="p-6 rounded-2xl bg-[#13151d] border border-[#242733] space-y-3">
-            <div className="flex items-center gap-2 text-[#e6e2c1] font-bold text-base">
-              <AlertCircle className="w-5 h-5" />
-              <span>Vui lòng chọn bộ phim để xem lịch chiếu</span>
-            </div>
-            <p className="text-zinc-400 text-sm">
-              Hệ thống cung cấp lịch chiếu theo từng bộ phim cụ thể. Vui lòng bấm vào một bộ phim dưới
-              đây để xem các suất chiếu khả dụng tại các cụm rạp.
-            </p>
-            {selectedCinema && (
-              <div className="inline-flex items-center gap-1.5 text-xs text-zinc-300 bg-[#090a0f] px-3 py-1.5 rounded-full border border-[#242733]">
-                <Building2 className="w-3.5 h-3.5 text-[#e6e2c1]" />
-                <span>Đang lọc theo cụm rạp: <strong>{selectedCinema.name}</strong></span>
+          {/* Controls Bar: Date Picker & Cinema Switcher */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-[#13151d] border border-[#242733] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Date Input in Vietnam Timezone */}
+              <div className="flex items-center gap-2 bg-[#090a0f] border border-[#242733] rounded-full px-4 py-2">
+                <Calendar className="w-4 h-4 text-[#e6e2c1]" />
+                <label htmlFor="cinema-schedule-date" className="sr-only">
+                  Chọn ngày chiếu
+                </label>
+                <input
+                  id="cinema-schedule-date"
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      handleDateChange(e.target.value);
+                    }
+                  }}
+                  className="bg-transparent text-zinc-200 text-xs sm:text-sm focus:outline-none cursor-pointer"
+                />
               </div>
-            )}
+
+              {/* Cinema Switcher */}
+              <div className="flex items-center gap-2 bg-[#090a0f] border border-[#242733] rounded-full px-4 py-2">
+                <Building2 className="w-4 h-4 text-[#e6e2c1]" />
+                <label htmlFor="cinema-switch" className="sr-only">
+                  Chọn rạp
+                </label>
+                <select
+                  id="cinema-switch"
+                  value={cinemaId ?? ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val) {
+                      handleSelectCinema(Number(val));
+                    }
+                  }}
+                  disabled={loadingCinemas}
+                  className="bg-transparent text-zinc-200 text-xs sm:text-sm focus:outline-none cursor-pointer"
+                >
+                  {cinemas.map((c) => (
+                    <option key={c.id} value={c.id} className="bg-[#13151d] text-zinc-200">
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Quick date display */}
+            <div className="text-xs text-zinc-400">
+              Ngày xem: <strong className="text-zinc-200">{formatDate(selectedDate)}</strong>
+            </div>
           </div>
 
-          {loadingMoviesList ? (
-            <div className="py-16">
-              <LoadingSpinner message="Đang tải danh sách phim đang chiếu..." />
+          {/* Cinema Schedule Result */}
+          {loadingCinemaShowtimes ? (
+            <div className="py-20 flex justify-center">
+              <LoadingSpinner message="Đang tải lịch chiếu theo rạp..." />
             </div>
-          ) : moviesListError ? (
+          ) : cinemaShowtimeError ? (
             <ErrorState
-              title="Không thể tải danh sách phim"
+              title="Không thể tải lịch chiếu của rạp"
               message={
-                moviesListError instanceof Error
-                  ? moviesListError.message
-                  : 'Vui lòng kiểm tra lại kết nối mạng và thử lại.'
+                cinemaShowtimeError instanceof Error
+                  ? cinemaShowtimeError.message
+                  : 'Đã có lỗi xảy ra khi truy vấn dữ liệu từ máy chủ.'
               }
-              onRetry={() => refetchMoviesList()}
+              onRetry={() => refetchCinemaShowtimes()}
             />
-          ) : availableMovies.length === 0 ? (
+          ) : (cinemaShowtimeData?.content || []).length === 0 ? (
             <EmptyState
               icon={Film}
-              title="Hiện không có phim đang chiếu"
-              description="Vui lòng quay lại sau khi có các bộ phim mới được phát hành."
+              title={`Không có suất chiếu nào trong ngày ${formatDate(selectedDate)}`}
+              description={`Cụm rạp ${
+                selectedCinema?.name || ''
+              } hiện chưa có suất chiếu được lên lịch trong ngày này. Vui lòng chọn ngày khác.`}
             />
           ) : (
-            <div className="space-y-4">
-              <h2 className="text-lg font-bold text-white">Danh sách phim đang chiếu</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {availableMovies.map((movie) => (
-                  <button
-                    key={movie.id}
-                    type="button"
-                    onClick={() => handleSelectMovie(movie.id)}
-                    className="group text-left p-3 rounded-2xl bg-[#13151d] border border-[#242733] hover:border-[#e6e2c1]/60 transition-all flex flex-col justify-between space-y-3 cursor-pointer shadow-lg shadow-black/30 hover:scale-[1.02]"
-                  >
-                    <div className="aspect-[2/3] w-full rounded-xl overflow-hidden bg-[#090a0f]">
-                      <img
-                        src={
-                          movie.posterUrl ||
-                          'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=400&q=80'
-                        }
-                        alt={movie.title}
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-white text-xs sm:text-sm line-clamp-1 group-hover:text-[#e6e2c1] transition-colors">
-                        {movie.title}
-                      </h3>
-                      <p className="text-[11px] text-zinc-400 mt-0.5 line-clamp-1">
-                        {movie.durationMinutes} phút {movie.genre ? `• ${movie.genre}` : ''}
-                      </p>
-                    </div>
-                    <span className="block w-full py-1.5 text-center text-xs font-bold rounded-full bg-[#181a24] group-hover:bg-[#e6e2c1] group-hover:text-black text-zinc-200 transition-colors">
-                      Xem lịch chiếu
-                    </span>
-                  </button>
+            <div className="space-y-6">
+              <div className="flex items-center justify-between text-xs text-zinc-400 px-1">
+                <span>
+                  Đang chiếu <strong className="text-zinc-200">{cinemaShowtimeData?.totalElements}</strong> bộ phim
+                </span>
+                {(cinemaShowtimeData?.totalPages || 0) > 1 && (
+                  <span>
+                    Trang {currentPage + 1} / {cinemaShowtimeData?.totalPages}
+                  </span>
+                )}
+              </div>
+
+              {/* Movie Groups */}
+              <div className="space-y-5">
+                {cinemaShowtimeData?.content.map((group) => (
+                  <CinemaMovieGroup key={group.movie.id} group={group} now={now} />
                 ))}
               </div>
+
+              {/* Pagination */}
+              {(cinemaShowtimeData?.totalPages || 0) > 1 && (
+                <div className="pt-6 border-t border-[#20232e] flex justify-center">
+                  <Pagination
+                    currentPage={currentPage + 1}
+                    totalPages={cinemaShowtimeData?.totalPages || 1}
+                    onPageChange={handlePageChange}
+                  />
+                </div>
+              )}
             </div>
           )}
         </section>
-      ) : (
-        /* CASE 2: Movie Selected -> Show Filters & Showtimes */
+      ) : movieId ? (
+        /* BRANCH 2: MOVIE MODE (movieId present) */
         <section className="space-y-6">
           {/* Controls Bar: Date Picker & Cinema Selector */}
           <div className="p-4 sm:p-5 rounded-2xl bg-[#13151d] border border-[#242733] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -291,7 +390,7 @@ export const ShowtimesPage: React.FC = () => {
                   value={cinemaId ?? ''}
                   onChange={(e) => {
                     const val = e.target.value;
-                    handleCinemaChange(val ? Number(val) : undefined);
+                    handleCinemaFilterChange(val ? Number(val) : undefined);
                   }}
                   disabled={loadingCinemas}
                   className="bg-transparent text-zinc-200 text-xs sm:text-sm focus:outline-none cursor-pointer"
@@ -315,21 +414,21 @@ export const ShowtimesPage: React.FC = () => {
           </div>
 
           {/* Showtimes Result State */}
-          {loadingShowtimes ? (
+          {loadingMovieShowtimes ? (
             <div className="py-20 flex justify-center">
               <LoadingSpinner message="Đang tìm kiếm các suất chiếu khả dụng..." />
             </div>
-          ) : showtimeError ? (
+          ) : movieShowtimeError ? (
             <ErrorState
               title="Không thể tải danh sách suất chiếu"
               message={
-                showtimeError instanceof Error
-                  ? showtimeError.message
+                movieShowtimeError instanceof Error
+                  ? movieShowtimeError.message
                   : 'Đã có lỗi xảy ra khi truy vấn dữ liệu từ máy chủ.'
               }
-              onRetry={() => refetchShowtimes()}
+              onRetry={() => refetchMovieShowtimes()}
             />
-          ) : showtimes.length === 0 ? (
+          ) : (movieShowtimeData?.content || []).length === 0 ? (
             <EmptyState
               icon={Film}
               title={`Không có suất chiếu nào trong ngày ${formatDate(selectedDate)}`}
@@ -343,7 +442,7 @@ export const ShowtimesPage: React.FC = () => {
                   <Button
                     variant="secondary"
                     size="sm"
-                    onClick={() => handleCinemaChange(undefined)}
+                    onClick={() => handleCinemaFilterChange(undefined)}
                   >
                     Xem tất cả cụm rạp
                   </Button>
@@ -354,29 +453,181 @@ export const ShowtimesPage: React.FC = () => {
             <div className="space-y-6">
               <div className="flex items-center justify-between text-xs text-zinc-400 px-1">
                 <span>
-                  Tìm thấy <strong className="text-zinc-200">{totalElements}</strong> suất chiếu
+                  Tìm thấy <strong className="text-zinc-200">{movieShowtimeData?.totalElements}</strong> suất chiếu
                 </span>
-                {totalPages > 1 && (
+                {(movieShowtimeData?.totalPages || 0) > 1 && (
                   <span>
-                    Trang {currentPage + 1} / {totalPages}
+                    Trang {currentPage + 1} / {movieShowtimeData?.totalPages}
                   </span>
                 )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                {showtimes.map((st) => (
+                {(movieShowtimeData?.content || []).map((st) => (
                   <ShowtimeCard key={st.id} showtime={st} now={now} />
                 ))}
               </div>
 
-              {/* Pagination if multiple pages */}
-              {totalPages > 1 && (
+              {/* Pagination */}
+              {(movieShowtimeData?.totalPages || 0) > 1 && (
                 <div className="pt-6 border-t border-[#20232e] flex justify-center">
                   <Pagination
                     currentPage={currentPage + 1}
-                    totalPages={totalPages}
+                    totalPages={movieShowtimeData?.totalPages || 1}
                     onPageChange={handlePageChange}
                   />
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+      ) : (
+        /* BRANCH 3: NEITHER SELECTED -> Let user choose by Cinema or by Movie */
+        <section className="space-y-6">
+          <div className="p-6 rounded-2xl bg-[#13151d] border border-[#242733] space-y-4">
+            <div className="flex items-center gap-2 text-[#e6e2c1] font-bold text-base">
+              <AlertCircle className="w-5 h-5" />
+              <span>Vui lòng chọn bộ phim để xem lịch chiếu, hoặc chọn cụm rạp</span>
+            </div>
+            <p className="text-zinc-400 text-sm">
+              Bạn có thể chọn một cụm rạp để xem toàn bộ phim và giờ chiếu trong ngày, hoặc chọn một bộ
+              phim cụ thể để tìm suất chiếu thuận tiện nhất.
+            </p>
+
+            {/* Toggle Mode Buttons */}
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setBrowseMode('CINEMAS')}
+                className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer border-none flex items-center gap-1.5 ${
+                  browseMode === 'CINEMAS'
+                    ? 'bg-[#e6e2c1] text-black shadow-md'
+                    : 'bg-[#181a24] text-zinc-300 hover:text-white'
+                }`}
+              >
+                <Building2 className="w-3.5 h-3.5" />
+                <span>Chọn theo cụm rạp</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setBrowseMode('MOVIES')}
+                className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer border-none flex items-center gap-1.5 ${
+                  browseMode === 'MOVIES'
+                    ? 'bg-[#e6e2c1] text-black shadow-md'
+                    : 'bg-[#181a24] text-zinc-300 hover:text-white'
+                }`}
+              >
+                <Film className="w-3.5 h-3.5" />
+                <span>Chọn theo phim</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Content based on browseMode */}
+          {browseMode === 'CINEMAS' ? (
+            <div className="space-y-4">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-[#e6e2c1]" />
+                <span>Danh sách các cụm rạp</span>
+              </h2>
+
+              {loadingCinemas ? (
+                <div className="py-16">
+                  <LoadingSpinner message="Đang tải danh sách cụm rạp..." />
+                </div>
+              ) : cinemas.length === 0 ? (
+                <EmptyState
+                  icon={Building2}
+                  title="Hiện chưa có cụm rạp khả dụng"
+                  description="Vui lòng quay lại sau."
+                />
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {cinemas
+                    .filter((c) => c.status === 'ACTIVE')
+                    .map((cinema) => (
+                      <button
+                        key={cinema.id}
+                        type="button"
+                        onClick={() => handleSelectCinema(cinema.id)}
+                        className="group text-left p-5 rounded-2xl bg-[#13151d] border border-[#242733] hover:border-[#e6e2c1]/60 transition-all flex flex-col justify-between space-y-3 cursor-pointer shadow-lg hover:scale-[1.02]"
+                      >
+                        <div className="space-y-1">
+                          <h3 className="font-bold text-white text-base group-hover:text-[#e6e2c1] transition-colors">
+                            {cinema.name}
+                          </h3>
+                          <p className="text-xs text-zinc-400 flex items-start gap-1">
+                            <MapPin className="w-3.5 h-3.5 text-[#e6e2c1] shrink-0 mt-0.5" />
+                            <span>{cinema.address}</span>
+                          </p>
+                        </div>
+                        <span className="block w-full py-2 text-center text-xs font-bold rounded-full bg-[#181a24] group-hover:bg-[#e6e2c1] group-hover:text-black text-zinc-200 transition-colors">
+                          Xem lịch rạp này
+                        </span>
+                      </button>
+                    ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <Film className="w-5 h-5 text-[#e6e2c1]" />
+                <span>Danh sách phim đang chiếu</span>
+              </h2>
+
+              {loadingMoviesList ? (
+                <div className="py-16">
+                  <LoadingSpinner message="Đang tải danh sách phim đang chiếu..." />
+                </div>
+              ) : moviesListError ? (
+                <ErrorState
+                  title="Không thể tải danh sách phim"
+                  message={
+                    moviesListError instanceof Error
+                      ? moviesListError.message
+                      : 'Vui lòng kiểm tra lại kết nối mạng và thử lại.'
+                  }
+                  onRetry={() => refetchMoviesList()}
+                />
+              ) : availableMovies.length === 0 ? (
+                <EmptyState
+                  icon={Film}
+                  title="Hiện không có phim đang chiếu"
+                  description="Vui lòng quay lại sau khi có các bộ phim mới được phát hành."
+                />
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {availableMovies.map((movie) => (
+                    <button
+                      key={movie.id}
+                      type="button"
+                      onClick={() => handleSelectMovie(movie.id)}
+                      className="group text-left p-3 rounded-2xl bg-[#13151d] border border-[#242733] hover:border-[#e6e2c1]/60 transition-all flex flex-col justify-between space-y-3 cursor-pointer shadow-lg shadow-black/30 hover:scale-[1.02]"
+                    >
+                      <div className="aspect-[2/3] w-full rounded-xl overflow-hidden bg-[#090a0f]">
+                        <img
+                          src={
+                            movie.posterUrl ||
+                            'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=400&q=80'
+                          }
+                          alt={movie.title}
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-white text-xs sm:text-sm line-clamp-1 group-hover:text-[#e6e2c1] transition-colors">
+                          {movie.title}
+                        </h3>
+                        <p className="text-[11px] text-zinc-400 mt-0.5 line-clamp-1">
+                          {movie.durationMinutes} phút {movie.genre ? `• ${movie.genre}` : ''}
+                        </p>
+                      </div>
+                      <span className="block w-full py-1.5 text-center text-xs font-bold rounded-full bg-[#181a24] group-hover:bg-[#e6e2c1] group-hover:text-black text-zinc-200 transition-colors">
+                        Xem lịch chiếu
+                      </span>
+                    </button>
+                  ))}
                 </div>
               )}
             </div>

@@ -6,11 +6,12 @@
 
 - **Actor:** Guest/Customer/Staff/Admin.
 - **Điều kiện trước:** Không cần đăng nhập; dữ liệu danh mục đã được admin cấu hình.
-- **Đầu vào:** movieId, date, cinemaId tùy chọn; showtimeId.
-- **S:** (1) GET danh sách phim có thể công bố; (2) chọn phim; (3) hệ thống trả các suất `SCHEDULED` phù hợp; (4) chọn suất; (5) API trả seatLabel, seatType và trạng thái hiệu lực `AVAILABLE/HELD/BOOKED`.
+- **Đầu vào:** Nhánh phim: movieId, date, cinemaId tùy chọn; nhánh rạp: cinemaId, date, phân trang nhóm phim; cả hai chọn showtimeId để xem ghế.
+- **S — theo phim:** (1) GET danh sách phim có thể công bố; (2) chọn phim; (3) hệ thống trả các suất `SCHEDULED` phù hợp; (4) chọn suất; (5) API trả seatLabel, seatType và trạng thái hiệu lực `AVAILABLE/HELD/BOOKED`.
+- **S — theo rạp (thiết kế bổ sung 05/11/2026):** (1) Xem danh mục rạp có ảnh; (2) bấm ảnh/tên rạp hoặc “Lịch chiếu”; (3) hệ thống lấy lịch rạp theo ngày Việt Nam mặc định/đã chọn, hiển thị ngay từng phim với tên, tuổi, poster và các nút giờ chiếu; (4) bấm giờ chiếu để tới `/showtimes/:showtimeId/seats`. Không yêu cầu chọn phim trước, không phải mở chi tiết phim mới thấy giờ chiếu. Đổi ngày/Back/refresh giữ đúng rạp/ngày/trang trong URL.
 - **E:** Phim/suất không có hoặc ẩn → 404/không hiển thị; tham số ngày sai → 400; ghế HELD quá hạn có thể hiển thị AVAILABLE nhưng phải tranh chấp lại khi POST.
 - **Hậu điều kiện:** Không thay đổi DB. Không trả `current_booking_id`, userId người giữ ghế hoặc mã vé.
-- **Quy tắc:** BR-01,04,05,06,07; **API:** `GET /api/movies`, `GET /api/movies/{id}/showtimes`, `GET /api/showtimes/{id}/seats`.
+- **Quy tắc:** BR-01,04,05,06,07,08; **API:** `GET /api/movies`, `GET /api/movies/{id}/showtimes`, `GET /api/showtimes/{id}/seats`; bổ sung `GET /api/cinemas/{id}/showtimes` theo contract mục 1.4 (chưa triển khai tại thời điểm cập nhật thiết kế).
 
 ## UC-02 — Quản lý suất chiếu
 

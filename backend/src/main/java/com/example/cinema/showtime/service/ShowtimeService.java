@@ -5,6 +5,7 @@ import com.example.cinema.catalog.entity.Movie;
 import com.example.cinema.catalog.entity.MovieStatus;
 import com.example.cinema.catalog.repository.MovieRepository;
 import com.example.cinema.cinema.entity.*;
+import com.example.cinema.cinema.repository.CinemaRepository;
 import com.example.cinema.cinema.repository.RoomRepository;
 import com.example.cinema.cinema.repository.SeatRepository;
 import com.example.cinema.common.dto.PageResponse;
@@ -16,6 +17,8 @@ import com.example.cinema.showtime.entity.*;
 import com.example.cinema.showtime.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -25,6 +28,7 @@ import java.math.BigDecimal;
 import java.time.*;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -41,6 +45,7 @@ public class ShowtimeService {
     private final SeatRepository seatRepository;
     private final MovieRepository movieRepository;
     private final BookingRepository bookingRepository;
+    private final CinemaRepository cinemaRepository;
     private final DatabaseTime databaseTime;
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -113,6 +118,49 @@ public class ShowtimeService {
         Instant end = date.plusDays(1).atStartOfDay(VIETNAM).toInstant();
         return PageResponse.from(showtimeRepository.findPublicSchedule(movieId, start, end, cinemaId,
                 Requests.page(page, size, sort, Set.of("id", "startsAt", "basePrice"))).map(ShowtimeResponse::from));
+    }
+
+    public PageResponse<CinemaMovieShowtimeGroupResponse> cinemaSchedule(Long cinemaId, LocalDate date,
+                                                                         int page, int size) {
+        Requests.positiveId(cinemaId);
+        Cinema cinema = cinemaRepository.findById(cinemaId).orElseThrow(this::cinemaNotFound);
+        if (cinema.getStatus() != CinemaStatus.ACTIVE) {
+            throw cinemaNotFound();
+        }
+        if (date == null || date.getYear() < 1000 || date.getYear() > 9998) {
+            throw new AppException(ErrorCode.VALIDATION_ERROR, "Ngày phải có năm từ 1000 đến 9998.");
+        }
+        if (page < 0 || size < 1 || size > 100) {
+            throw new AppException(ErrorCode.VALIDATION_ERROR, "page phải >= 0; size phải từ 1 đến 100.");
+        }
+        Instant start = date.atStartOfDay(VIETNAM).toInstant();
+        Instant end = date.plusDays(1).atStartOfDay(VIETNAM).toInstant();
+
+        Page<Movie> moviePage = showtimeRepository.findDistinctMoviesForCinemaSchedule(cinemaId, start, end,
+                PageRequest.of(page, size));
+        if (moviePage.isEmpty()) {
+            return new PageResponse<>(List.of(), page, size, moviePage.getTotalElements(), moviePage.getTotalPages());
+        }
+
+        List<Long> movieIds = moviePage.getContent().stream().map(Movie::getId).toList();
+        List<Showtime> showtimes = showtimeRepository.findShowtimesForCinemaMovies(cinemaId, movieIds, start, end);
+
+        Map<Long, List<ShowtimeResponse>> showtimesByMovie = showtimes.stream()
+                .map(ShowtimeResponse::from)
+                .collect(Collectors.groupingBy(ShowtimeResponse::movieId, LinkedHashMap::new, Collectors.toList()));
+
+        List<CinemaMovieShowtimeGroupResponse> groups = moviePage.getContent().stream()
+                .map(m -> new CinemaMovieShowtimeGroupResponse(
+                        MovieSummaryResponse.from(m),
+                        showtimesByMovie.getOrDefault(m.getId(), List.of())
+                ))
+                .toList();
+
+        return new PageResponse<>(groups, page, size, moviePage.getTotalElements(), moviePage.getTotalPages());
+    }
+
+    private AppException cinemaNotFound() {
+        return new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Không tìm thấy cụm rạp hoặc rạp đang tạm dừng.");
     }
 
     public SeatMapResponse seatMap(Long id) {

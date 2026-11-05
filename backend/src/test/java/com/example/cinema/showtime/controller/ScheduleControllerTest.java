@@ -51,9 +51,32 @@ class ScheduleControllerTest {
                 .andExpect(jsonPath("$.currentBookingId").doesNotExist());
     }
 
+    @Test void guestCanReadCinemaScheduleGroupedByMovie() throws Exception {
+        var movieSummary = new MovieSummaryResponse(10L, "Phim Mẫu", "https://img.test/poster.jpg", "T18", 120);
+        var showtimeItem = new ShowtimeResponse(101L, 10L, 1L, "Rạp Mẫu", 20L, "Phòng 01",
+                Instant.parse("2026-11-10T11:00:00Z"), Instant.parse("2026-11-10T13:00:00Z"), 15,
+                new java.math.BigDecimal("75000.00"), new java.math.BigDecimal("20000.00"),
+                com.example.cinema.showtime.entity.ShowtimeStatus.SCHEDULED);
+        var group = new CinemaMovieShowtimeGroupResponse(movieSummary, List.of(showtimeItem));
+
+        when(showtimes.cinemaSchedule(eq(1L), any(), eq(0), eq(20)))
+                .thenReturn(new PageResponse<>(List.of(group), 0, 20, 1, 1));
+
+        mvc.perform(get("/api/cinemas/1/showtimes?date=2026-11-10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].movie.title").value("Phim Mẫu"))
+                .andExpect(jsonPath("$.content[0].movie.ageRating").value("T18"))
+                .andExpect(jsonPath("$.content[0].showtimes[0].id").value(101))
+                .andExpect(jsonPath("$.content[0].showtimes[0].roomName").value("Phòng 01"));
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"/api/movies/1/showtimes", "/api/movies/1/showtimes?date=bad",
-            "/api/movies/1/showtimes?date=2026-02-30", "/api/showtimes/abc/seats"})
+            "/api/movies/1/showtimes?date=2026-02-30", "/api/showtimes/abc/seats",
+            "/api/cinemas/1/showtimes", "/api/cinemas/1/showtimes?date=bad",
+            "/api/cinemas/1/showtimes?date=2026-02-30", "/api/cinemas/abc/showtimes?date=2026-11-10",
+            "/api/cinemas/1/showtimes?date=2026-11-10&sort=startsAt,asc"})
     void invalidDateOrIdIs400(String url) throws Exception {
         mvc.perform(get(url)).andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
     }

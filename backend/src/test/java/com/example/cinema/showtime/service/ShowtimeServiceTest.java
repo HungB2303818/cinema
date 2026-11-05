@@ -33,6 +33,7 @@ class ShowtimeServiceTest {
     @Mock SeatRepository seats;
     @Mock MovieRepository movies;
     @Mock BookingRepository bookings;
+    @Mock CinemaRepository cinemas;
     @Mock DatabaseTime time;
     @InjectMocks ShowtimeService service;
     final Instant start = Instant.parse("2026-11-10T12:00:00Z");
@@ -158,6 +159,51 @@ class ShowtimeServiceTest {
         service.schedule(1L, LocalDate.of(2026, 11, 10), null, 0, 20, "startsAt,asc");
         verify(showtimes).findPublicSchedule(eq(1L), eq(Instant.parse("2026-11-09T17:00:00Z")),
                 eq(Instant.parse("2026-11-10T17:00:00Z")), isNull(), any(Pageable.class));
+    }
+
+    @Test void cinemaScheduleValidatesCinemaAndDates() {
+        when(cinemas.findById(99L)).thenReturn(Optional.empty());
+        assertCode(() -> service.cinemaSchedule(99L, LocalDate.of(2026, 11, 10), 0, 20), ErrorCode.RESOURCE_NOT_FOUND);
+
+        Cinema inactive = Cinema.builder().id(98L).status(CinemaStatus.INACTIVE).build();
+        when(cinemas.findById(98L)).thenReturn(Optional.of(inactive));
+        assertCode(() -> service.cinemaSchedule(98L, LocalDate.of(2026, 11, 10), 0, 20), ErrorCode.RESOURCE_NOT_FOUND);
+
+        Cinema active = Cinema.builder().id(3L).status(CinemaStatus.ACTIVE).build();
+        when(cinemas.findById(3L)).thenReturn(Optional.of(active));
+        assertCode(() -> service.cinemaSchedule(3L, LocalDate.of(999, 1, 1), 0, 20), ErrorCode.VALIDATION_ERROR);
+        assertCode(() -> service.cinemaSchedule(3L, LocalDate.of(2026, 11, 10), -1, 20), ErrorCode.VALIDATION_ERROR);
+        assertCode(() -> service.cinemaSchedule(3L, LocalDate.of(2026, 11, 10), 0, 101), ErrorCode.VALIDATION_ERROR);
+    }
+
+    @Test void cinemaScheduleGroupsByMovieAndPreservesShowtimesOrder() {
+        Cinema active = Cinema.builder().id(3L).status(CinemaStatus.ACTIVE).name("Rạp Test").build();
+        when(cinemas.findById(3L)).thenReturn(Optional.of(active));
+
+        Movie movieB = Movie.builder().id(2L).title("Phim B").durationMinutes(100).status(MovieStatus.SHOWING).build();
+        org.springframework.data.domain.PageImpl<Movie> moviePage =
+                new org.springframework.data.domain.PageImpl<>(List.of(movie, movieB), org.springframework.data.domain.PageRequest.of(0, 20), 2);
+        when(showtimes.findDistinctMoviesForCinemaSchedule(eq(3L), any(), any(), any())).thenReturn(moviePage);
+
+        Showtime showtime2 = Showtime.builder().id(5L).movie(movie).room(room).startsAt(start.plusSeconds(3600))
+                .endsAt(start.plusSeconds(10800)).basePrice(new BigDecimal("75000")).vipSurcharge(BigDecimal.ZERO).build();
+        Showtime showtimeB = Showtime.builder().id(6L).movie(movieB).room(room).startsAt(start.plusSeconds(1800))
+                .endsAt(start.plusSeconds(7800)).basePrice(new BigDecimal("80000")).vipSurcharge(BigDecimal.ZERO).build();
+
+        when(showtimes.findShowtimesForCinemaMovies(eq(3L), eq(List.of(1L, 2L)), any(), any()))
+                .thenReturn(List.of(showtime, showtime2, showtimeB));
+
+        var result = service.cinemaSchedule(3L, LocalDate.of(2026, 11, 10), 0, 20);
+
+        assertThat(result.totalElements()).isEqualTo(2);
+        assertThat(result.content()).hasSize(2);
+        assertThat(result.content().get(0).movie().title()).isEqualTo("Phim");
+        assertThat(result.content().get(0).showtimes()).hasSize(2);
+        assertThat(result.content().get(0).showtimes().get(0).id()).isEqualTo(4L);
+        assertThat(result.content().get(0).showtimes().get(1).id()).isEqualTo(5L);
+        assertThat(result.content().get(1).movie().title()).isEqualTo("Phim B");
+        assertThat(result.content().get(1).showtimes()).hasSize(1);
+        assertThat(result.content().get(1).showtimes().get(0).id()).isEqualTo(6L);
     }
 
     @Test void defaultsCleanupAndSurcharge() {
