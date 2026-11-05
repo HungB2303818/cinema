@@ -90,9 +90,50 @@ class ScheduleControllerTest {
             mvc.perform(post(path).contentType(MediaType.APPLICATION_JSON).content("{}"))
                     .andExpect(status().is(status));
         }
+        mvc.perform(get("/api/admin/showtimes")).andExpect(status().is(status));
+        mvc.perform(get("/api/admin/showtimes/1")).andExpect(status().is(status));
         mvc.perform(put("/api/admin/showtimes/1").contentType(MediaType.APPLICATION_JSON).content(SHOWTIME))
                 .andExpect(status().is(status));
         verifyNoInteractions(cinemas, showtimes);
+    }
+
+    @Test @WithMockUser(roles = "ADMIN") void adminCanListShowtimesWithFilters() throws Exception {
+        var showtimeItem = new ShowtimeResponse(101L, 10L, 1L, "Rạp Mẫu", 20L, "Phòng 01",
+                Instant.parse("2026-11-10T11:00:00Z"), Instant.parse("2026-11-10T13:00:00Z"), 15,
+                new java.math.BigDecimal("75000.00"), new java.math.BigDecimal("20000.00"),
+                com.example.cinema.showtime.entity.ShowtimeStatus.SCHEDULED);
+        when(showtimes.adminSchedule(eq(1L), eq(20L), eq(10L), eq(java.time.LocalDate.of(2026, 11, 10)),
+                eq(com.example.cinema.showtime.entity.ShowtimeStatus.SCHEDULED), eq(0), eq(20), eq("id,desc")))
+                .thenReturn(new PageResponse<>(List.of(showtimeItem), 0, 20, 1, 1));
+
+        mvc.perform(get("/api/admin/showtimes?cinemaId=1&roomId=20&movieId=10&date=2026-11-10&status=SCHEDULED&page=0&size=20&sort=id,desc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(101))
+                .andExpect(jsonPath("$.content[0].cinemaName").value("Rạp Mẫu"))
+                .andExpect(jsonPath("$.content[0].roomName").value("Phòng 01"));
+    }
+
+    @Test @WithMockUser(roles = "ADMIN") void adminCanGetShowtimeDetail() throws Exception {
+        var showtimeItem = new ShowtimeResponse(101L, 10L, 1L, "Rạp Mẫu", 20L, "Phòng 01",
+                Instant.parse("2026-11-10T11:00:00Z"), Instant.parse("2026-11-10T13:00:00Z"), 15,
+                new java.math.BigDecimal("75000.00"), new java.math.BigDecimal("20000.00"),
+                com.example.cinema.showtime.entity.ShowtimeStatus.SCHEDULED);
+        when(showtimes.adminDetail(101L)).thenReturn(showtimeItem);
+
+        mvc.perform(get("/api/admin/showtimes/101"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(101))
+                .andExpect(jsonPath("$.cinemaName").value("Rạp Mẫu"));
+    }
+
+    @Test @WithMockUser(roles = "ADMIN") void adminGetShowtimeDetailNotFoundReturns404() throws Exception {
+        when(showtimes.adminDetail(999L)).thenThrow(new com.example.cinema.common.error.AppException(
+                com.example.cinema.common.error.ErrorCode.RESOURCE_NOT_FOUND));
+
+        mvc.perform(get("/api/admin/showtimes/999"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"));
     }
 
     @Test @WithMockUser(roles = "ADMIN") void adminCanCreateRoomAndSeats() throws Exception {

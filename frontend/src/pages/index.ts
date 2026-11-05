@@ -15,4 +15,8 @@ export * from './AdminDashboardPage';
 export * from './AdminMoviesPage';
 export * from './AdminMovieCreatePage';
 export * from './AdminMovieEditPage';
+export * from './AdminRoomsPage';
+export * from './AdminSeatsPage';
+export * from './AdminShowtimesPage';
+export * from './AdminShowtimeFormPage';
 export * from './NotFoundPage';

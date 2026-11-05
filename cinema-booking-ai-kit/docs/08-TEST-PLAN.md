@@ -165,6 +165,14 @@ $env:DB_NAME = 'cinema_week4_it_20261104' # context smoke test cũ cũng dùng s
 | TC-48 | Rạp không tồn tại/INACTIVE, phòng MAINTENANCE, phim HIDDEN, suất hủy, ngày giáp UTC | 404 rạp; chỉ trả suất public phù hợp đúng ngày Việt Nam; 400 input/sort sai; page rỗng khác lỗi, không lộ dữ liệu riêng | UC-01, TC-26/37, BR-21 |
 | TC-49 | Cutoff xảy ra khi đang xem; thiếu poster/tuổi/định dạng/phụ đề, mobile và bàn phím | Nút hết hạn bị disable theo thời gian; fallback ảnh không loop; không bịa “2D Phụ Đề Anh”; nhận diện đúng phim/phòng/giờ và thao tác bàn phím được | BR-08, FR-02/15 |
 
+### Quản trị suất chiếu Admin — TASK-07 bổ sung & FE-10 (2026-11-05)
+
+| TC | Kịch bản | Kỳ vọng | Tham chiếu |
+|---|---|---|---|
+| TC-50 | `GET /api/admin/showtimes` phân quyền ADMIN; lọc `cinemaId`, `roomId`, `movieId`, `date` (Asia/Ho_Chi_Minh nửa mở UTC), `status` | Chỉ ADMIN truy cập (Guest 401, CUSTOMER/STAFF 403); PageResponse; sort whitelist `id/startsAt/basePrice/status`; không bị lọc public loại phim HIDDEN hay phòng MAINTENANCE; không tự động lọc hôm nay khi thiếu date | FR-04/15, UC-02, BR-21 |
+| TC-51 | `GET /api/admin/showtimes/{id}` chi tiết suất admin | Chỉ ADMIN truy cập; đọc thành công kể cả suất phim HIDDEN hoặc phòng MAINTENANCE; 404 khi ID không tồn tại; 400 khi ID không hợp lệ; không lộ owner hold/ticket code | FR-04/15, UC-02, BR-21 |
+| TC-52 | Frontend Quản lý Phòng, Ghế vật lý & Suất chiếu (FE-10) | Chọn rạp, danh sách phòng phân trang, tạo/sửa phòng; sơ đồ ghế vật lý ACTIVE/MAINTENANCE, tạo batch ghế atomic có preview; tạo/sửa suất với timezone Asia/Ho_Chi_Minh ↔ UTC chuẩn xác, bắt lỗi overlap có cleanup, khóa sửa khi đã có suất/booking | FR-04/05, UC-02, BR-01..05/19/20/21 |
+
 Frontend FE-05 bổ sung test theo các TC hiện có:
 
 - TC-01/17: click đôi chỉ một intent; retry timeout/5xx và reload dùng key/payload cũ, kể cả thứ tự chọn ghế khác; storage hỏng được xử lý an toàn. Không tự POST khi mount/refresh; replay EXPIRED/CANCELLED/CONFIRMED không tạo hold mới.

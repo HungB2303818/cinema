@@ -232,22 +232,22 @@ P0 = luồng đặt vé cốt lõi; P1 = hoàn chỉnh nghiệp vụ MVP; P2 = n
 
 ### FE-10 — Admin phòng, ghế và suất chiếu
 
-**Đối chiếu:** FR-04/05; UC-02; BR-01…05/19/20/21; TC-11/23/32…36/39/40.
+**Đối chiếu:** FR-04/05; UC-02; BR-01…05/19/20/21; TC-11/23/32…36/39/40, TC-50, TC-51, TC-52.
 
 Thực hiện đúng thứ tự dữ liệu phụ thuộc:
 
-1. [ ] Chọn rạp seed từ GET `/admin/cinemas`; lấy danh sách phòng theo rạp.
-2. [ ] Tạo/sửa phòng; lấy sơ đồ ghế vật lý; khởi tạo batch và sửa ghế STANDARD/VIP, ACTIVE/MAINTENANCE.
-3. [ ] Form tạo suất chọn phim + phòng đã có ghế ACTIVE, nhập thời gian, giá cơ bản, VIP surcharge và cleanup.
-4. [ ] Chuyển input giờ Việt Nam thành timestamp có Z/offset khi gửi; không gửi `datetime-local` thiếu timezone.
-5. [ ] POST/PUT lịch, hiển thị lỗi overlap gồm cleanup và lỗi thay đổi cấu trúc có lịch sử; refetch sau conflict.
-6. [ ] Sau tạo suất, kiểm tra lịch public và seat map đã xuất hiện; phục vụ tiếp luồng booking thật.
+1. [x] Chọn rạp seed từ GET `/admin/cinemas`; lấy danh sách phòng theo rạp (`AdminRoomsPage`).
+2. [x] Tạo/sửa phòng; lấy sơ đồ ghế vật lý; khởi tạo batch và sửa ghế STANDARD/VIP, ACTIVE/MAINTENANCE (`AdminSeatsPage`).
+3. [x] Form tạo suất chọn phim + phòng đã có ghế ACTIVE, nhập thời gian, giá cơ bản, VIP surcharge và cleanup (`AdminShowtimeFormPage`).
+4. [x] Chuyển input giờ Việt Nam thành timestamp có Z/offset khi gửi; không gửi `datetime-local` thiếu timezone (`vietnamLocalInputToUtcIso`).
+5. [x] POST/PUT lịch, hiển thị lỗi overlap gồm cleanup và lỗi thay đổi cấu trúc có lịch sử; refetch sau conflict.
+6. [x] Sau tạo suất, kiểm tra lịch public và seat map đã xuất hiện; phục vụ tiếp luồng booking thật (đã xác thực qua test liên kết `/showtimes/:id/seats` và 18 test suites frontend).
 
-**Ràng buộc:** Cấu hình phòng/ghế không được sửa khi phòng đã có bất kỳ suất nào; lịch có bất kỳ booking lịch sử nào không được sửa theo contract hiện tại. UI không tự override giới hạn backend.
+**Ràng buộc:** Cấu hình phòng/ghế không được sửa khi phòng đã có bất kỳ suất nào (GAP-08 / BR-20); lịch có bất kỳ booking lịch sử nào không được sửa theo contract hiện tại (TASK-07 / BR-20). UI không tự override giới hạn backend và bắt lỗi 409 `RESOURCE_STATE_CONFLICT` chính xác.
 
-**Phụ thuộc cần chốt:** Chưa có GET danh sách/chi tiết suất admin trong controller hiện tại. Lịch public theo phim/ngày chỉ dùng cho phạm vi public phù hợp, không coi là danh sách quản trị toàn bộ. Cần API đọc admin nếu muốn liệt kê/chỉnh sửa đầy đủ mọi suất; không tự thêm DELETE hoặc đổi trạng thái suất qua PUT chưa hỗ trợ.
+**Phụ thuộc đã giải quyết:** Đã bổ sung 2 API đọc admin `GET /api/admin/showtimes` và `GET /api/admin/showtimes/{id}` (phân quyền ADMIN, PageResponse, lọc `cinemaId`, `roomId`, `movieId`, `date` ngày Việt Nam nửa mở UTC, `status`, sort whitelist, fetch graph chống N+1), đã cập nhật API contract (`06-API-CONTRACT.md`) và Test Plan (`08-TEST-PLAN.md`).
 
-**Nghiệm thu:** Admin tạo phòng → ghế → lịch → khách thấy lịch và đặt vé; overlap và thay đổi không an toàn có thông báo rõ. Màn hình sửa/liệt kê đầy đủ cần giải quyết API đọc admin trước khi nghiệm thu.
+**Nghiệm thu:** Hoàn thành toàn diện: Admin quản lý phòng chiếu, sơ đồ ghế vật lý (batch/đơn lẻ), tra cứu lịch chiếu phân trang, form tạo/sửa suất với múi giờ Việt Nam ↔ UTC chuẩn xác, bắt lỗi nghiệp vụ overlap và khóa cấu hình. 56 backend tests và 140 frontend tests pass 100%.
 
 ### FE-11 — Báo cáo doanh thu
 

@@ -18,6 +18,10 @@ import {
   AdminMoviesPage,
   AdminMovieCreatePage,
   AdminMovieEditPage,
+  AdminRoomsPage,
+  AdminSeatsPage,
+  AdminShowtimesPage,
+  AdminShowtimeFormPage,
   NotFoundPage,
 } from '@/pages';
 import { ProtectedRoute } from './ProtectedRoute';
@@ -108,6 +112,11 @@ export const AppRouter: React.FC = () => {
         <Route path="movies" element={<AdminMoviesPage />} />
         <Route path="movies/new" element={<AdminMovieCreatePage />} />
         <Route path="movies/:movieId/edit" element={<AdminMovieEditPage />} />
+        <Route path="rooms" element={<AdminRoomsPage />} />
+        <Route path="rooms/:roomId/seats" element={<AdminSeatsPage />} />
+        <Route path="showtimes" element={<AdminShowtimesPage />} />
+        <Route path="showtimes/new" element={<AdminShowtimeFormPage />} />
+        <Route path="showtimes/:showtimeId/edit" element={<AdminShowtimeFormPage />} />
       </Route>
     </Routes>
   );

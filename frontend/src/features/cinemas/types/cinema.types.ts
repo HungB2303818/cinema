@@ -1,10 +1,13 @@
 export type CinemaStatus = 'ACTIVE' | 'INACTIVE';
+export type RoomStatus = 'ACTIVE' | 'MAINTENANCE';
+export type PhysicalSeatStatus = 'ACTIVE' | 'MAINTENANCE';
+export type SeatType = 'STANDARD' | 'VIP';
 
 export interface CinemaRoom {
   id: number;
   cinemaId: number;
   name: string;
-  status: 'ACTIVE' | 'MAINTENANCE';
+  status: RoomStatus;
 }
 
 export interface Cinema {
@@ -34,4 +37,38 @@ export interface CinemaMeta {
   city: string;
   roomTypes: string[];
   features: string[];
+}
+
+export interface RoomRequest {
+  cinemaId: number;
+  name: string;
+  status: RoomStatus;
+}
+
+export interface RoomResponse {
+  id: number;
+  cinemaId: number;
+  name: string;
+  status: RoomStatus;
+}
+
+export interface SeatResponse {
+  id: number;
+  roomId: number;
+  seatRow: string;
+  seatNumber: number;
+  label: string;
+  seatType: SeatType;
+  status: PhysicalSeatStatus;
+}
+
+export interface SeatRequest {
+  seatRow: string;
+  seatNumber: number;
+  seatType: SeatType;
+  status: PhysicalSeatStatus;
+}
+
+export interface SeatBatchRequest {
+  seats: SeatRequest[];
 }

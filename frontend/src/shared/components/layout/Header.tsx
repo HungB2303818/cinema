@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Film, User as UserIcon, LogOut, Shield, Menu, X, ArrowLeft, Headphones, Ticket } from 'lucide-react';
+import { Film, User as UserIcon, LogOut, Shield, Menu, X, ArrowLeft, Headphones, Ticket, Tv, Calendar } from 'lucide-react';
 import { useAuth } from '@/features/auth';
 import { StatusBadge } from '@/shared/components/ui/StatusBadge';
 
@@ -132,6 +132,32 @@ export const Header: React.FC<HeaderProps> = ({ variant = 'customer' }) => {
               >
                 <Film className="w-3.5 h-3.5" />
                 <span>Quản lý phim</span>
+              </Link>
+
+              <Link
+                to="/admin/rooms"
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold rounded-full border-none transition-colors ${
+                  pathname.startsWith('/admin/rooms')
+                    ? 'bg-[#e6e2c1] text-black font-bold'
+                    : 'text-zinc-300 hover:text-white bg-[#161821] hover:bg-[#20232d]'
+                }`}
+                title="Phòng & Ghế"
+              >
+                <Tv className="w-3.5 h-3.5" />
+                <span>Phòng & Ghế</span>
+              </Link>
+
+              <Link
+                to="/admin/showtimes"
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold rounded-full border-none transition-colors ${
+                  pathname.startsWith('/admin/showtimes')
+                    ? 'bg-[#e6e2c1] text-black font-bold'
+                    : 'text-zinc-300 hover:text-white bg-[#161821] hover:bg-[#20232d]'
+                }`}
+                title="Suất chiếu"
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                <span>Suất chiếu</span>
               </Link>
 
               <Link

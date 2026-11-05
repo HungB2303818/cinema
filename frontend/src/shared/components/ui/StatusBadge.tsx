@@ -64,6 +64,26 @@ const statusConfigMap: Record<string, { label: string; className: string }> = {
     className: 'bg-zinc-800 text-zinc-400 font-medium border-none',
   },
 
+  // Showtime statuses
+  SCHEDULED: {
+    label: 'Đã lên lịch',
+    className: 'bg-emerald-500/20 text-emerald-400 font-semibold border-none',
+  },
+  COMPLETED: {
+    label: 'Đã hoàn thành',
+    className: 'bg-zinc-800 text-zinc-400 font-medium border-none',
+  },
+
+  // Cinema statuses
+  SUSPENDED: {
+    label: 'Tạm dừng',
+    className: 'bg-amber-500/20 text-amber-300 border-none',
+  },
+  INACTIVE: {
+    label: 'Ngừng hoạt động',
+    className: 'bg-zinc-800 text-zinc-400 border-none',
+  },
+
   // Seat statuses
   AVAILABLE: {
     label: 'Ghế trống',

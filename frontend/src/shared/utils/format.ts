@@ -156,3 +156,59 @@ export function getMovieStatusBadge(status: string | null | undefined): { label:
 }
 
 export const formatVietnamDateTime = formatDateTime;
+
+/**
+ * Converts a Vietnam local datetime-local input string (YYYY-MM-DDTHH:mm) to UTC ISO string with Z.
+ * Explicitly binds to Asia/Ho_Chi_Minh (+07:00) so it does NOT depend on the user's machine timezone.
+ */
+export function vietnamLocalInputToUtcIso(datetimeLocalStr: string): string {
+  if (!datetimeLocalStr) return '';
+  // Ensure seconds are present: "YYYY-MM-DDTHH:mm" -> "YYYY-MM-DDTHH:mm:00+07:00"
+  const normalized = datetimeLocalStr.length === 16 ? `${datetimeLocalStr}:00` : datetimeLocalStr;
+  const withOffset = `${normalized}+07:00`;
+  const date = new Date(withOffset);
+  if (isNaN(date.getTime())) {
+    throw new Error('Định dạng thời gian không hợp lệ.');
+  }
+  return date.toISOString();
+}
+
+/**
+ * Converts a UTC ISO string (e.g. from backend) to Vietnam local datetime-local input string (YYYY-MM-DDTHH:mm).
+ * Explicitly converts to Asia/Ho_Chi_Minh (+07:00) regardless of the client machine's local timezone.
+ */
+export function utcIsoToVietnamLocalInput(utcIsoStr: string): string {
+  if (!utcIsoStr) return '';
+  const date = new Date(utcIsoStr);
+  if (isNaN(date.getTime())) return '';
+
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(date);
+
+  const year = parts.find((p) => p.type === 'year')?.value;
+  const month = parts.find((p) => p.type === 'month')?.value;
+  const day = parts.find((p) => p.type === 'day')?.value;
+  let hour = parts.find((p) => p.type === 'hour')?.value;
+  if (hour === '24') hour = '00';
+  const minute = parts.find((p) => p.type === 'minute')?.value;
+
+  return `${year}-${month}-${day}T${hour}:${minute}`;
+}
+
+/**
+ * Adds minutes to a Vietnam datetime-local string (YYYY-MM-DDTHH:mm) and returns new YYYY-MM-DDTHH:mm string.
+ */
+export function addMinutesToVietnamLocal(datetimeLocalStr: string, minutes: number): string {
+  if (!datetimeLocalStr || isNaN(minutes)) return '';
+  const utcIso = vietnamLocalInputToUtcIso(datetimeLocalStr);
+  const date = new Date(utcIso);
+  const newDate = new Date(date.getTime() + minutes * 60 * 1000);
+  return utcIsoToVietnamLocalInput(newDate.toISOString());
+}

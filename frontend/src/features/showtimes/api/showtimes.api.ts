@@ -53,3 +53,60 @@ export const showtimesApi = {
     return res.data;
   },
 };
+
+export const adminShowtimesApi = {
+  /**
+   * GET /api/admin/showtimes
+   */
+  list: async (filters: import('../types/showtime.types').AdminShowtimeFilters = {}): Promise<PageResponse<Showtime>> => {
+    const query = new URLSearchParams();
+    if (filters.cinemaId) query.append('cinemaId', filters.cinemaId.toString());
+    if (filters.roomId) query.append('roomId', filters.roomId.toString());
+    if (filters.movieId) query.append('movieId', filters.movieId.toString());
+    if (filters.date) query.append('date', filters.date);
+    if (filters.status) query.append('status', filters.status);
+    if (filters.page !== undefined) query.append('page', filters.page.toString());
+    if (filters.size !== undefined) query.append('size', filters.size.toString());
+    if (filters.sort) query.append('sort', filters.sort);
+
+    const queryString = query.toString();
+    const res = await httpClient.get<PageResponse<Showtime>>(
+      `/admin/showtimes${queryString ? `?${queryString}` : ''}`
+    );
+    return res.data;
+  },
+
+  /**
+   * GET /api/admin/showtimes/{id}
+   */
+  getById: async (id: number): Promise<Showtime> => {
+    const res = await httpClient.get<Showtime>(`/admin/showtimes/${id}`);
+    return res.data;
+  },
+
+  /**
+   * POST /api/admin/showtimes
+   * Trả về { showtime: Showtime, createdSeatCount: number }
+   */
+  create: async (
+    payload: import('../types/showtime.types').ShowtimeRequest
+  ): Promise<import('../types/showtime.types').ShowtimeCreatedResponse> => {
+    const res = await httpClient.post<import('../types/showtime.types').ShowtimeCreatedResponse>(
+      '/admin/showtimes',
+      payload
+    );
+    return res.data;
+  },
+
+  /**
+   * PUT /api/admin/showtimes/{id}
+   * Trả về Showtime trực tiếp
+   */
+  update: async (
+    id: number,
+    payload: import('../types/showtime.types').ShowtimeRequest
+  ): Promise<Showtime> => {
+    const res = await httpClient.put<Showtime>(`/admin/showtimes/${id}`, payload);
+    return res.data;
+  },
+};

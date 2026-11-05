@@ -206,6 +206,49 @@ class ShowtimeServiceTest {
         assertThat(result.content().get(1).showtimes().get(0).id()).isEqualTo(6L);
     }
 
+    @Test void adminScheduleWithFilters() {
+        when(showtimes.findAdminSchedule(eq(3L), eq(2L), eq(1L), any(Instant.class), any(Instant.class),
+                eq(ShowtimeStatus.SCHEDULED), any(Pageable.class)))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(showtime)));
+
+        var result = service.adminSchedule(3L, 2L, 1L, LocalDate.of(2026, 11, 10), ShowtimeStatus.SCHEDULED,
+                0, 20, "startsAt,asc");
+
+        assertThat(result.totalElements()).isEqualTo(1);
+        assertThat(result.content()).hasSize(1);
+        assertThat(result.content().get(0).id()).isEqualTo(4L);
+        assertThat(result.content().get(0).cinemaName()).isEqualTo("Rạp");
+        assertThat(result.content().get(0).roomName()).isEqualTo("Phòng");
+    }
+
+    @Test void adminScheduleWithoutDateDoesNotFilterToday() {
+        when(showtimes.findAdminSchedule(isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), any(Pageable.class)))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(showtime)));
+
+        var result = service.adminSchedule(null, null, null, null, null, 0, 20, "id,desc");
+
+        assertThat(result.totalElements()).isEqualTo(1);
+        verify(showtimes).findAdminSchedule(isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), any(Pageable.class));
+    }
+
+    @Test void adminDetailReturnsShowtimeEvenIfMovieHiddenOrRoomMaintenance() {
+        movie.setStatus(MovieStatus.HIDDEN);
+        room.setStatus(RoomStatus.MAINTENANCE);
+        when(showtimes.findAdminDetailById(4L)).thenReturn(Optional.of(showtime));
+
+        var result = service.adminDetail(4L);
+
+        assertThat(result.id()).isEqualTo(4L);
+        assertThat(result.movieId()).isEqualTo(1L);
+        assertThat(result.roomId()).isEqualTo(2L);
+    }
+
+    @Test void adminDetailNotFoundThrows404() {
+        when(showtimes.findAdminDetailById(999L)).thenReturn(Optional.empty());
+
+        assertCode(() -> service.adminDetail(999L), ErrorCode.RESOURCE_NOT_FOUND);
+    }
+
     @Test void defaultsCleanupAndSurcharge() {
         var request = new ShowtimeRequest(1L, 2L, start, start.plusSeconds(7200), null, BigDecimal.ZERO, null);
         assertThat(request.cleanupMinutes()).isEqualTo(15);

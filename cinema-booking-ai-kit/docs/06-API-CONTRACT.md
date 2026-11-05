@@ -36,6 +36,8 @@
 | PUT | `/api/admin/rooms/{roomId}/seats/{seatId}` | ADMIN | Sửa vị trí/loại/trạng thái ghế chưa có suất | 02 |
 | POST | `/api/admin/showtimes` | ADMIN | Tạo lịch + inventory | 02 |
 | PUT | `/api/admin/showtimes/{id}` | ADMIN | Sửa suất chưa ảnh hưởng booking | 02 |
+| GET | `/api/admin/showtimes` | ADMIN | Danh sách suất chiếu quản trị, lọc theo rạp/phòng/phim/ngày/status | 02 |
+| GET | `/api/admin/showtimes/{id}` | ADMIN | Chi tiết suất chiếu quản trị theo ID | 02 |
 | GET | `/api/admin/reports/revenue` | ADMIN | Doanh thu | 09 |
 
 **Quy ước:** endpoint GET hỗ trợ phân trang `page` (0-based), `size` (default 20, max 100), `sort` có whitelist; `date` của UI là ngày theo `Asia/Ho_Chi_Minh`, server đổi sang UTC để lọc chính xác.
@@ -420,9 +422,37 @@ Lỗi 404 invalid ticket; 422 trước/sau khung giờ hoặc suất bị hủy;
 - Thiếu JWT → 401; không phải ADMIN → 403. Deadlock/lock timeout → 409 `RESOURCE_STATE_CONFLICT`, không tự retry create (chưa có idempotency key cho lập lịch).
 - Luồng booking TASK-09/10 đã dùng `findByIdForBooking` (shared row lock) trước khi insert booking. Đây là giao thức phối hợp với khóa write của update lịch; TASK-07 riêng chỉ cung cấp guard và quản trị lịch.
 
+### 9.2 Đọc danh sách và chi tiết suất chiếu quản trị — TASK-07 bổ sung (FE-10)
+
+`GET /api/admin/showtimes?cinemaId=1&roomId=20&movieId=10&date=2026-11-10&status=SCHEDULED&page=0&size=20&sort=id,desc`
+
+- Phân quyền: Chỉ `ADMIN`. Chưa đăng nhập → 401; CUSTOMER/STAFF → 403.
+- Các bộ lọc tùy chọn (optional):
+  - `cinemaId`: số nguyên dương.
+  - `roomId`: số nguyên dương.
+  - `movieId`: số nguyên dương.
+  - `date`: ngày theo `Asia/Ho_Chi_Minh` (định dạng YYYY-MM-DD, năm 1000–9998). Server chuyển đổi thành khoảng nửa mở UTC `[00:00:00 ngày đó, 00:00:00 ngày tiếp theo)` để so khớp `startsAt`. Nếu không truyền `date`, **không tự động lọc ngày hôm nay** (trả về tất cả suất thỏa mãn các điều kiện khác).
+  - `status`: enum `SCHEDULED`, `CANCELLED`, `COMPLETED`.
+- Phân trang & sắp xếp:
+  - `page`: 0-based, mặc định 0. `size`: 1–100, mặc định 20.
+  - `sort`: whitelist các trường `id`, `startsAt`, `basePrice`, `status`. Mặc định `id,desc`. Luôn thêm thứ tự phụ theo `id` để đảm bảo phân trang ổn định.
+- Đặc tả dữ liệu:
+  - Admin không bị bộ lọc public loại trừ: phim HIDDEN, phòng/rạp ngừng hoạt động (MAINTENANCE/SUSPENDED) hoặc suất có trạng thái khác SCHEDULED vẫn hiển thị đầy đủ.
+  - Tránh N+1 bằng `@EntityGraph` trên `room`, `room.cinema`, `movie`. Không sử dụng row lock cho thao tác đọc thông thường.
+  - Response dùng `PageResponse<ShowtimeResponse>` với ShowtimeResponse đầy đủ thuộc tính như mục 1.3: `{id, movieId, cinemaId, cinemaName, roomId, roomName, startsAt, endsAt, cleanupMinutes, basePrice, vipSurcharge, status}`.
+  - Tuyệt đối không để lộ owner hold, booking khách hoặc mã vé.
+  - Tham số sai hoặc sort ngoài whitelist → 400 VALIDATION_ERROR.
+
+`GET /api/admin/showtimes/{id}`
+
+- Phân quyền: Chỉ `ADMIN`.
+- Đọc chi tiết suất chiếu theo `id` (số nguyên dương) kể cả suất không public (thuộc phim HIDDEN, phòng MAINTENANCE, rạp SUSPENDED hoặc suất CANCELLED/COMPLETED).
+- Trả về `ShowtimeResponse` trực tiếp với HTTP 200.
+- `id` không tồn tại → 404 RESOURCE_NOT_FOUND; `id` không hợp lệ (<= 0) → 400 VALIDATION_ERROR.
+
 `GET /api/admin/reports/revenue?from=2026-11-01&to=2026-11-30`: hai ngày theo local calendar; server convert `[startLocal 00:00, dayAfterEndLocal 00:00)` sang UTC. Trả `totalRevenue`, `successfulPayments`, `currency="VND"`, danh sách `dailyRevenue`.
 
-### 9.2 Báo cáo doanh thu — TASK-16
+### 9.3 Báo cáo doanh thu — TASK-16
 
 Chỉ ADMIN; `from/to` bắt buộc là ngày ISO hợp lệ, năm 1000–9998, from <= to; lỗi → 400 VALIDATION_ERROR. Response 200:
 

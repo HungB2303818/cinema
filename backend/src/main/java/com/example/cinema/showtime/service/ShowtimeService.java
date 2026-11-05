@@ -107,6 +107,35 @@ public class ShowtimeService {
         return ShowtimeResponse.from(showtime);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
+    public PageResponse<ShowtimeResponse> adminSchedule(Long cinemaId, Long roomId, Long movieId,
+                                                       LocalDate date, ShowtimeStatus status,
+                                                       int page, int size, String sort) {
+        if (cinemaId != null) Requests.positiveId(cinemaId);
+        if (roomId != null) Requests.positiveId(roomId);
+        if (movieId != null) Requests.positiveId(movieId);
+        Instant start = null;
+        Instant end = null;
+        if (date != null) {
+            if (date.getYear() < 1000 || date.getYear() > 9998) {
+                throw new AppException(ErrorCode.VALIDATION_ERROR, "Ngày phải có năm từ 1000 đến 9998.");
+            }
+            start = date.atStartOfDay(VIETNAM).toInstant();
+            end = date.plusDays(1).atStartOfDay(VIETNAM).toInstant();
+        }
+        Page<Showtime> showtimePage = showtimeRepository.findAdminSchedule(
+                cinemaId, roomId, movieId, start, end, status,
+                Requests.page(page, size, sort, Set.of("id", "startsAt", "basePrice", "status")));
+        return PageResponse.from(showtimePage.map(ShowtimeResponse::from));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    public ShowtimeResponse adminDetail(Long id) {
+        Requests.positiveId(id);
+        Showtime showtime = showtimeRepository.findAdminDetailById(id).orElseThrow(this::notFound);
+        return ShowtimeResponse.from(showtime);
+    }
+
     public PageResponse<ShowtimeResponse> schedule(Long movieId, LocalDate date, Long cinemaId,
                                                   int page, int size, String sort) {
         publicMovie(movieId);

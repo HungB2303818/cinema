@@ -2,6 +2,7 @@ package com.example.cinema.showtime.repository;
 
 import com.example.cinema.catalog.entity.Movie;
 import com.example.cinema.showtime.entity.Showtime;
+import com.example.cinema.showtime.entity.ShowtimeStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -72,4 +73,30 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
     List<Showtime> findShowtimesForCinemaMovies(@Param("cinemaId") Long cinemaId,
             @Param("movieIds") List<Long> movieIds, @Param("start") Instant start, @Param("end") Instant end);
 
+    @EntityGraph(attributePaths = {"room", "room.cinema", "movie"})
+    @Query(value = "select s from Showtime s where " +
+            "(:cinemaId is null or s.room.cinema.id = :cinemaId) and " +
+            "(:roomId is null or s.room.id = :roomId) and " +
+            "(:movieId is null or s.movie.id = :movieId) and " +
+            "(:start is null or s.startsAt >= :start) and " +
+            "(:end is null or s.startsAt < :end) and " +
+            "(:status is null or s.status = :status)",
+           countQuery = "select count(s) from Showtime s where " +
+            "(:cinemaId is null or s.room.cinema.id = :cinemaId) and " +
+            "(:roomId is null or s.room.id = :roomId) and " +
+            "(:movieId is null or s.movie.id = :movieId) and " +
+            "(:start is null or s.startsAt >= :start) and " +
+            "(:end is null or s.startsAt < :end) and " +
+            "(:status is null or s.status = :status)")
+    Page<Showtime> findAdminSchedule(@Param("cinemaId") Long cinemaId,
+                                     @Param("roomId") Long roomId,
+                                     @Param("movieId") Long movieId,
+                                     @Param("start") Instant start,
+                                     @Param("end") Instant end,
+                                     @Param("status") ShowtimeStatus status,
+                                     Pageable pageable);
+
+    @EntityGraph(attributePaths = {"room", "room.cinema", "movie"})
+    @Query("select s from Showtime s where s.id = :id")
+    Optional<Showtime> findAdminDetailById(@Param("id") Long id);
 }

@@ -44,7 +44,8 @@ export interface CinemaShowtimesQueryParams {
   size?: number;
 }
 
-export type SeatType = 'STANDARD' | 'VIP';
+import type { SeatType } from '@/features/cinemas/types/cinema.types';
+export type { SeatType };
 export type SeatState = 'AVAILABLE' | 'HELD' | 'BOOKED';
 
 export interface SeatItem {
@@ -60,4 +61,32 @@ export interface SeatMapResponse {
   startsAt: string;
   bookingClosesAt: string;
   seats: SeatItem[];
+}
+
+export type ShowtimeResponse = Showtime;
+
+export interface ShowtimeCreatedResponse {
+  showtime: Showtime;
+  createdSeatCount: number;
+}
+
+export interface ShowtimeRequest {
+  movieId: number;
+  roomId: number;
+  startsAt: string; // ISO 8601 UTC timestamp with Z
+  endsAt: string;   // ISO 8601 UTC timestamp with Z
+  cleanupMinutes?: number;
+  basePrice: number;
+  vipSurcharge?: number;
+}
+
+export interface AdminShowtimeFilters {
+  cinemaId?: number;
+  roomId?: number;
+  movieId?: number;
+  date?: string; // YYYY-MM-DD in Asia/Ho_Chi_Minh
+  status?: ShowtimeStatus;
+  page?: number;
+  size?: number;
+  sort?: string;
 }
