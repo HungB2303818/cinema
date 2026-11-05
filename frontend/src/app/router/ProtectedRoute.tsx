@@ -8,9 +8,14 @@ import { ErrorState } from '@/shared/components/ui/ErrorState';
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requiredRole?: UserRole;
+  allowedRoles?: UserRole[];
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole }) => {
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  children,
+  requiredRole,
+  allowedRoles,
+}) => {
   const { user, isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
 
@@ -22,12 +27,15 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requir
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (requiredRole && user?.role !== requiredRole) {
+  const effectiveAllowedRoles = allowedRoles ?? (requiredRole ? [requiredRole] : undefined);
+
+  if (effectiveAllowedRoles && (!user?.role || !effectiveAllowedRoles.includes(user.role))) {
+    const rolesText = effectiveAllowedRoles.join(' hoặc ');
     return (
       <div className="py-20 max-w-lg mx-auto text-center space-y-4">
         <ErrorState
           title="Không có quyền truy cập"
-          message={`Trang này yêu cầu quyền ${requiredRole}. Tài khoản hiện tại (${user?.role}) không có quyền truy cập.`}
+          message={`Trang này yêu cầu quyền ${rolesText}. Tài khoản hiện tại (${user?.role}) không có quyền truy cập.`}
         />
       </div>
     );

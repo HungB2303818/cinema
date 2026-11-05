@@ -179,15 +179,15 @@ P0 = luồng đặt vé cốt lõi; P1 = hoàn chỉnh nghiệp vụ MVP; P2 = n
 
 **Đối chiếu:** FR-08/12/14; UC-04/08; BR-12…15/17; TC-06/07/08/16/22.
 
-- [ ] Tạo `features/payments` theo cùng cấu trúc api/types/hooks/components; không thêm cổng thanh toán thật.
-- [ ] Checkout hiển thị ghế, đơn giá snapshot, tổng server, hạn giữ; chỉ CUSTOMER owner còn PENDING và hiệu lực mới thao tác.
-- [ ] Gọi POST `/bookings/{id}/payments/mock`, có thao tác mô phỏng SUCCESS/FAILED và ghi nhãn rõ.
-- [ ] Key gắn với một payment attempt: retry kỹ thuật cùng payload dùng key cũ; lần thử mới sau FAILED hoặc đổi `simulatedResult` dùng key mới.
-- [ ] Timeout không được mặc định là payment FAILED: GET booking để đối soát, retry cùng key nếu cần; không tự tạo key mới và thanh toán lại.
-- [ ] FAILED hiển thị lỗi lần thanh toán nhưng booking còn PENDING nếu chưa hết hạn; không đổi booking thành FAILED.
-- [ ] Replay FAILED là kết quả attempt cũ, không dùng nó để ghi đè booking hiện tại đã CONFIRMED; refetch GET booking.
-- [ ] SUCCESS chuyển trang xác nhận, hiển thị mã vé server cấp; refresh lấy lại qua GET booking và `/bookings/{id}/tickets`.
-- [ ] Không optimistic update thành CONFIRMED/BOOKED, không sinh vé ở client; invalidation booking/history/seat map sau mutation.
+- [x] Tạo `features/payments` theo cùng cấu trúc api/types/hooks/components; không thêm cổng thanh toán thật.
+- [x] Checkout hiển thị ghế, đơn giá snapshot, tổng server, hạn giữ; chỉ CUSTOMER owner còn PENDING và hiệu lực mới thao tác.
+- [x] Gọi POST `/bookings/{id}/payments/mock`, có thao tác mô phỏng SUCCESS/FAILED và ghi nhãn rõ.
+- [x] Key gắn với một payment attempt: retry kỹ thuật cùng payload dùng key cũ; lần thử mới sau FAILED hoặc đổi `simulatedResult` dùng key mới.
+- [x] Timeout không được mặc định là payment FAILED: GET booking để đối soát, retry cùng key nếu cần; không tự tạo key mới và thanh toán lại.
+- [x] FAILED hiển thị lỗi lần thanh toán nhưng booking còn PENDING nếu chưa hết hạn; không đổi booking thành FAILED.
+- [x] Replay FAILED là kết quả attempt cũ, không dùng nó để ghi đè booking hiện tại đã CONFIRMED; refetch GET booking.
+- [x] SUCCESS chuyển trang xác nhận, hiển thị mã vé server cấp; refresh lấy lại qua GET booking và `/bookings/{id}/tickets`.
+- [x] Không optimistic update thành CONFIRMED/BOOKED, không sinh vé ở client; invalidation booking/history/seat map sau mutation.
 
 **Nghiệm thu:** FAILED → thử mới SUCCESS trong hạn; timeout/reload không thanh toán đôi; hết hạn không nhận vé; CONFIRMED lấy lại được cùng mã vé.
 
@@ -195,12 +195,12 @@ P0 = luồng đặt vé cốt lõi; P1 = hoàn chỉnh nghiệp vụ MVP; P2 = n
 
 **Đối chiếu:** FR-09/10/12; UC-05/06/08; BR-15/16/17/21; TC-09/10/15.
 
-- [ ] Dùng GET `/bookings/me` có phân trang cho lịch sử; tận dụng/sửa `MyTicketsPage` thay vì tạo nguồn dữ liệu vé giả.
-- [ ] Tạo trang chi tiết dùng GET `/bookings/{id}`; hiển thị `effectiveStatus` và snapshot giá, không tính lại theo bảng giá hiện tại.
-- [ ] PENDING còn hạn có “Tiếp tục thanh toán” và “Hủy đơn”; CONFIRMED có xem vé; EXPIRED/CANCELLED không có nút thanh toán.
-- [ ] Hủy qua POST `/bookings/{id}/cancel` có xác nhận và trạng thái pending; xử lý đơn vừa hết hạn/vừa được thanh toán.
-- [ ] Chỉ gọi GET tickets khi CONFIRMED; không tải vé cho mọi đơn trong danh sách.
-- [ ] Owner khác/không tồn tại hiển thị lỗi không lộ thông tin; logout xóa dữ liệu riêng.
+- [x] Dùng GET `/bookings/me` có phân trang cho lịch sử; tận dụng/sửa `MyTicketsPage` thay vì tạo nguồn dữ liệu vé giả.
+- [x] Tạo trang chi tiết dùng GET `/bookings/{id}`; hiển thị `effectiveStatus` và snapshot giá, không tính lại theo bảng giá hiện tại.
+- [x] PENDING còn hạn có “Tiếp tục thanh toán” và “Hủy đơn”; CONFIRMED có xem vé; EXPIRED/CANCELLED không có nút thanh toán.
+- [x] Hủy qua POST `/bookings/{id}/cancel` có xác nhận và trạng thái pending; xử lý đơn vừa hết hạn/vừa được thanh toán.
+- [x] Chỉ gọi GET tickets khi CONFIRMED; không tải vé cho mọi đơn trong danh sách.
+- [x] Owner khác/không tồn tại hiển thị lỗi không lộ thông tin; logout xóa dữ liệu riêng.
 
 **Nghiệm thu:** Đơn PENDING tiếp tục được sau reload; hủy đơn giải phóng ghế qua backend; không có chức năng hủy/hoàn tiền CONFIRMED.
 
@@ -208,11 +208,11 @@ P0 = luồng đặt vé cốt lõi; P1 = hoàn chỉnh nghiệp vụ MVP; P2 = n
 
 **Đối chiếu:** FR-11; UC-07; BR-17/18/21; TC-13/14/21.
 
-- [ ] Tạo route `/staff/check-in`, guard STAFF hoặc ADMIN, input nhập/dán `ticketCode`.
-- [ ] POST `/staff/tickets/check-in`; không gửi `staffId`, không sửa/case-fold mã vé.
-- [ ] Hiển thị phim/phòng/ghế/giờ khi thành công; phân biệt vé sai, đã dùng và ngoài cửa sổ hợp lệ.
-- [ ] Chặn submit lặp lúc đang xử lý; không tự retry mutation check-in khi lỗi mạng, báo kết quả chưa xác định nếu cần.
-- [ ] Không hiển thị toàn bộ lịch sử khách cho staff; không log mã vé. Camera QR để sau MVP.
+- [x] Tạo route `/staff/check-in`, guard STAFF hoặc ADMIN, input nhập/dán `ticketCode`.
+- [x] POST `/staff/tickets/check-in`; không gửi `staffId`, không sửa/case-fold mã vé.
+- [x] Hiển thị phim/phòng/ghế/giờ khi thành công; phân biệt vé sai, đã dùng và ngoài cửa sổ hợp lệ.
+- [x] Chặn submit lặp lúc đang xử lý; không tự retry mutation check-in khi lỗi mạng, báo kết quả chưa xác định nếu cần.
+- [x] Không hiển thị toàn bộ lịch sử khách cho staff; không log mã vé. Camera QR để sau MVP.
 
 **Nghiệm thu:** Staff check-in được một lần; lần hai có thông báo đã dùng; CUSTOMER/Guest bị chặn cả route lẫn API.
 

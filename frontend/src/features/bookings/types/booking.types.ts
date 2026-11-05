@@ -40,6 +40,33 @@ export interface BookingDetailResponse {
   seats: BookingDetailSeatItem[];
 }
 
+/**
+ * Summary DTO for GET /api/bookings/me (FE-07)
+ */
+export interface BookingSummaryItem {
+  bookingId: number;
+  bookingCode: string;
+  status: BookingStatus;
+  effectiveStatus: BookingStatus;
+  movieTitle: string;
+  startsAt: string;
+  totalAmount: number;
+  createdAt: string;
+  expiresAt: string;
+}
+
+export interface BookingCancelResponse {
+  bookingId: number;
+  status: 'CANCELLED';
+  releasedSeatCount: number;
+}
+
+export interface BookingHistoryQueryParams {
+  page?: number;
+  size?: number;
+  sort?: string;
+}
+
 export interface BookingIntent {
   version: 1;
   userId: number;

@@ -8,7 +8,10 @@ import {
   ShowtimesPage,
   SeatSelectionPage,
   CheckoutPage,
+  BookingDetailPage,
+  BookingSuccessPage,
   MyTicketsPage,
+  StaffCheckinPage,
   LoginPage,
   RegisterPage,
   AdminDashboardPage,
@@ -39,12 +42,42 @@ export const AppRouter: React.FC = () => {
           }
         />
 
+        {/* Customer Protected Route - Booking Success & Issued Tickets (FE-06) */}
+        <Route
+          path="/bookings/:bookingId/success"
+          element={
+            <ProtectedRoute requiredRole="CUSTOMER">
+              <BookingSuccessPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Customer Protected Route - Booking Detail & Actions (FE-07) */}
+        <Route
+          path="/bookings/:bookingId"
+          element={
+            <ProtectedRoute requiredRole="CUSTOMER">
+              <BookingDetailPage />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Customer Protected Route */}
         <Route
           path="/my-tickets"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute requiredRole="CUSTOMER">
               <MyTicketsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Staff & Admin Ticket Check-in Route (FE-08) */}
+        <Route
+          path="/staff/check-in"
+          element={
+            <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
+              <StaffCheckinPage />
             </ProtectedRoute>
           }
         />

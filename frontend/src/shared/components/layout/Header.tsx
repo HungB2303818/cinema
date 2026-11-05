@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Film, User as UserIcon, LogOut, Shield, Menu, X, ArrowLeft, Headphones } from 'lucide-react';
+import { Film, User as UserIcon, LogOut, Shield, Menu, X, ArrowLeft, Headphones, Ticket } from 'lucide-react';
 import { useAuth } from '@/features/auth';
 import { StatusBadge } from '@/shared/components/ui/StatusBadge';
 
@@ -38,12 +38,14 @@ export const Header: React.FC<HeaderProps> = ({ variant = 'customer' }) => {
   const search = location.search;
 
   const isHomeActive = pathname === '/' && search === '';
-  const isShowingActive = pathname === '/movies' && (search === '' || search.includes('status=SHOWING'));
-  const isUpcomingActive = pathname === '/movies' && search.includes('status=UPCOMING');
+  const isMoviesActive = pathname === '/movies' || pathname.startsWith('/movies/');
   const isCinemasActive = pathname.startsWith('/cinemas');
   const isShowtimesActive = pathname.startsWith('/showtimes');
   const isTicketsActive = pathname.startsWith('/my-tickets');
+  const isCheckinActive = pathname === '/staff/check-in' || pathname.startsWith('/staff/check-in/');
   const isAdminActive = pathname.startsWith('/admin');
+  const isCustomer = isAuthenticated && user?.role === 'CUSTOMER';
+  const isStaffOrAdmin = isAuthenticated && (user?.role === 'STAFF' || user?.role === 'ADMIN');
 
   const getNavLinkClass = (isActive: boolean) =>
     `px-3 py-1.5 xl:px-4 xl:py-2 rounded-full text-xs xl:text-sm font-semibold transition-all duration-200 border-none shrink-0 ${
@@ -117,8 +119,17 @@ export const Header: React.FC<HeaderProps> = ({ variant = 'customer' }) => {
               </span>
             </div>
 
-            {/* Right: Switch to Store + Admin Info */}
+            {/* Right: Soát vé + Switch to Store + Admin Info */}
             <div className="flex items-center gap-3">
+              <Link
+                to="/staff/check-in"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold text-zinc-300 hover:text-white bg-[#161821] hover:bg-[#20232d] rounded-full border-none transition-colors"
+                title="Soát vé"
+              >
+                <Ticket className="w-3.5 h-3.5 text-[#e6e2c1]" />
+                <span>Soát vé</span>
+              </Link>
+
               <Link
                 to="/"
                 className="inline-flex items-center gap-1.5 px-3.5 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold text-zinc-300 hover:text-white bg-[#161821] hover:bg-[#20232d] rounded-full border-none transition-colors"
@@ -174,11 +185,8 @@ export const Header: React.FC<HeaderProps> = ({ variant = 'customer' }) => {
             <Link to="/" className={getNavLinkClass(isHomeActive)}>
               Trang chủ
             </Link>
-            <Link to="/movies?status=SHOWING" className={getNavLinkClass(isShowingActive)}>
-              Phim đang chiếu
-            </Link>
-            <Link to="/movies?status=UPCOMING" className={getNavLinkClass(isUpcomingActive)}>
-              Phim sắp chiếu
+            <Link to="/movies" className={getNavLinkClass(isMoviesActive)}>
+              Phim
             </Link>
             <Link to="/cinemas" className={getNavLinkClass(isCinemasActive)}>
               Rạp phim
@@ -186,9 +194,17 @@ export const Header: React.FC<HeaderProps> = ({ variant = 'customer' }) => {
             <Link to="/showtimes" className={getNavLinkClass(isShowtimesActive)}>
               Lịch chiếu
             </Link>
-            {isAuthenticated && (
+            {isCustomer && (
               <Link to="/my-tickets" className={getNavLinkClass(isTicketsActive)}>
                 Vé của tôi
+              </Link>
+            )}
+            {isStaffOrAdmin && (
+              <Link to="/staff/check-in" className={getNavLinkClass(isCheckinActive)}>
+                <span className="flex items-center gap-1.5">
+                  <Ticket className="w-3.5 h-3.5" />
+                  <span>Soát vé</span>
+                </span>
               </Link>
             )}
             {hasRole('ADMIN') && (
@@ -283,11 +299,8 @@ export const Header: React.FC<HeaderProps> = ({ variant = 'customer' }) => {
               <Link to="/" className={getMobileNavLinkClass(isHomeActive)}>
                 Trang chủ
               </Link>
-              <Link to="/movies?status=SHOWING" className={getMobileNavLinkClass(isShowingActive)}>
-                Phim đang chiếu
-              </Link>
-              <Link to="/movies?status=UPCOMING" className={getMobileNavLinkClass(isUpcomingActive)}>
-                Phim sắp chiếu
+              <Link to="/movies" className={getMobileNavLinkClass(isMoviesActive)}>
+                Phim
               </Link>
               <Link to="/cinemas" className={getMobileNavLinkClass(isCinemasActive)}>
                 Rạp phim
@@ -295,9 +308,15 @@ export const Header: React.FC<HeaderProps> = ({ variant = 'customer' }) => {
               <Link to="/showtimes" className={getMobileNavLinkClass(isShowtimesActive)}>
                 Lịch chiếu
               </Link>
-              {isAuthenticated && (
+              {isCustomer && (
                 <Link to="/my-tickets" className={getMobileNavLinkClass(isTicketsActive)}>
                   Vé của tôi
+                </Link>
+              )}
+              {isStaffOrAdmin && (
+                <Link to="/staff/check-in" className={getMobileNavLinkClass(isCheckinActive)}>
+                  <Ticket className={`w-5 h-5 ${isCheckinActive ? 'text-black' : 'text-[#e6e2c1]'}`} />
+                  <span>Soát vé</span>
                 </Link>
               )}
               {hasRole('ADMIN') && (

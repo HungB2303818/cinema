@@ -1,7 +1,7 @@
 import React from 'react';
+import { Link, Navigate } from 'react-router-dom';
 import { Shield, Film, Calendar, Users, Tv } from 'lucide-react';
 import { useAuth } from '@/features/auth';
-import { Navigate } from 'react-router-dom';
 
 export const AdminDashboardPage: React.FC = () => {
   const { hasRole, isLoading } = useAuth();
@@ -40,6 +40,8 @@ export const AdminDashboardPage: React.FC = () => {
       icon: Users,
       count: 'Bảo mật',
       color: 'text-emerald-400',
+      link: '/staff/check-in',
+      linkText: 'Vào trang soát vé',
     },
   ];
 
@@ -75,6 +77,16 @@ export const AdminDashboardPage: React.FC = () => {
                   </span>
                 </div>
                 <p className="text-xs text-zinc-400 leading-relaxed">{mod.description}</p>
+                {mod.link && (
+                  <div className="pt-2">
+                    <Link
+                      to={mod.link}
+                      className="inline-flex items-center gap-1.5 text-xs text-[#e6e2c1] hover:underline font-semibold"
+                    >
+                      <span>{mod.linkText || 'Truy cập'} &rarr;</span>
+                    </Link>
+                  </div>
+                )}
               </div>
             </div>
           );

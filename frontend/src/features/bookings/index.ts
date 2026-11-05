@@ -7,3 +7,4 @@ export * from './components/Seat';
 export * from './components/SeatLegend';
 export * from './components/SeatMap';
 export * from './components/BookingSummary';
+export * from './components/CancelBookingModal';

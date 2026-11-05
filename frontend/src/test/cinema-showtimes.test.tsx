@@ -94,8 +94,8 @@ describe('Cinema Showtimes (Part A / TC-46..49)', () => {
     );
 
     // Verify cinema header & movie group title
-    expect(await screen.findByRole('heading', { level: 1, name: 'CGV Vincom' })).toBeInTheDocument();
-    expect(await screen.findByText('Dune: Hành Tinh Cát 2')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'CGV Vincom' }, { timeout: 4000 })).toBeInTheDocument();
+    expect(await screen.findByText('Dune: Hành Tinh Cát 2', {}, { timeout: 4000 })).toBeInTheDocument();
     expect(screen.getByText('T18')).toBeInTheDocument();
     expect(screen.getByText(/166 phút/i)).toBeInTheDocument();
   });

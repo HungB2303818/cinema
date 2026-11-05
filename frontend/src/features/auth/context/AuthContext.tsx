@@ -41,7 +41,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = (newToken: string, newUser: User) => {
     try {
       Object.keys(sessionStorage).forEach((key) => {
-        if (key.startsWith('cinema_booking_intent_')) {
+        if (key.startsWith('cinema_booking_intent_') || key.startsWith('cinema_payment_attempt_')) {
           sessionStorage.removeItem(key);
         }
       });
@@ -56,7 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     try {
       Object.keys(sessionStorage).forEach((key) => {
-        if (key.startsWith('cinema_booking_intent_')) {
+        if (key.startsWith('cinema_booking_intent_') || key.startsWith('cinema_payment_attempt_')) {
           sessionStorage.removeItem(key);
         }
       });
