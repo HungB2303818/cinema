@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Film, Sparkles, ArrowRight } from 'lucide-react';
-import { useMovies, MovieCard } from '@/features/movies';
+import { Film, ArrowRight } from 'lucide-react';
+import { useMovies, MovieCard, MovieHeroBanner } from '@/features/movies';
 import type { MovieQueryParams } from '@/features/movies';
 import { LoadingSpinner, ErrorState, EmptyState, Pagination } from '@/shared/components/ui';
 import { useCinemas, CinemaCard } from '@/features/cinemas';
@@ -65,24 +65,18 @@ export const HomePage: React.FC = () => {
 
   return (
     <div className="space-y-10 pb-16">
-      {/* Hero Banner */}
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#10121a] via-[#151724] to-[#0d0e14] border border-[#242733] p-8 sm:p-12 shadow-2xl">
-        <div className="relative z-10 max-w-2xl space-y-4">
-          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-bold bg-[#e6e2c1]/15 text-[#e6e2c1]">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Trải nghiệm điện ảnh đỉnh cao</span>
-          </div>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-white leading-tight">
-            Đặt vé xem phim trực tuyến nhanh chóng & dễ dàng
-          </h1>
-          <p className="text-zinc-400 text-sm sm:text-base">
-            Cập nhật liên tục lịch chiếu các bộ phim bom tấn mới nhất tại hệ thống rạp trên toàn quốc.
-          </p>
-        </div>
-      </section>
+      {/* Hero Banner featuring Dune 3 with transparency effects & slogan */}
+      <MovieHeroBanner
+        onExploreClick={() => {
+          const catalogEl = document.getElementById('movies-catalog');
+          if (catalogEl) {
+            catalogEl.scrollIntoView({ behavior: 'smooth' });
+          }
+        }}
+      />
 
       {/* Public movie categories */}
-      <section className="space-y-6">
+      <section id="movies-catalog" className="space-y-6">
         <div className="space-y-4 border-b border-[#20232e] pb-6">
           {/* Tab Switcher */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">

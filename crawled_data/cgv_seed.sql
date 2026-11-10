@@ -1,9 +1,77 @@
--- Dữ liệu phim sắp chiếu cào từ CGV (https://www.cgv.vn/default/movies/coming-soon-1.html)
--- Chuẩn hóa theo Schema của hệ thống Cinema Booking (bảng movies)
--- Số lượng phim: 34
+-- CGV seed data for the existing cinema_booking schema (MySQL 8+).
+-- Run after cinema_booking_schema.sql or the backend Flyway V1 migration.
+-- Contains 3 cinemas, 16 rooms, and 34 movies; poster URLs use Cloudinary.
+-- This file inserts data only; it does not create or change tables.
+-- Movie inserts are intended for a one-time import (re-running duplicates movies).
 
 USE cinema_booking;
+SET NAMES utf8mb4;
 
+-- Cinemas and their rooms (cinemas must be inserted before rooms)
+-- ============================================================
+-- 1. INSERT VÀO BẢNG `cinemas`
+-- Sử dụng WHERE NOT EXISTS để tránh bị trùng lặp nếu chạy lại script
+-- ============================================================
+
+-- 1. CGV Sense City Cần Thơ (Mã site: 013)
+INSERT INTO cinemas (name, address, status)
+SELECT 'CGV Sense City Cần Thơ', 'Tầng 3, TTTM Sense City, Số 1 Đại Lộ Hòa Bình, Phường Tân An, Quận Ninh Kiều, Cần Thơ', 'ACTIVE'
+WHERE NOT EXISTS (SELECT 1 FROM cinemas WHERE name = 'CGV Sense City Cần Thơ');
+
+-- 2. CGV Vincom Xuân Khánh (Mã site: 036)
+INSERT INTO cinemas (name, address, status)
+SELECT 'CGV Vincom Xuân Khánh', 'Tầng 5, TTTM Vincom Plaza Xuân Khánh, Số 209 Đường 30/04, Phường Xuân Khánh, Quận Ninh Kiều, Cần Thơ', 'ACTIVE'
+WHERE NOT EXISTS (SELECT 1 FROM cinemas WHERE name = 'CGV Vincom Xuân Khánh');
+
+-- 3. CGV Vincom Hùng Vương (Mã site: 029)
+INSERT INTO cinemas (name, address, status)
+SELECT 'CGV Vincom Hùng Vương', 'Tầng 6, TTTM Vincom Plaza Hùng Vương, Số 2 Hùng Vương, Phường Thới Bình, Quận Ninh Kiều, Cần Thơ', 'ACTIVE'
+WHERE NOT EXISTS (SELECT 1 FROM cinemas WHERE name = 'CGV Vincom Hùng Vương');
+
+-- ============================================================
+-- 2. INSERT CÁC PHÒNG CHIẾU TƯƠNG ỨNG VÀO BẢNG `rooms`
+-- Bảng rooms có UNIQUE KEY (cinema_id, name)
+-- ============================================================
+
+-- Các phòng chiếu của "CGV Sense City Cần Thơ" (6 phòng)
+INSERT IGNORE INTO rooms (cinema_id, name, status)
+SELECT id, 'Phòng 01 (2D)', 'ACTIVE' FROM cinemas WHERE name = 'CGV Sense City Cần Thơ' LIMIT 1;
+INSERT IGNORE INTO rooms (cinema_id, name, status)
+SELECT id, 'Phòng 02 (2D)', 'ACTIVE' FROM cinemas WHERE name = 'CGV Sense City Cần Thơ' LIMIT 1;
+INSERT IGNORE INTO rooms (cinema_id, name, status)
+SELECT id, 'Phòng 03 (3D)', 'ACTIVE' FROM cinemas WHERE name = 'CGV Sense City Cần Thơ' LIMIT 1;
+INSERT IGNORE INTO rooms (cinema_id, name, status)
+SELECT id, 'Phòng 04 (2D)', 'ACTIVE' FROM cinemas WHERE name = 'CGV Sense City Cần Thơ' LIMIT 1;
+INSERT IGNORE INTO rooms (cinema_id, name, status)
+SELECT id, 'Phòng 05 (2D)', 'ACTIVE' FROM cinemas WHERE name = 'CGV Sense City Cần Thơ' LIMIT 1;
+INSERT IGNORE INTO rooms (cinema_id, name, status)
+SELECT id, 'Phòng 06 (3D/Sweetbox)', 'ACTIVE' FROM cinemas WHERE name = 'CGV Sense City Cần Thơ' LIMIT 1;
+
+-- Các phòng chiếu của "CGV Vincom Xuân Khánh" (6 phòng)
+INSERT IGNORE INTO rooms (cinema_id, name, status)
+SELECT id, 'Phòng 01 (2D)', 'ACTIVE' FROM cinemas WHERE name = 'CGV Vincom Xuân Khánh' LIMIT 1;
+INSERT IGNORE INTO rooms (cinema_id, name, status)
+SELECT id, 'Phòng 02 (2D)', 'ACTIVE' FROM cinemas WHERE name = 'CGV Vincom Xuân Khánh' LIMIT 1;
+INSERT IGNORE INTO rooms (cinema_id, name, status)
+SELECT id, 'Phòng 03 (3D)', 'ACTIVE' FROM cinemas WHERE name = 'CGV Vincom Xuân Khánh' LIMIT 1;
+INSERT IGNORE INTO rooms (cinema_id, name, status)
+SELECT id, 'Phòng 04 (3D)', 'ACTIVE' FROM cinemas WHERE name = 'CGV Vincom Xuân Khánh' LIMIT 1;
+INSERT IGNORE INTO rooms (cinema_id, name, status)
+SELECT id, 'Phòng 05 (Gold Class)', 'ACTIVE' FROM cinemas WHERE name = 'CGV Vincom Xuân Khánh' LIMIT 1;
+INSERT IGNORE INTO rooms (cinema_id, name, status)
+SELECT id, 'Phòng 06 (2D/Sweetbox)', 'ACTIVE' FROM cinemas WHERE name = 'CGV Vincom Xuân Khánh' LIMIT 1;
+
+-- Các phòng chiếu của "CGV Vincom Hùng Vương" (4 phòng)
+INSERT IGNORE INTO rooms (cinema_id, name, status)
+SELECT id, 'Phòng 01 (2D)', 'ACTIVE' FROM cinemas WHERE name = 'CGV Vincom Hùng Vương' LIMIT 1;
+INSERT IGNORE INTO rooms (cinema_id, name, status)
+SELECT id, 'Phòng 02 (2D)', 'ACTIVE' FROM cinemas WHERE name = 'CGV Vincom Hùng Vương' LIMIT 1;
+INSERT IGNORE INTO rooms (cinema_id, name, status)
+SELECT id, 'Phòng 03 (3D)', 'ACTIVE' FROM cinemas WHERE name = 'CGV Vincom Hùng Vương' LIMIT 1;
+INSERT IGNORE INTO rooms (cinema_id, name, status)
+SELECT id, 'Phòng 04 (2D)', 'ACTIVE' FROM cinemas WHERE name = 'CGV Vincom Hùng Vương' LIMIT 1;
+
+-- Movies (Cloudinary poster URLs)
 INSERT INTO movies (title, description, duration_minutes, genre, age_rating, release_date, poster_url, status)
 VALUES ('BÒ SỮA BAY', 'Vào những năm 90, một trang trại bò sữa đang nghiên cứu một công thức sữa độc quyền có thể chữa lành vết thương, trẻ hóa và nhiều công dụng đặc biệt khác. Để thoát nghèo, một nhóm công nhân quyết định đánh cắp công thức sữa ấy, cho đến khi Trâu - tên đầu sỏ có cảm tình đặc biệt với người tạo nên công thức sữa.', 108, 'Hài, Hành Động, Tâm Lý', 'T18', '2026-11-06', 'https://res.cloudinary.com/dve5vqois/image/upload/v1793758604/cinema/posters/01_bo_sua_bay.jpg', 'SHOWING');
 
