@@ -42,13 +42,34 @@ Tại thư mục gốc dự án (`E:\Cinema`):
 ```bash
 docker compose up -d mysql
 ```
-*(Container sẽ ánh xạ sang cổng được định nghĩa trong `.env`, mặc định `3307` nếu cổng 3306 đang bị chiếm)*.
+*(Container ánh xạ cổng MySQL 3306 ra `localhost:3307` trên máy theo `MYSQL_PORT` trong `.env` gốc.)*
+
+### Chạy MySQL và backend bằng Docker Compose
+
+Tại thư mục gốc, chuẩn bị `.env` và `backend/.env` (hai file này không được commit), rồi chạy:
+
+```bash
+docker compose up -d --build mysql backend
+docker compose ps
+```
+
+MySQL được công bố trên máy tại `localhost:3307`; backend được công bố tại `localhost:8080` (hoặc cổng host `SERVER_PORT` trong `.env` gốc). Bên trong Compose, backend dùng `mysql:3306`, tên database và tài khoản MySQL từ `.env` gốc; các cấu hình còn lại như JWT và Cloudinary lấy từ `backend/.env`. `backend/.env` dành cho backend chạy ngoài Docker cũng có thể dùng `DB_HOST=localhost`, `DB_PORT=3307`: Compose sẽ ghi đè riêng các biến DB và `SERVER_PORT` cho container. Flyway tự tạo/cập nhật schema khi backend khởi động; không chạy thêm SQL khởi tạo bằng tay.
+
+Để xem log hoặc dừng container mà vẫn giữ dữ liệu trong volume:
+
+```bash
+docker compose logs -f backend
+docker compose down
+```
+
+Không dùng `docker compose down -v` nếu cần giữ dữ liệu MySQL. Nếu volume đã tồn tại, sửa `MYSQL_USER`/`MYSQL_PASSWORD` trong `.env` không tự đổi tài khoản đã tạo trong MySQL.
 
 ## 4. Quản lý Migration (Flyway)
 
 Cơ sở dữ liệu được quản lý tự động bởi Flyway khi Spring Boot khởi động:
 - `V1__init_schema.sql`: Khởi tạo 11 bảng chuẩn DDL (`users`, `movies`, `cinemas`, `rooms`, `seats`, `showtimes`, `bookings`, `showtime_seats`, `booking_seats`, `payments`, `ticket_checkins`).
 - `V2__seed_test_data.sql`: Dữ liệu seed mẫu chuẩn gồm tài khoản Admin/Staff/Customer, rạp CGV Demo, 2 phòng chiếu, 80 ghế (Standard + VIP), và danh sách phim.
+- `V3__seed_cgv_data.sql`: Thêm 3 rạp CGV, 16 phòng và 34 phim từ `../sql_schema/cgv_seed.sql`. Có kiểm tra tránh chèn trùng dữ liệu đã import thủ công; các phòng mới chưa có ghế. Không chạy lại `cgv_seed.sql` bằng tay sau khi đã dùng Flyway.
 
 Mật khẩu mặc định cho các tài khoản seed: `Password@123`
 - **Admin:** `admin@cinema.com`
