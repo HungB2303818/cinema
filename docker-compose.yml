@@ -23,26 +23,6 @@ services:
       timeout: 5s
       retries: 10
 
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    env_file:
-      - ./backend/.env
-    environment:
-      SERVER_PORT: 8080
-      DB_HOST: mysql
-      DB_PORT: 3306
-      DB_NAME: ${MYSQL_DATABASE:-cinema_booking}
-      DB_USERNAME: ${MYSQL_USER:-cinema_user}
-      DB_PASSWORD: ${MYSQL_PASSWORD:-cinema_password}
-    ports:
-      - "${SERVER_PORT:-8080}:8080"
-    depends_on:
-      mysql:
-        condition: service_healthy
-
 volumes:
   mysql_data:
     driver: local
