@@ -24,7 +24,7 @@ describe('CinemasPage (FE-03, Section B)', () => {
     expect(screen.queryByText('CGV Sense City Cần Thơ')).not.toBeInTheDocument();
   });
 
-  it('renders real cinemas without links to the removed schedule page', async () => {
+  it('links a cinema card to its showtimes', async () => {
     vi.spyOn(cinemasApi, 'list').mockResolvedValueOnce([
       {
         id: 1,
@@ -40,8 +40,8 @@ describe('CinemasPage (FE-03, Section B)', () => {
     expect(screen.getByText('87 Láng Hạ, Hà Nội')).toBeInTheDocument();
     expect(screen.getAllByText('Đang hoạt động').length).toBeGreaterThan(0);
 
-    expect(screen.queryByRole('link', { name: /Lịch chiếu/i })).not.toBeInTheDocument();
-    expect(document.querySelector('a[href^="/showtimes"]')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Xem lịch chiếu rạp Rạp Quốc Gia' }))
+      .toHaveAttribute('href', '/showtimes?cinemaId=1');
   });
 
   it('opens room modal and displays real rooms', async () => {

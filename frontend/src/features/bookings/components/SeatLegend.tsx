@@ -3,8 +3,8 @@ import { X, Clock } from 'lucide-react';
 
 export const SeatLegend: React.FC = () => {
   return (
-    <div className="rounded-2xl bg-[#13151d] border border-[#242733] p-4 text-xs">
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4 items-center justify-center">
+    <div className="text-xs" aria-label="Chú giải trạng thái ghế">
+      <div className="flex flex-wrap gap-x-5 gap-y-3 items-center justify-center lg:justify-start">
         {/* Available Standard */}
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-md bg-[#13151d] border border-[#2c3040] flex items-center justify-center text-[10px] text-zinc-300 font-medium">

@@ -19,8 +19,7 @@ function addDays(date: string, days: number): string {
 
 export function ShowtimeDateStrip({ selectedDate, onSelect, today = getVietnamDateString() }: ShowtimeDateStripProps) {
   const selectedRef = useRef<HTMLButtonElement>(null);
-  const start = selectedDate < today || selectedDate >= addDays(today, DAY_COUNT) ? selectedDate : today;
-  const dates = Array.from({ length: DAY_COUNT }, (_, index) => addDays(start, index));
+  const dates = Array.from({ length: DAY_COUNT }, (_, index) => addDays(today, index));
 
   useEffect(() => {
     selectedRef.current?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });

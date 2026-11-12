@@ -1,10 +1,11 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { MainLayout, AdminLayout, AuthLayout } from '@/shared/components/layout';
 import {
   HomePage,
   MovieDetailsPage,
   CinemasPage,
+  ShowtimesPage,
   SeatSelectionPage,
   CheckoutPage,
   BookingDetailPage,
@@ -35,7 +36,7 @@ export const AppRouter: React.FC = () => {
         <Route path="/movies" element={<HomePage />} />
         <Route path="/movies/:id" element={<MovieDetailsPage />} />
         <Route path="/cinemas" element={<CinemasPage />} />
-        <Route path="/showtimes" element={<Navigate to="/movies" replace />} />
+        <Route path="/showtimes" element={<ShowtimesPage />} />
         <Route path="/showtimes/:showtimeId/seats" element={<SeatSelectionPage />} />
 
         {/* Customer Protected Route - Recoverable Checkout (FE-05) */}

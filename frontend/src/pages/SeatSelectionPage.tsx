@@ -5,10 +5,6 @@ import {
   Clock,
   AlertTriangle,
   Info,
-  Calendar,
-  Building2,
-  CheckCircle2,
-  Film,
   AlertCircle,
   RefreshCw,
 } from 'lucide-react';
@@ -435,59 +431,22 @@ export const SeatSelectionPage: React.FC = () => {
   const seats = seatMap.seats || [];
 
   return (
-    <div className="space-y-8 pb-16">
-      {/* Top Navigation & Breadcrumb */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#20232e] pb-6">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-xs font-bold text-[#e6e2c1] uppercase tracking-wider">
-            <Link to="/movies" className="hover:underline flex items-center gap-1">
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Phim</span>
-            </Link>
-            <span>/</span>
-            <span>Chọn ghế</span>
-          </div>
-
-          <h1 className="text-2xl sm:text-3xl font-black text-white">
-            {routerState?.movieTitle || 'Chọn Ghế Xem Phim'}
-          </h1>
-
-          <div className="flex flex-wrap items-center gap-4 text-xs text-zinc-400 pt-1">
-            {showtimeId && (
-              <span className="px-2 py-0.5 rounded-full bg-[#181a24] border border-[#242733] text-zinc-300 font-semibold text-xs">
-                Mã suất #{showtimeId}
-              </span>
-            )}
-            {isCutoff ? (
-              <span className="px-2 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-300 font-semibold text-xs">
-                Đã ngừng nhận đặt vé
-              </span>
-            ) : (
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 font-semibold text-xs">
-                Đang nhận đặt vé trực tuyến
-              </span>
-            )}
-            {routerState?.cinemaName && (
-              <span className="flex items-center gap-1.5">
-                <Building2 className="w-3.5 h-3.5 text-[#e6e2c1]" />
-                <strong>{routerState.cinemaName}</strong>
-              </span>
-            )}
-            {routerState?.roomName && (
-              <span className="flex items-center gap-1.5">
-                <Film className="w-3.5 h-3.5 text-zinc-500" />
-                <span>{routerState.roomName}</span>
-              </span>
-            )}
-            {startsAt && (
-              <span className="flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-zinc-500" />
-                <span>{formatVietnamDateTime(startsAt)}</span>
-              </span>
-            )}
-          </div>
+    <div className="max-w-[1440px] mx-auto space-y-6 pb-16">
+      <header className="border-b border-[#30313b] pb-6">
+        <Link to="/movies" className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-[#e6e2c1] focus-visible:outline-2 focus-visible:outline-[#e6e2c1] rounded-sm mb-5">
+          <ArrowLeft className="w-4 h-4" /> Trở lại danh sách phim
+        </Link>
+        <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white leading-tight">
+          {routerState?.movieTitle || 'Chọn ghế xem phim'}
+        </h1>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-zinc-400 mt-3">
+          {routerState?.cinemaName && <span className="text-zinc-200">{routerState.cinemaName}</span>}
+          {routerState?.roomName && <span>{routerState.roomName}</span>}
+          {startsAt && <time dateTime={startsAt}>{formatVietnamDateTime(startsAt)}</time>}
+          {!routerState?.cinemaName && !routerState?.roomName && <span>Mã suất #{showtimeId}</span>}
         </div>
-      </div>
+        {isCutoff && <p className="mt-2 text-sm text-rose-300">Đã ngừng nhận đặt vé</p>}
+      </header>
 
       {/* Cutoff Warning Banner */}
       {isCutoff && (
@@ -583,12 +542,8 @@ export const SeatSelectionPage: React.FC = () => {
         </div>
       )}
 
-      {/* Main Grid: Left is Seat Map & Legend, Right is Booking Summary */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left Seat Map Column */}
-        <div className="lg:col-span-8 space-y-6">
-          <SeatLegend />
-
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className="lg:col-span-8 xl:col-span-9 space-y-5">
           {seats.length === 0 ? (
             <EmptyState
               title="Chưa có sơ đồ ghế"
@@ -602,17 +557,13 @@ export const SeatSelectionPage: React.FC = () => {
               isCutoff={isCutoff || isSubmitting}
             />
           )}
+          <SeatLegend />
         </div>
 
-        {/* Right Summary Sidebar */}
-        <div className="lg:col-span-4 sticky top-6">
+        <div className="lg:col-span-4 xl:col-span-3 lg:sticky lg:top-6">
           <BookingSummary
             selectedSeats={selectedSeats}
             onRemoveSeat={handleRemoveSeat}
-            startsAt={startsAt}
-            movieTitle={routerState?.movieTitle}
-            cinemaName={routerState?.cinemaName}
-            roomName={routerState?.roomName}
             isCutoff={isCutoff}
             onContinue={handleInitiateBooking}
           />
@@ -626,18 +577,10 @@ export const SeatSelectionPage: React.FC = () => {
           role="dialog"
           aria-modal="true"
         >
-          <div className="bg-[#13151d] border border-[#242733] rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-6">
-            <div className="w-12 h-12 rounded-full bg-[#e6e2c1]/10 text-[#e6e2c1] flex items-center justify-center mx-auto">
-              <CheckCircle2 className="w-6 h-6" />
-            </div>
-
-            <div className="text-center space-y-2">
-              <h3 className="text-lg font-bold text-white">Xác nhận giữ ghế</h3>
-              <p className="text-xs text-zinc-400 leading-relaxed">
-                Bạn đang tiến hành giữ chỗ cho{' '}
-                <strong className="text-white">{selectedSeats.length} ghế</strong>:
-              </p>
-              <div className="flex flex-wrap justify-center gap-1.5 py-1">
+          <div className="bg-[#171922] border border-[#323440] rounded-[28px] p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-6">
+            <div className="space-y-3">
+              <h3 className="text-xl font-semibold text-white">Xác nhận giữ ghế</h3>
+              <div className="flex flex-wrap gap-1.5">
                 {selectedSeats.map((s) => (
                   <span
                     key={s.seatId}
@@ -649,19 +592,14 @@ export const SeatSelectionPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Hold notice */}
-            <div className="p-4 rounded-2xl bg-[#090a0f] border border-[#20232e] text-xs text-zinc-300 space-y-2">
+            <div className="border-t border-[#343744] pt-4 text-sm text-zinc-300 space-y-3">
               <div className="flex items-center gap-1.5 font-semibold text-[#e6e2c1]">
                 <Clock className="w-4 h-4" />
                 <span>Thời hạn giữ chỗ: 5 phút</span>
               </div>
-              <p className="text-zinc-400 leading-relaxed">
-                Sau khi bấm xác nhận, hệ thống sẽ thực hiện giữ ghế trong vòng{' '}
-                <strong className="text-zinc-200">5 phút</strong> để bạn tiến hành thanh toán.
-                Sau 5 phút nếu chưa hoàn tất, ghế sẽ tự động được giải phóng cho người khác.
-              </p>
-              <div className="pt-2 border-t border-[#20232e] flex items-center justify-between font-bold text-sm text-white">
-                <span>Tạm tính:</span>
+              <p className="text-zinc-400 text-xs leading-relaxed">Ghế sẽ được giải phóng nếu bạn chưa thanh toán sau 5 phút.</p>
+              <div className="flex items-center justify-between font-semibold text-sm text-white">
+                <span>Tạm tính</span>
                 <span className="text-[#e6e2c1]">{formatCurrency(estimatedTotal)}</span>
               </div>
             </div>

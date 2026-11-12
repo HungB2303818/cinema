@@ -16,7 +16,12 @@ export const CinemaCard: React.FC<CinemaCardProps> = ({ cinema, onSelectCinema }
   const showImage = imageInfo.imageUrl && !imageError;
 
   return (
-    <article className="group flex flex-col justify-between overflow-hidden rounded-2xl bg-[#13151d] border border-[#242733] shadow-xl shadow-black/40 hover:border-[#e6e2c1]/60 hover:shadow-black/60 transition-all duration-300">
+    <article className="group relative flex flex-col justify-between overflow-hidden rounded-2xl bg-[#13151d] border border-[#242733] shadow-xl shadow-black/40 hover:border-[#e6e2c1]/60 hover:shadow-black/60 transition-all duration-300">
+      <Link
+        to={`/showtimes?cinemaId=${cinema.id}`}
+        aria-label={`Xem lịch chiếu rạp ${cinema.name}`}
+        className="absolute inset-0 z-10 focus-visible:outline-2 focus-visible:outline-[#e6e2c1]"
+      />
       {/* Cinema Image Frame: 16:9 aspect ratio */}
       <div
         className="relative aspect-video w-full overflow-hidden bg-[#090a0f] border-b border-[#20232e] flex items-center justify-center"
@@ -88,7 +93,7 @@ export const CinemaCard: React.FC<CinemaCardProps> = ({ cinema, onSelectCinema }
         </div>
 
         {/* Action Controls */}
-        <footer className="pt-3 border-t border-[#20232e] flex items-center gap-2.5">
+        <footer className="relative z-20 pt-3 border-t border-[#20232e] flex items-center gap-2.5">
           {onSelectCinema && (
             <button
               type="button"
@@ -100,13 +105,13 @@ export const CinemaCard: React.FC<CinemaCardProps> = ({ cinema, onSelectCinema }
             </button>
           )}
 
-          {!onSelectCinema && <Link
-            to="/cinemas"
+          <Link
+            to={`/showtimes?cinemaId=${cinema.id}`}
             className="flex-1 px-3.5 py-2 text-xs font-bold rounded-full bg-[#e6e2c1] hover:bg-[#dad6b2] text-black transition-all flex items-center justify-center gap-1.5 shadow-md active:scale-[0.98] border-none text-center"
           >
             <Info className="w-3.5 h-3.5" />
-            <span>Thông tin rạp</span>
-          </Link>}
+            <span>Xem lịch chiếu</span>
+          </Link>
         </footer>
       </div>
     </article>

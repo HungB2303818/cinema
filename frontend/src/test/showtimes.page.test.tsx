@@ -5,6 +5,7 @@ import { renderWithProviders } from './test-utils';
 import { showtimesApi } from '@/features/showtimes/api/showtimes.api';
 import { moviesApi } from '@/features/movies/api/movies.api';
 import { cinemasApi } from '@/features/cinemas/api/cinemas.api';
+import { getVietnamDateString } from '@/shared/utils/format';
 
 describe('ShowtimesPage (FE-03, Section C)', () => {
   beforeEach(() => {
@@ -53,6 +54,7 @@ describe('ShowtimesPage (FE-03, Section C)', () => {
   });
 
   it('calls showtime query with correct parameters when movieId is selected in URL', async () => {
+    const today = getVietnamDateString();
     const showtimeSpy = vi.spyOn(showtimesApi, 'getMovieShowtimes').mockResolvedValueOnce({
       content: [
         {
@@ -94,7 +96,7 @@ describe('ShowtimesPage (FE-03, Section C)', () => {
     ]);
 
     renderWithProviders(<ShowtimesPage />, {
-      initialEntries: ['/showtimes?movieId=1&date=2026-11-10&cinemaId=1'],
+      initialEntries: [`/showtimes?movieId=1&date=${today}&cinemaId=1`],
     });
 
     // Check movie title header
@@ -105,7 +107,7 @@ describe('ShowtimesPage (FE-03, Section C)', () => {
       expect(showtimeSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           movieId: 1,
-          date: '2026-11-10',
+          date: today,
           cinemaId: 1,
         })
       );

@@ -84,7 +84,7 @@ describe('SeatSelectionPage (FE-04)', () => {
     expect(screen.getByRole('button', { name: /Ghế A1/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Ghế B1/i })).toBeInTheDocument();
     expect(screen.getByText('Mã suất #101')).toBeInTheDocument();
-    expect(screen.getByText('Đang nhận đặt vé trực tuyến')).toBeInTheDocument();
+    expect(screen.getByLabelText('Sơ đồ ghế')).toBeInTheDocument();
   });
 
   it('disables HELD and BOOKED seats from selection', async () => {
@@ -117,7 +117,7 @@ describe('SeatSelectionPage (FE-04)', () => {
 
     // Initially 0 seats selected
     expect(screen.getByText('Ghế đã chọn (0/8)')).toBeInTheDocument();
-    expect(screen.getByText(/Chưa có ghế nào được chọn/i)).toBeInTheDocument();
+    expect(screen.getByText(/Chọn ghế trên sơ đồ để tiếp tục/i)).toBeInTheDocument();
 
     // Select seat A1 (STANDARD, 90,000 đ)
     const a1Button = screen.getByRole('button', { name: /Ghế A1/i });

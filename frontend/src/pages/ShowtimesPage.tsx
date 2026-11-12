@@ -35,7 +35,11 @@ export const ShowtimesPage: React.FC = () => {
 
   // Selected date in Asia/Ho_Chi_Minh: default to today if not provided or format is invalid
   const todayVietnam = getVietnamDateString();
-  const selectedDate = dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : todayVietnam;
+  const lastDate = new Date(`${todayVietnam}T00:00:00Z`);
+  lastDate.setUTCDate(lastDate.getUTCDate() + 6);
+  const endDate = lastDate.toISOString().slice(0, 10);
+  const selectedDate = dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)
+    && dateParam >= todayVietnam && dateParam <= endDate ? dateParam : todayVietnam;
 
   const currentPage = isNaN(pageParam) || pageParam < 0 ? 0 : pageParam;
 

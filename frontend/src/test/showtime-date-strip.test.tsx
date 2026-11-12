@@ -29,8 +29,9 @@ describe('ShowtimeDateStrip', () => {
     expect(screen.getByRole('button', { name: 'Chọn ngày 30/12/2026' })).toBeInTheDocument();
   });
 
-  it('keeps a date from an older shared URL available and selected', () => {
+  it('always shows the seven days starting today even for an older shared URL', () => {
     render(<ShowtimeDateStrip today="2026-11-05" selectedDate="2026-10-30" onSelect={vi.fn()} />);
-    expect(screen.getByRole('button', { name: 'Chọn ngày 30/10/2026' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.queryByRole('button', { name: 'Chọn ngày 30/10/2026' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Chọn ngày 05/11/2026' })).toBeInTheDocument();
   });
 });

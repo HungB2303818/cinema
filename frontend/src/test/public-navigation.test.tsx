@@ -14,7 +14,7 @@ function LocationProbe() {
   return <output data-testid="location">{location.pathname}</output>;
 }
 
-describe('Public navigation without a standalone showtimes page', () => {
+describe('Public navigation with cinema showtimes', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.spyOn(auth, 'useAuth').mockReturnValue({
@@ -33,10 +33,11 @@ describe('Public navigation without a standalone showtimes page', () => {
     expect(document.querySelector('a[href^="/showtimes"]')).not.toBeInTheDocument();
   });
 
-  it.each(['/showtimes', '/showtimes?cinemaId=2&date=2026-11-06'])('redirects the old URL %s to movies', async (url) => {
+  it.each(['/showtimes', '/showtimes?cinemaId=2'])('opens the showtimes page at %s', async (url) => {
     renderWithProviders(<><AppRouter /><LocationProbe /></>, { initialEntries: [url] });
-    expect(await screen.findByTestId('location')).toHaveTextContent('/movies');
-    expect(screen.queryByRole('group', { name: 'Chọn ngày chiếu' })).not.toBeInTheDocument();
-    expect(document.querySelector('a[href^="/showtimes"]')).not.toBeInTheDocument();
+    expect(await screen.findByTestId('location')).toHaveTextContent('/showtimes');
+    if (url.includes('cinemaId')) {
+      expect(screen.getByRole('group', { name: 'Chọn ngày chiếu' })).toBeInTheDocument();
+    }
   });
 });

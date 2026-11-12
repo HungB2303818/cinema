@@ -6,6 +6,12 @@ import { showtimesApi } from '@/features/showtimes/api/showtimes.api';
 import { cinemasApi } from '@/features/cinemas/api/cinemas.api';
 import type { PageResponse } from '@/shared/types/api.types';
 import type { CinemaMovieShowtimeGroup } from '@/features/showtimes';
+import { formatDate, getVietnamDateString } from '@/shared/utils/format';
+
+const today = getVietnamDateString();
+const tomorrowDate = new Date(`${today}T00:00:00Z`);
+tomorrowDate.setUTCDate(tomorrowDate.getUTCDate() + 1);
+const tomorrow = tomorrowDate.toISOString().slice(0, 10);
 
 describe('Cinema Showtimes (Part A / TC-46..49)', () => {
   beforeEach(() => {
@@ -35,8 +41,8 @@ describe('Cinema Showtimes (Part A / TC-46..49)', () => {
             cinemaName: 'CGV Vincom',
             roomId: 201,
             roomName: 'Phòng 01',
-            startsAt: '2026-11-10T11:00:00Z',
-            endsAt: '2026-11-10T13:46:00Z',
+            startsAt: `${tomorrow}T11:00:00Z`,
+            endsAt: `${tomorrow}T13:46:00Z`,
             cleanupMinutes: 15,
             basePrice: 75000,
             vipSurcharge: 20000,
@@ -49,8 +55,8 @@ describe('Cinema Showtimes (Part A / TC-46..49)', () => {
             cinemaName: 'CGV Vincom',
             roomId: 202,
             roomName: 'Phòng 02', // Same time, different room!
-            startsAt: '2026-11-10T11:00:00Z',
-            endsAt: '2026-11-10T13:46:00Z',
+            startsAt: `${tomorrow}T11:00:00Z`,
+            endsAt: `${tomorrow}T13:46:00Z`,
             cleanupMinutes: 15,
             basePrice: 85000,
             vipSurcharge: 20000,
@@ -86,11 +92,11 @@ describe('Cinema Showtimes (Part A / TC-46..49)', () => {
       .mockResolvedValue(mockCinemaSchedule);
 
     renderWithProviders(<ShowtimesPage />, {
-      initialEntries: ['/showtimes?cinemaId=1&date=2026-11-10'],
+      initialEntries: [`/showtimes?cinemaId=1&date=${today}`],
     });
 
     expect(getCinemaShowtimesSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ cinemaId: 1, date: '2026-11-10' })
+      expect.objectContaining({ cinemaId: 1, date: today })
     );
 
     // Verify cinema header & movie group title
@@ -105,7 +111,7 @@ describe('Cinema Showtimes (Part A / TC-46..49)', () => {
     vi.spyOn(showtimesApi, 'getCinemaShowtimes').mockResolvedValue(mockCinemaSchedule);
 
     renderWithProviders(<ShowtimesPage />, {
-      initialEntries: ['/showtimes?cinemaId=1&date=2026-11-10'],
+      initialEntries: [`/showtimes?cinemaId=1&date=${today}`],
     });
 
     expect(await screen.findByText('Dune: Hành Tinh Cát 2')).toBeInTheDocument();
@@ -129,14 +135,14 @@ describe('Cinema Showtimes (Part A / TC-46..49)', () => {
   it('selects a date from the horizontal strip, keeps cinema and resets pagination', async () => {
     vi.spyOn(cinemasApi, 'list').mockResolvedValue(mockCinemas);
     const scheduleSpy = vi.spyOn(showtimesApi, 'getCinemaShowtimes').mockResolvedValue(mockCinemaSchedule);
-    renderWithProviders(<ShowtimesPage />, { initialEntries: ['/showtimes?cinemaId=1&date=2026-11-10&page=2'] });
-    const selected = screen.getByRole('button', { name: 'Chọn ngày 10/11/2026' });
+    renderWithProviders(<ShowtimesPage />, { initialEntries: [`/showtimes?cinemaId=1&date=${today}&page=2`] });
+    const selected = screen.getByRole('button', { name: `Chọn ngày ${formatDate(today)}` });
     expect(selected).toHaveAttribute('aria-pressed', 'true');
-    fireEvent.click(screen.getByRole('button', { name: 'Chọn ngày 11/11/2026' }));
+    fireEvent.click(screen.getByRole('button', { name: `Chọn ngày ${formatDate(tomorrow)}` }));
     await waitFor(() => expect(scheduleSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ cinemaId: 1, date: '2026-11-11', page: 0 })
+      expect.objectContaining({ cinemaId: 1, date: tomorrow, page: 0 })
     ));
-    expect(screen.getByRole('button', { name: 'Chọn ngày 11/11/2026' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: `Chọn ngày ${formatDate(tomorrow)}` })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('TC-49: disables showtime that has reached cutoff', async () => {
@@ -144,7 +150,7 @@ describe('Cinema Showtimes (Part A / TC-46..49)', () => {
     vi.spyOn(showtimesApi, 'getCinemaShowtimes').mockResolvedValue(mockCinemaSchedule);
 
     renderWithProviders(<ShowtimesPage />, {
-      initialEntries: ['/showtimes?cinemaId=1&date=2026-11-10'],
+      initialEntries: [`/showtimes?cinemaId=1&date=${today}`],
     });
 
     expect(await screen.findByText('Dune: Hành Tinh Cát 2')).toBeInTheDocument();
@@ -167,7 +173,7 @@ describe('Cinema Showtimes (Part A / TC-46..49)', () => {
     });
 
     renderWithProviders(<ShowtimesPage />, {
-      initialEntries: ['/showtimes?cinemaId=1&date=2026-11-10'],
+      initialEntries: [`/showtimes?cinemaId=1&date=${today}`],
     });
 
     expect(
@@ -182,7 +188,7 @@ describe('Cinema Showtimes (Part A / TC-46..49)', () => {
       .mockRejectedValueOnce(new Error('Lỗi máy chủ'));
 
     renderWithProviders(<ShowtimesPage />, {
-      initialEntries: ['/showtimes?cinemaId=1&date=2026-11-10'],
+      initialEntries: [`/showtimes?cinemaId=1&date=${today}`],
     });
 
     expect(

@@ -1,17 +1,13 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import type { SeatItem } from '@/features/showtimes';
-import { formatCurrency, formatVietnamDateTime } from '@/shared/utils';
+import { formatCurrency } from '@/shared/utils';
 import { useAuth } from '@/features/auth';
-import { ShoppingBag, AlertCircle, X, ShieldAlert, ArrowRight, LogIn } from 'lucide-react';
+import { AlertCircle, X, ShieldAlert, ArrowRight, LogIn } from 'lucide-react';
 
 interface BookingSummaryProps {
   selectedSeats: SeatItem[];
   onRemoveSeat: (seatId: number) => void;
-  startsAt?: string;
-  movieTitle?: string;
-  cinemaName?: string;
-  roomName?: string;
   isCutoff?: boolean;
   onContinue: () => void;
 }
@@ -19,10 +15,6 @@ interface BookingSummaryProps {
 export const BookingSummary: React.FC<BookingSummaryProps> = ({
   selectedSeats,
   onRemoveSeat,
-  startsAt,
-  movieTitle,
-  cinemaName,
-  roomName,
   isCutoff = false,
   onContinue,
 }) => {
@@ -43,46 +35,16 @@ export const BookingSummary: React.FC<BookingSummaryProps> = ({
   };
 
   return (
-    <div className="rounded-2xl bg-[#13151d] border border-[#242733] p-5 sm:p-6 shadow-xl space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-2 pb-4 border-b border-[#20232e]">
-        <ShoppingBag className="w-5 h-5 text-[#e6e2c1]" />
-        <h3 className="font-bold text-white text-base">Thông tin đặt vé</h3>
-      </div>
-
-      {/* Showtime Context if available */}
-      {(movieTitle || startsAt || cinemaName || roomName) && (
-        <div className="space-y-1.5 pb-4 border-b border-[#20232e] text-xs">
-          {movieTitle && (
-            <p className="font-bold text-white text-sm line-clamp-1">{movieTitle}</p>
-          )}
-          {cinemaName && (
-            <p className="text-zinc-400">
-              Rạp: <span className="text-zinc-200">{cinemaName}</span>
-              {roomName ? ` - ${roomName}` : ''}
-            </p>
-          )}
-          {startsAt && (
-            <p className="text-zinc-400">
-              Suất chiếu:{' '}
-              <span className="text-[#e6e2c1] font-medium">
-                {formatVietnamDateTime(startsAt)}
-              </span>
-            </p>
-          )}
-        </div>
-      )}
-
+    <div className="rounded-[28px] bg-[#171922] border border-[#323440] p-5 sm:p-6 space-y-5">
       {/* Selected Seats List */}
       <div className="space-y-3">
         <div className="flex items-center justify-between text-xs text-zinc-400">
           <span>Ghế đã chọn ({count}/8)</span>
-          {count > 0 && <span className="font-medium text-white">{count} ghế</span>}
         </div>
 
         {count === 0 ? (
-          <p className="text-xs text-zinc-500 py-3 italic text-center bg-[#0d0e14] rounded-xl border border-[#1f222d]">
-            Chưa có ghế nào được chọn. Vui lòng chọn ghế trên sơ đồ.
+          <p className="text-sm text-zinc-400 py-5 text-center border border-dashed border-[#343744] rounded-xl">
+            Chọn ghế trên sơ đồ để tiếp tục.
           </p>
         ) : (
           <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
@@ -95,9 +57,7 @@ export const BookingSummary: React.FC<BookingSummaryProps> = ({
                   <span className="font-bold text-[#e6e2c1] px-2 py-0.5 rounded bg-[#10121a]">
                     {seat.label}
                   </span>
-                  <span className="text-zinc-400">
-                    {seat.seatType === 'VIP' ? 'Ghế VIP' : 'Ghế Thường'}
-                  </span>
+                   <span className="text-zinc-400">{seat.seatType === 'VIP' ? 'VIP' : 'Thường'}</span>
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -123,13 +83,13 @@ export const BookingSummary: React.FC<BookingSummaryProps> = ({
       {/* Total Amount */}
       <div className="pt-4 border-t border-[#20232e] space-y-1">
         <div className="flex items-baseline justify-between">
-          <span className="text-xs text-zinc-400">Tổng tạm tính:</span>
+          <span className="text-sm text-zinc-300">Tạm tính</span>
           <span className="text-xl font-black text-[#e6e2c1]">
             {formatCurrency(totalAmount)}
           </span>
         </div>
-        <p className="text-[11px] text-zinc-400 leading-relaxed italic">
-          * Chọn ghế chưa giữ chỗ. Giá chính thức được xác định khi tạo đơn.
+        <p className="text-xs text-zinc-400 leading-relaxed">
+          Ghế chỉ được giữ sau khi bạn xác nhận đặt vé.
         </p>
       </div>
 

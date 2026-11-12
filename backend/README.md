@@ -50,7 +50,8 @@ docker compose up -d mysql
 Cơ sở dữ liệu được quản lý tự động bởi Flyway khi Spring Boot khởi động:
 - `V1__init_schema.sql`: Khởi tạo 11 bảng chuẩn DDL (`users`, `movies`, `cinemas`, `rooms`, `seats`, `showtimes`, `bookings`, `showtime_seats`, `booking_seats`, `payments`, `ticket_checkins`).
 - `V2__seed_test_data.sql`: Dữ liệu seed mẫu chuẩn gồm tài khoản Admin/Staff/Customer, rạp CGV Demo, 2 phòng chiếu, 80 ghế (Standard + VIP), và danh sách phim.
-- `V3__seed_cgv_data.sql`: Thêm 3 rạp CGV, 16 phòng và 34 phim từ `../sql_schema/cgv_seed.sql`. Có kiểm tra tránh chèn trùng dữ liệu đã import thủ công; các phòng mới chưa có ghế. Không chạy lại `cgv_seed.sql` bằng tay sau khi đã dùng Flyway.
+- `V3__seed_cgv_data.sql`: Thêm 3 rạp CGV, 16 phòng và 34 phim từ `cgv_seed.sql`.
+- `V4__seed_seats.sql`: Khởi tạo ghế vật lý cho 16 phòng chiếu CGV (80–120 ghế/phòng với 50% VIP; riêng phòng Gold Class có 40 ghế VIP).
 
 Mật khẩu mặc định cho các tài khoản seed: `Password@123`
 - **Admin:** `admin@cinema.com`
