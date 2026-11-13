@@ -311,7 +311,7 @@ export const BookingSuccessPage: React.FC = () => {
 
         {/* Render Issued Tickets */}
         {!isTicketsLoading && !isTicketsError && tickets && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             {tickets.map((t) => {
               const isCopied = copiedCode === t.ticketCode;
               return (
@@ -332,15 +332,15 @@ export const BookingSuccessPage: React.FC = () => {
                     <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">
                       Mã vé vào phòng:
                     </span>
-                    <div className="flex items-center justify-between gap-2 bg-[#12141c] p-2 rounded-lg border border-[#20232e]">
-                      <span className="font-mono font-black text-sm sm:text-base text-white tracking-widest select-all">
+                    <div className="flex min-w-0 items-center justify-between gap-2 bg-[#12141c] p-2 rounded-lg border border-[#20232e]">
+                      <span className="min-w-0 flex-1 break-all font-mono font-black text-sm sm:text-base text-white tracking-widest select-all">
                         {t.ticketCode}
                       </span>
                       <button
                         type="button"
                         onClick={() => handleCopy(t.ticketCode)}
                         title="Sao chép mã vé"
-                        className="p-1.5 rounded-md hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors border-none cursor-pointer"
+                        className="shrink-0 p-1.5 rounded-md hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors border-none cursor-pointer"
                         aria-label={`Sao chép mã vé ghế ${t.label}`}
                       >
                         {isCopied ? (
