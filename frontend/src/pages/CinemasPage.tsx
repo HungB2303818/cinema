@@ -66,61 +66,6 @@ export const CinemasPage: React.FC = () => {
           </div>
         </div>
       </section>
-
-      {/* Search & Filter Bar */}
-      <section className="bg-[#13151d] rounded-2xl border border-[#242733] p-5 space-y-4 shadow-lg">
-        <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
-          {/* Search Input */}
-          <div className="relative flex-1">
-            <Search className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Tìm kiếm rạp theo tên hoặc địa chỉ..."
-              className="w-full pl-11 pr-12 py-2.5 bg-[#090a0f] border border-[#242733] rounded-full text-white placeholder-zinc-500 text-sm focus:outline-none focus:border-[#e6e2c1] transition-colors"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-zinc-400 hover:text-white cursor-pointer border-none"
-              >
-                Xóa
-              </button>
-            )}
-          </div>
-
-          {/* Status Filter */}
-          <div className="flex items-center gap-2">
-            <div className="flex bg-[#090a0f] p-1 rounded-full border border-[#242733] text-xs font-semibold">
-              <button
-                type="button"
-                onClick={() => setStatusFilter('ALL')}
-                className={`px-4 py-2 rounded-full transition-colors cursor-pointer border-none ${
-                  statusFilter === 'ALL'
-                    ? 'bg-[#e6e2c1] text-black shadow-sm font-bold'
-                    : 'text-zinc-400 hover:text-white hover:bg-[#181a24]'
-                }`}
-              >
-                Tất cả
-              </button>
-              <button
-                type="button"
-                onClick={() => setStatusFilter('ACTIVE')}
-                className={`px-4 py-2 rounded-full transition-colors cursor-pointer border-none ${
-                  statusFilter === 'ACTIVE'
-                    ? 'bg-[#e6e2c1] text-black shadow-sm font-bold'
-                    : 'text-zinc-400 hover:text-white hover:bg-[#181a24]'
-                }`}
-              >
-                Đang hoạt động
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Cinema List */}
       {loading ? (
         <div className="py-20 flex justify-center">

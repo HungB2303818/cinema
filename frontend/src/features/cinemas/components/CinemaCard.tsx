@@ -72,11 +72,6 @@ export const CinemaCard: React.FC<CinemaCardProps> = ({ cinema, onSelectCinema }
       {/* Cinema Information */}
       <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
         <div className="space-y-2">
-          <div className="flex items-center gap-1.5 text-[#e6e2c1] text-xs font-bold uppercase tracking-wider">
-            <Building2 className="w-3.5 h-3.5 shrink-0" />
-            <span>Cụm rạp</span>
-          </div>
-
           <div className="block">
             <h3
               className="text-lg font-bold text-white group-hover/title:text-[#e6e2c1] transition-colors line-clamp-1"
@@ -91,28 +86,6 @@ export const CinemaCard: React.FC<CinemaCardProps> = ({ cinema, onSelectCinema }
             <span className="leading-relaxed">{cinema.address}</span>
           </p>
         </div>
-
-        {/* Action Controls */}
-        <footer className="relative z-20 pt-3 border-t border-[#20232e] flex items-center gap-2.5">
-          {onSelectCinema && (
-            <button
-              type="button"
-              onClick={() => onSelectCinema(cinema)}
-              className="flex-1 px-3.5 py-2 text-xs font-semibold rounded-full bg-[#181a24] hover:bg-[#222530] text-zinc-300 hover:text-white transition-colors flex items-center justify-center gap-1.5 cursor-pointer border-none"
-            >
-              <Info className="w-3.5 h-3.5 text-[#e6e2c1]" />
-              <span>Phòng chiếu</span>
-            </button>
-          )}
-
-          <Link
-            to={`/showtimes?cinemaId=${cinema.id}`}
-            className="flex-1 px-3.5 py-2 text-xs font-bold rounded-full bg-[#e6e2c1] hover:bg-[#dad6b2] text-black transition-all flex items-center justify-center gap-1.5 shadow-md active:scale-[0.98] border-none text-center"
-          >
-            <Info className="w-3.5 h-3.5" />
-            <span>Xem lịch chiếu</span>
-          </Link>
-        </footer>
       </div>
     </article>
   );

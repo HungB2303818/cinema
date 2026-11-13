@@ -121,7 +121,7 @@ export function isPastCutoff(
 export function getAgeRatingBadge(rating: string | null | undefined): { label: string; color: string } {
   switch (rating) {
     case 'P':
-      return { label: 'P - Phổ biến', color: 'bg-[#e6e2c1] text-black font-bold' };
+      return { label: 'P - Phổ biến', color: 'bg-[#799D46] text-white font-bold' };
     case 'K':
       return { label: 'K - Dưới 13 tuổi có bảo hộ', color: 'bg-blue-600 text-white font-semibold' };
     case 'T13':
