@@ -1,8 +1,13 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Clock, Calendar, Film, ArrowLeft, Building2 } from 'lucide-react';
+import { Clock, Calendar, Film, ArrowLeft, Building2, ChevronDown } from 'lucide-react';
 import { useMovieDetail } from '@/features/movies';
-import { useMovieShowtimes, useCurrentTime, ShowtimeCard } from '@/features/showtimes';
+import {
+  useMovieShowtimes,
+  useCurrentTime,
+  CinemaShowtimeList,
+  ShowtimeDateStrip,
+} from '@/features/showtimes';
 import { useCinemas } from '@/features/cinemas';
 import {
   formatDate,
@@ -180,28 +185,37 @@ export const MovieDetailsPage: React.FC = () => {
       </section>
 
       {/* Showtimes Section */}
-      <section className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#20232e] pb-4">
-          <div>
-            <h2 className="text-2xl font-bold text-white">Lịch chiếu tại các rạp</h2>
-            <p className="text-sm text-zinc-400 mt-1">
-              Chọn ngày và cụm rạp để xem các suất chiếu khả dụng
-            </p>
-          </div>
+      <section className="space-y-5">
+        <div>
+          <h2 className="text-2xl font-bold text-white">Lịch chiếu</h2>
+          <p className="mt-1 text-sm text-zinc-400">
+            Chọn cụm rạp và ngày để xem các suất chiếu khả dụng
+          </p>
+        </div>
 
-          {/* Filters: Date Picker & Cinema Filter */}
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Cinema Filter */}
-            {cinemas.length > 0 && (
-              <div className="flex items-center gap-2 bg-[#13151d] border border-[#242733] rounded-full px-3.5 py-1.5 text-xs">
-                <Building2 className="w-4 h-4 text-[#e6e2c1]" />
+        {/* Filters: Cinema Select & Date Strip */}
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+          {cinemas.length > 0 && (
+            <div className="shrink-0 lg:w-72">
+              <label
+                htmlFor="cinema-filter"
+                className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-zinc-400"
+              >
+                Cụm rạp
+              </label>
+              <div className="relative">
+                <Building2
+                  className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#e6e2c1]"
+                  aria-hidden="true"
+                />
                 <select
+                  id="cinema-filter"
                   value={selectedCinemaId ?? ''}
                   onChange={(e) => {
                     const val = e.target.value;
                     setSelectedCinemaId(val ? Number(val) : undefined);
                   }}
-                  className="bg-transparent text-zinc-200 text-xs focus:outline-none cursor-pointer"
+                  className="w-full cursor-pointer appearance-none rounded-xl border border-[#242733] bg-[#13151d] py-3 pl-10 pr-10 text-sm text-zinc-100 transition-colors focus:border-[#e6e2c1] focus:outline-none"
                 >
                   <option value="" className="bg-[#13151d] text-zinc-200">
                     Tất cả cụm rạp
@@ -212,23 +226,16 @@ export const MovieDetailsPage: React.FC = () => {
                     </option>
                   ))}
                 </select>
+                <ChevronDown
+                  className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500"
+                  aria-hidden="true"
+                />
               </div>
-            )}
-
-            {/* Date Picker */}
-            <div className="flex items-center gap-2 bg-[#13151d] border border-[#242733] rounded-full px-4 py-2">
-              <Calendar className="w-4 h-4 text-[#e6e2c1]" />
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => {
-                  if (e.target.value) {
-                    setSelectedDate(e.target.value);
-                  }
-                }}
-                className="bg-transparent text-zinc-200 text-xs sm:text-sm focus:outline-none cursor-pointer"
-              />
             </div>
+          )}
+
+          <div className="min-w-0 flex-1">
+            <ShowtimeDateStrip selectedDate={selectedDate} onSelect={setSelectedDate} />
           </div>
         </div>
 
@@ -265,11 +272,12 @@ export const MovieDetailsPage: React.FC = () => {
             }
           />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {showtimes.map((st) => (
-              <ShowtimeCard key={st.id} showtime={st} now={now} />
-            ))}
-          </div>
+          <CinemaShowtimeList
+            showtimes={showtimes}
+            cinemas={cinemas}
+            movieTitle={movie.title}
+            now={now}
+          />
         )}
       </section>
     </div>

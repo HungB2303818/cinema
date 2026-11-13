@@ -6,6 +6,7 @@ import { moviesApi } from '@/features/movies/api/movies.api';
 import { showtimesApi } from '@/features/showtimes/api/showtimes.api';
 import { cinemasApi } from '@/features/cinemas/api/cinemas.api';
 import { ApiErrorResponse } from '@/shared/api/http-client';
+import { formatTime } from '@/shared/utils/format';
 import { Routes, Route } from 'react-router-dom';
 
 describe('MovieDetailsPage (FE-03, Section A & C)', () => {
@@ -108,5 +109,121 @@ describe('MovieDetailsPage (FE-03, Section A & C)', () => {
 
     // Empty state for showtimes
     expect(await screen.findByText(/Chưa có suất chiếu trong ngày/i)).toBeInTheDocument();
+  });
+
+  it('groups showtimes by cinema and room like CGV, with addresses and bookable times', async () => {
+    vi.spyOn(moviesApi, 'getById').mockResolvedValue({
+      id: 1,
+      title: 'Interstellar',
+      description: 'Chuyến du hành xuyên không gian.',
+      durationMinutes: 169,
+      genre: 'Khoa học viễn tưởng',
+      ageRating: 'T13',
+      releaseDate: '2026-11-01',
+      posterUrl: null,
+      status: 'SHOWING',
+    });
+
+    vi.spyOn(cinemasApi, 'list').mockResolvedValue([
+      {
+        id: 1,
+        name: 'CGV Vincom Hùng Vương',
+        address: '01 Hùng Vương, Cần Thơ',
+        status: 'ACTIVE',
+      },
+      {
+        id: 2,
+        name: 'CGV Sense City',
+        address: 'Đại lộ Hòa Bình, Cần Thơ',
+        status: 'ACTIVE',
+      },
+    ]);
+
+    const base = {
+      movieId: 1,
+      cleanupMinutes: 15,
+      basePrice: 80000,
+      vipSurcharge: 20000,
+      status: 'SCHEDULED' as const,
+    };
+
+    vi.spyOn(showtimesApi, 'getMovieShowtimes').mockResolvedValue({
+      content: [
+        {
+          ...base,
+          id: 101,
+          cinemaId: 1,
+          cinemaName: 'CGV Vincom Hùng Vương',
+          roomId: 1,
+          roomName: 'Phòng 1',
+          startsAt: '2030-01-01T10:00:00Z',
+          endsAt: '2030-01-01T12:00:00Z',
+        },
+        {
+          ...base,
+          id: 102,
+          cinemaId: 1,
+          cinemaName: 'CGV Vincom Hùng Vương',
+          roomId: 2,
+          roomName: 'Phòng 2',
+          startsAt: '2030-01-01T12:30:00Z',
+          endsAt: '2030-01-01T14:30:00Z',
+        },
+        {
+          ...base,
+          id: 103,
+          cinemaId: 2,
+          cinemaName: 'CGV Sense City',
+          roomId: 3,
+          roomName: 'Gold Class',
+          startsAt: '2030-01-01T15:00:00Z',
+          endsAt: '2030-01-01T17:00:00Z',
+        },
+        {
+          ...base,
+          id: 104,
+          cinemaId: 1,
+          cinemaName: 'CGV Vincom Hùng Vương',
+          roomId: 1,
+          roomName: 'Phòng 1',
+          startsAt: new Date(Date.now() - 5 * 60_000).toISOString(),
+          endsAt: new Date(Date.now() + 60 * 60_000).toISOString(),
+        },
+      ],
+      page: 0,
+      size: 50,
+      totalElements: 4,
+      totalPages: 1,
+    });
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/movies/:id" element={<MovieDetailsPage />} />
+      </Routes>,
+      { initialEntries: ['/movies/1'] }
+    );
+
+    // Cinema headings and addresses
+    expect(
+      await screen.findByRole('heading', { name: 'CGV Vincom Hùng Vương' })
+    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'CGV Sense City' })).toBeInTheDocument();
+    expect(screen.getByText('01 Hùng Vương, Cần Thơ')).toBeInTheDocument();
+    expect(screen.getByText('Đại lộ Hòa Bình, Cần Thơ')).toBeInTheDocument();
+
+    // Room groups
+    expect(screen.getByText('Phòng 1')).toBeInTheDocument();
+    expect(screen.getByText('Phòng 2')).toBeInTheDocument();
+    expect(screen.getByText('Gold Class')).toBeInTheDocument();
+
+    // Bookable time links to seat selection
+    const bookableTime = formatTime('2030-01-01T10:00:00Z');
+    const bookableLink = screen.getByRole('link', {
+      name: new RegExp(`Đặt vé suất ${bookableTime}`),
+    });
+    expect(bookableLink).toHaveAttribute('href', '/showtimes/101/seats');
+
+    // Past-cutoff showtime is rendered disabled
+    expect(screen.getByRole('button', { name: /không khả dụng/i })).toBeDisabled();
   });
 });
