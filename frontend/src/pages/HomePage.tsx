@@ -65,15 +65,7 @@ export const HomePage: React.FC = () => {
 
   return (
     <div className="space-y-10 pb-16">
-      {/* Hero Banner featuring Dune 3 with transparency effects & slogan */}
-      <MovieHeroBanner
-        onExploreClick={() => {
-          const catalogEl = document.getElementById('movies-catalog');
-          if (catalogEl) {
-            catalogEl.scrollIntoView({ behavior: 'smooth' });
-          }
-        }}
-      />
+      <MovieHeroBanner />
 
       {/* Public movie categories */}
       <section id="movies-catalog" className="space-y-6">
