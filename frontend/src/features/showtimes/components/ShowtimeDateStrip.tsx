@@ -26,7 +26,7 @@ export function ShowtimeDateStrip({ selectedDate, onSelect, today = getVietnamDa
   }, [selectedDate]);
 
   return (
-    <div role="group" aria-label="Chọn ngày chiếu" className="flex gap-2 overflow-x-auto rounded-2xl border border-[#242733] bg-[#13151d] p-3 sm:gap-3 sm:p-4">
+    <div role="group" aria-label="Chọn ngày chiếu" className="flex gap-1.5 overflow-x-auto rounded-xl border border-[#242733] bg-[#13151d] p-2 sm:gap-2">
       {dates.map((date) => {
         const value = new Date(`${date}T00:00:00Z`);
         const selected = date === selectedDate;
@@ -38,13 +38,13 @@ export function ShowtimeDateStrip({ selectedDate, onSelect, today = getVietnamDa
             aria-label={`Chọn ngày ${formatDate(date)}`}
             aria-pressed={selected}
             onClick={() => onSelect(date)}
-            className={`flex h-[76px] min-w-[104px] flex-1 items-center justify-between gap-2 rounded-xl border px-3 transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e6e2c1] ${selected ? 'border-[#e6e2c1] bg-[#e6e2c1] text-[#090a0f] shadow-sm' : 'border-[#242733] bg-[#090a0f] text-zinc-400 hover:border-[#e6e2c1]/50 hover:bg-[#1a1c26] hover:text-[#e6e2c1]'}`}
+            className={`flex h-[50px] min-w-[82px] flex-1 items-center justify-between gap-1.5 rounded-lg border px-2.5 transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e6e2c1] ${selected ? 'border-[#e6e2c1] bg-[#e6e2c1] text-[#090a0f] shadow-sm' : 'border-[#242733] bg-[#090a0f] text-zinc-400 hover:border-[#e6e2c1]/50 hover:bg-[#1a1c26] hover:text-[#e6e2c1]'}`}
           >
-            <span className="flex flex-col items-start text-base leading-6">
+            <span className="flex flex-col items-start text-[10px] leading-3.5">
               <span>{value.getUTCMonth() + 1}</span>
               <span>{WEEKDAYS[value.getUTCDay()]}</span>
             </span>
-            <span className="text-[50px] font-normal leading-none tabular-nums">{String(value.getUTCDate()).padStart(2, '0')}</span>
+            <span className="text-[26px] font-normal leading-none tabular-nums">{String(value.getUTCDate()).padStart(2, '0')}</span>
           </button>
         );
       })}

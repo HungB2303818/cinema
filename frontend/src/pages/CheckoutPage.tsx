@@ -11,17 +11,17 @@ import {
   AlertTriangle,
   CreditCard,
   RefreshCw,
-  Info,
-  Check,
   XCircle,
   ShieldAlert,
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { useBookingDetail } from '@/features/bookings';
 import {
   paymentsApi,
   getSavedPaymentAttempt,
   savePaymentAttempt,
   clearPaymentAttempt,
+  buildBookingQrPayload,
 } from '@/features/payments';
 import type { PaymentSimulatedResult, PaymentAttempt } from '@/features/payments';
 import { useAuth } from '@/features/auth';
@@ -374,6 +374,12 @@ export const CheckoutPage: React.FC = () => {
     }
   };
 
+  // Booking details encoded in the payment QR code
+  const qrPayload = useMemo(
+    () => (booking ? buildBookingQrPayload(booking) : ''),
+    [booking]
+  );
+
   // 1. Invalid Booking ID
   if (!isValidId) {
     return (
@@ -436,7 +442,8 @@ export const CheckoutPage: React.FC = () => {
             <span>Thông Tin Đặt Vé & Thanh Toán</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white">
-            Mã đơn: <span className="text-[#e6e2c1] font-mono">{booking.bookingCode}</span>
+            Mã đơn:{' '}
+            <span className="break-all text-[#e6e2c1] font-mono">{booking.bookingCode}</span>
           </h1>
           <p className="text-zinc-400 text-xs mt-1">
             Khởi tạo lúc: {formatVietnamDateTime(booking.createdAt)}
@@ -647,11 +654,11 @@ export const CheckoutPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Column: Server Total & Payment Controls */}
+        {/* Right Column: Server Total & QR Payment */}
         <div className="md:col-span-4 space-y-6">
           <div className="p-6 rounded-2xl bg-[#13151d] border border-[#242733] space-y-5 shadow-lg">
             <h2 className="text-sm font-bold text-[#e6e2c1] uppercase tracking-wider">
-              Tổng tiền thanh toán
+              Thanh toán bằng QR
             </h2>
 
             <div className="space-y-2 pt-1 border-t border-[#20232e]">
@@ -670,17 +677,69 @@ export const CheckoutPage: React.FC = () => {
               </p>
             </div>
 
-            {/* FE-06 Mock Payment Disclaimer */}
-            <div className="p-3.5 rounded-xl bg-[#090a0f] border border-[#20232e] text-xs text-zinc-400 space-y-1.5">
-              <div className="flex items-center gap-1.5 font-bold text-[#e6e2c1]">
-                <Info className="w-3.5 h-3.5" />
-                <span>Thanh toán mô phỏng — không thu tiền thật</span>
+            {/* QR Payment */}
+            {isPending && user?.role === 'CUSTOMER' && (
+              <div className="space-y-4">
+                <div className="flex justify-center rounded-2xl bg-white p-4">
+                  <QRCodeSVG
+                    value={qrPayload}
+                    size={200}
+                    level="M"
+                    marginSize={2}
+                    title={`Mã QR đơn đặt vé ${booking.bookingCode}`}
+                    role="img"
+                    aria-label={`Mã QR thanh toán đơn ${booking.bookingCode}`}
+                  />
+                </div>
+                <p className="text-center text-[11px] leading-relaxed text-zinc-400">
+                  Mở camera hoặc ứng dụng ngân hàng và quét mã để xem thông tin đặt vé.
+                </p>
+
+                <dl className="space-y-1.5 rounded-xl border border-[#20232e] bg-[#090a0f] p-3 text-[11px]">
+                  <div className="space-y-1">
+                    <dt className="text-zinc-500">Mã đơn</dt>
+                    <dd className="break-all font-mono font-bold text-[#e6e2c1]">
+                      {booking.bookingCode}
+                    </dd>
+                  </div>
+                  <div className="flex items-start justify-between gap-3">
+                    <dt className="text-zinc-500">Ghế</dt>
+                    <dd className="text-right font-semibold text-white">
+                      {booking.seats.map((seat) => seat.label).join(', ')}
+                    </dd>
+                  </div>
+                  <div className="flex items-start justify-between gap-3">
+                    <dt className="text-zinc-500">Hết hạn sau</dt>
+                    <dd className="text-right font-mono font-bold text-amber-300">
+                      {formatCountdown(remainingSeconds)}
+                    </dd>
+                  </div>
+                </dl>
+
+                <div className="space-y-3">
+                  <Button
+                    variant="primary"
+                    size="md"
+                    onClick={() => handleMockPayment('SUCCESS')}
+                    disabled={isSubmitting || activeAttempt?.status === 'INDETERMINATE'}
+                    className="w-full justify-center gap-2 font-bold py-3 shadow-lg"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>{isSubmitting ? 'Đang xử lý...' : 'Tôi đã thanh toán'}</span>
+                  </Button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleMockPayment('FAILED')}
+                    disabled={isSubmitting || activeAttempt?.status === 'INDETERMINATE'}
+                    className="w-full py-2.5 px-4 rounded-full bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 hover:text-rose-200 border border-rose-500/30 text-xs font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <XCircle className="w-4 h-4 text-rose-400" />
+                    <span>Mô phỏng giao dịch thất bại</span>
+                  </button>
+                </div>
               </div>
-              <p className="text-[11px] leading-relaxed text-zinc-400">
-                Hệ thống hỗ trợ mô phỏng kết quả thanh toán trực tiếp để kiểm thử quy trình giữ
-                chỗ và phát hành vé điện tử.
-              </p>
-            </div>
+            )}
 
             {/* Role Warning if not CUSTOMER */}
             {user?.role !== 'CUSTOMER' && (
@@ -692,59 +751,27 @@ export const CheckoutPage: React.FC = () => {
               </div>
             )}
 
-            {/* Payment Action Buttons */}
-            <div className="space-y-3 pt-2">
-              {isPending && user?.role === 'CUSTOMER' && (
-                <>
-                  <Button
-                    variant="primary"
-                    size="md"
-                    onClick={() => handleMockPayment('SUCCESS')}
-                    disabled={isSubmitting || (activeAttempt?.status === 'INDETERMINATE')}
-                    className="w-full justify-center gap-2 font-bold py-3 shadow-lg"
-                  >
-                    <Check className="w-4 h-4" />
-                    <span>
-                      {isSubmitting
-                        ? 'Đang xử lý...'
-                        : 'Mô phỏng thanh toán thành công'}
-                    </span>
-                  </Button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleMockPayment('FAILED')}
-                    disabled={isSubmitting || (activeAttempt?.status === 'INDETERMINATE')}
-                    className="w-full py-2.5 px-4 rounded-full bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 hover:text-rose-200 border border-rose-500/30 text-xs font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
-                  >
-                    <XCircle className="w-4 h-4 text-rose-400" />
-                    <span>Mô phỏng thanh toán thất bại</span>
-                  </button>
-                </>
-              )}
-
-              {isConfirmed && (
-                <Link to={`/bookings/${bookingId}/success`} className="block w-full">
-                  <Button variant="primary" size="md" className="w-full gap-2 font-bold py-3 shadow-lg">
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>Xem vé đã phát hành</span>
-                  </Button>
-                </Link>
-              )}
-
-              {isExpired && (
-                <div className="text-center py-2 text-xs text-rose-400 font-medium">
-                  Đơn đã hết hạn giữ chỗ. Không thể thực hiện thanh toán.
-                </div>
-              )}
-
-              <Link to="/movies" className="block w-full pt-1">
-                <Button variant="secondary" size="md" className="w-full">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  <span>Chọn phim khác</span>
+            {isConfirmed && (
+              <Link to={`/bookings/${bookingId}/success`} className="block w-full">
+                <Button variant="primary" size="md" className="w-full gap-2 font-bold py-3 shadow-lg">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Xem vé đã phát hành</span>
                 </Button>
               </Link>
-            </div>
+            )}
+
+            {isExpired && (
+              <div className="text-center py-2 text-xs text-rose-400 font-medium">
+                Đơn đã hết hạn giữ chỗ. Không thể thực hiện thanh toán.
+              </div>
+            )}
+
+            <Link to="/movies" className="block w-full">
+              <Button variant="secondary" size="md" className="w-full">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                <span>Chọn phim khác</span>
+              </Button>
+            </Link>
           </div>
         </div>
       </div>

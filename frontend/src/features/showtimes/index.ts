@@ -9,4 +9,5 @@ export * from './hooks/useCreateShowtime';
 export * from './hooks/useUpdateShowtime';
 export * from './components/ShowtimeCard';
 export * from './components/CinemaMovieGroup';
+export * from './components/CinemaShowtimeList';
 export * from './components/ShowtimeDateStrip';

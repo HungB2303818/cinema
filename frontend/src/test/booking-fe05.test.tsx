@@ -217,7 +217,7 @@ describe('FE-05: Booking, 5-minute Hold & Recoverable Checkout', () => {
 
     renderCheckout(1001);
 
-    expect(await screen.findByText('BK0001001')).toBeInTheDocument();
+    expect(await screen.findAllByText('BK0001001')).not.toHaveLength(0);
     expect(getDetailSpy).toHaveBeenCalledWith(1001);
     expect(createSpy).not.toHaveBeenCalled();
   });
@@ -274,9 +274,9 @@ describe('FE-05: Booking, 5-minute Hold & Recoverable Checkout', () => {
     expect(await screen.findByText('Thời gian giữ ghế còn lại')).toBeInTheDocument();
 
     // Remaining time must be ~02:00 or 01:59, NOT 05:00!
-    const timerText = screen.getByText(/0[12]:[0-5][0-9]/);
-    expect(timerText).toBeInTheDocument();
-    expect(timerText.textContent).not.toBe('05:00');
+    const timerTexts = screen.getAllByText(/0[12]:[0-5][0-9]/);
+    expect(timerTexts.length).toBeGreaterThan(0);
+    timerTexts.forEach((timer) => expect(timer.textContent).not.toBe('05:00'));
   });
 
   it('Test 11: Displays EXPIRED when remaining time reaches 0 even if persisted is PENDING', async () => {
@@ -330,7 +330,7 @@ describe('FE-05: Booking, 5-minute Hold & Recoverable Checkout', () => {
 
     renderCheckout(1001);
 
-    expect(await screen.findByText('BK0001001')).toBeInTheDocument();
+    expect(await screen.findAllByText('BK0001001')).not.toHaveLength(0);
     // It should STILL be PENDING and holding, not flipped to EXPIRED due to network hiccup
     expect(screen.queryByText(/Đơn đặt vé đã hết thời hạn giữ ghế/i)).not.toBeInTheDocument();
     expect(screen.getByText(/Đang giữ chỗ \(PENDING\)/i)).toBeInTheDocument();

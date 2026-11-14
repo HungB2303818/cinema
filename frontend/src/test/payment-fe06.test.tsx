@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router-dom';
 import { CheckoutPage } from '@/pages/CheckoutPage';
@@ -11,6 +11,7 @@ import {
   savePaymentAttempt,
   getSavedPaymentAttempt,
   clearPaymentAttempt,
+  buildBookingQrPayload,
 } from '@/features/payments';
 import type { PaymentResponse } from '@/features/payments';
 import { ticketsApi } from '@/features/tickets';
@@ -100,7 +101,7 @@ describe('FE-06: Mock Payment, Confirmation & Issued Tickets', () => {
     renderApp('/bookings/1001/checkout');
 
     const successBtn = await screen.findByRole('button', {
-      name: /Mô phỏng thanh toán thành công/i,
+      name: /Tôi đã thanh toán/i,
     });
     expect(successBtn).toBeEnabled();
 
@@ -154,7 +155,7 @@ describe('FE-06: Mock Payment, Confirmation & Issued Tickets', () => {
     renderApp('/bookings/1001/checkout');
 
     const failBtn = await screen.findByRole('button', {
-      name: /Mô phỏng thanh toán thất bại/i,
+      name: /Mô phỏng giao dịch thất bại/i,
     });
     await user.click(failBtn);
 
@@ -167,7 +168,7 @@ describe('FE-06: Mock Payment, Confirmation & Issued Tickets', () => {
 
     // Now try second attempt (SUCCESS)
     const successBtn = screen.getByRole('button', {
-      name: /Mô phỏng thanh toán thành công/i,
+      name: /Tôi đã thanh toán/i,
     });
     await user.click(successBtn);
 
@@ -203,7 +204,7 @@ describe('FE-06: Mock Payment, Confirmation & Issued Tickets', () => {
     renderApp('/bookings/1001/checkout');
 
     const successBtn = await screen.findByRole('button', {
-      name: /Mô phỏng thanh toán thành công/i,
+      name: /Tôi đã thanh toán/i,
     });
     await user.click(successBtn);
 
@@ -249,7 +250,7 @@ describe('FE-06: Mock Payment, Confirmation & Issued Tickets', () => {
     renderApp('/bookings/1001/checkout');
 
     const successBtn = await screen.findByRole('button', {
-      name: /Mô phỏng thanh toán thành công/i,
+      name: /Tôi đã thanh toán/i,
     });
     await user.click(successBtn);
 
@@ -311,10 +312,31 @@ describe('FE-06: Mock Payment, Confirmation & Issued Tickets', () => {
 
     // Payment buttons are not offered
     expect(
-      screen.queryByRole('button', { name: /Mô phỏng thanh toán thành công/i })
+      screen.queryByRole('button', { name: /Tôi đã thanh toán/i })
     ).not.toBeInTheDocument();
 
     expect(paySpy).not.toHaveBeenCalled();
+  });
+
+  it('Test 6b: PENDING checkout renders a QR code and booking summary for scanning', async () => {
+    vi.spyOn(bookingsApi, 'getById').mockResolvedValue(mockBookingDetail);
+
+    renderApp('/bookings/1001/checkout');
+
+    const qr = await screen.findByRole('img', {
+      name: /Mã QR thanh toán đơn BK0001001/i,
+    });
+    expect(qr).toBeInTheDocument();
+    expect(within(qr).getByText(/BK0001001/)).toBeInTheDocument();
+
+    // Summary beside the QR mirrors the booking
+    expect(screen.getByText('A1, A2')).toBeInTheDocument();
+    expect(screen.getByText(/180\.000/)).toBeInTheDocument();
+
+    // The scanned payload carries only the booking code and amount
+    const payload = buildBookingQrPayload(mockBookingDetail);
+    expect(payload).toContain('Mã đơn: BK0001001');
+    expect(payload).toMatch(/Số tiền: 180\.000\s₫/);
   });
 
   it('Test 7: Deep link to /bookings/:id/success performs GET only and does NOT treat URL as proof if PENDING', async () => {
