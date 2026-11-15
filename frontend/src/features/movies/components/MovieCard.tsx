@@ -5,7 +5,6 @@ import type { Movie } from "../types/movie.types";
 import {
   formatDate,
   getAgeRatingBadge,
-  getMovieStatusBadge,
 } from "@/shared/utils/format";
 
 interface MovieCardProps {

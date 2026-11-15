@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Building2, Sparkles } from 'lucide-react';
+import { Building2, Sparkles } from 'lucide-react';
 import type { Cinema } from '@/features/cinemas';
 import { useCinemas, CinemaCard, CinemaDetailModal } from '@/features/cinemas';
 import { LoadingSpinner, ErrorState, EmptyState, Button } from '@/shared/components/ui';
