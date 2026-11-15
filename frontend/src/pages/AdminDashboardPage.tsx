@@ -53,11 +53,11 @@ export const AdminDashboardPage: React.FC = () => {
 
   return (
     <div className="space-y-8 pb-16">
-      <div className="border-b border-[#20232e] pb-6 flex items-center justify-between">
+      <div className="border-b border-[#20232e] pb-6">
         <div>
           <div className="flex items-center gap-2 text-[#e6e2c1] text-sm font-bold mb-1">
             <Shield className="w-4 h-4" />
-            <span>Admin Control Panel</span>
+            <span>Quản trị hệ thống</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white">Bảng điều khiển Quản trị</h1>
           <p className="text-zinc-400 text-sm mt-1">Quản lý danh mục rạp, phim, suất chiếu và kiểm soát hệ thống</p>
@@ -70,7 +70,7 @@ export const AdminDashboardPage: React.FC = () => {
           return (
             <div
               key={i}
-              className="bg-[#13151d] border border-[#242733] rounded-2xl p-6 hover:border-[#e6e2c1]/50 transition-all flex items-start gap-5 shadow-xl shadow-black/30"
+              className="bg-[#13151d] border border-[#242733] rounded-lg p-6 hover:border-[#e6e2c1]/50 transition-colors motion-reduce:transition-none flex items-start gap-5"
             >
               <div className={`p-3.5 rounded-xl bg-[#090a0f] border border-[#242733] ${mod.color}`}>
                 <Icon className="w-6 h-6" />
