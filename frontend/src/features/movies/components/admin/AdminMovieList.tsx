@@ -330,8 +330,18 @@ export const AdminMovieList: React.FC = () => {
 
                       {/* Title & Age Rating */}
                       <td className="px-5 py-3.5">
-                        <div className="font-bold text-white text-base leading-snug">
-                          {movie.title}
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-white text-base leading-snug">
+                            {movie.title}
+                          </span>
+                          {movie.isFeatured && (
+                            <span
+                              className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-[#e6e2c1] text-black shadow-sm shrink-0"
+                              title="Phim đặc biệt"
+                            >
+                              ★ Đặc biệt
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center gap-2 mt-1">
                           <span className={`text-[10px] px-2 py-0.5 rounded-full ${ageBadge.color}`}>

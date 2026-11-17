@@ -21,6 +21,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -146,6 +147,25 @@ class MovieServiceTest {
     void cannotUpdateMissingMovie() {
         when(repository.findById(1L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.update(1L, request(MovieStatus.SHOWING))).isInstanceOf(AppException.class);
+    }
+
+    @Test
+    void transitionUpcomingToShowing_success() {
+        LocalDate date = LocalDate.of(2026, 11, 17);
+        when(repository.transitionUpcomingToShowing(date)).thenReturn(3);
+
+        int updated = service.transitionUpcomingToShowing(date);
+
+        assertThat(updated).isEqualTo(3);
+        verify(repository).transitionUpcomingToShowing(date);
+    }
+
+    @Test
+    void transitionUpcomingToShowing_nullDate_throwsValidationException() {
+        assertThatThrownBy(() -> service.transitionUpcomingToShowing(null))
+                .isInstanceOf(AppException.class)
+                .satisfies(ex -> assertThat(((AppException) ex).getErrorCode()).isEqualTo(ErrorCode.VALIDATION_ERROR));
+        verify(repository, never()).transitionUpcomingToShowing(any());
     }
 
     private Movie movie(MovieStatus status) {

@@ -35,6 +35,7 @@ export const AdminMovieForm: React.FC<AdminMovieFormProps> = ({
     initialData?.durationMinutes !== undefined ? initialData.durationMinutes.toString() : '120'
   );
   const [status, setStatus] = useState<MovieStatus>(initialData?.status || 'UPCOMING');
+  const [isFeatured, setIsFeatured] = useState<boolean>(initialData?.isFeatured ?? false);
   const [description, setDescription] = useState(initialData?.description || '');
   const [genre, setGenre] = useState(initialData?.genre || '');
   const [ageRating, setAgeRating] = useState<AgeRating | ''>((initialData?.ageRating as AgeRating) || '');
@@ -89,6 +90,7 @@ export const AdminMovieForm: React.FC<AdminMovieFormProps> = ({
     setAgeRating((initialData.ageRating as AgeRating) || '');
     setReleaseDate(initialData.releaseDate || '');
     setPosterUrl(initialData.posterUrl || '');
+    setIsFeatured(initialData.isFeatured ?? false);
     if (!selectedFile) {
       setPreviewUrl(initialData.posterUrl || null);
     }
@@ -214,6 +216,7 @@ export const AdminMovieForm: React.FC<AdminMovieFormProps> = ({
       ageRating: ageRating ? ageRating : null,
       releaseDate: releaseDate.trim() ? releaseDate.trim() : null,
       posterUrl: posterUrl.trim() ? posterUrl.trim() : null,
+      isFeatured,
     };
 
     try {
@@ -475,6 +478,21 @@ export const AdminMovieForm: React.FC<AdminMovieFormProps> = ({
                     <option value="C">C - Cấm phổ biến</option>
                   </select>
                 </div>
+              </div>
+
+              {/* Special / Featured Movie Checkbox */}
+              <div className="flex items-center gap-3 p-3.5 bg-[#13151c] border border-[#262934] rounded-xl hover:border-[#e6e2c1]/40 transition-colors">
+                <input
+                  id="movie-is-featured"
+                  type="checkbox"
+                  checked={isFeatured}
+                  onChange={(e) => setIsFeatured(e.target.checked)}
+                  disabled={isSubmitting}
+                  className="size-4.5 rounded border-[#262934] text-[#e6e2c1] accent-[#e6e2c1] bg-[#0c0d12] cursor-pointer"
+                />
+                <label htmlFor="movie-is-featured" className="text-sm font-semibold text-zinc-200 cursor-pointer select-none">
+                  ⭐ Đánh dấu là Phim đặc biệt (Ưu tiên hiển thị lên đầu trang)
+                </label>
               </div>
 
               {/* Genre & Release Date */}

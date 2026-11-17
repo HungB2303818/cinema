@@ -17,6 +17,12 @@ public record MovieRequest(
         LocalDate releaseDate,
         @Size(max = 500, message = "URL poster tối đa 500 ký tự.")
         @Pattern(regexp = "(?i)^https?://[^\\s]+$", message = "Poster phải là URL HTTP hoặc HTTPS.") String posterUrl,
-        @NotNull(message = "Trạng thái phim là bắt buộc.") MovieStatus status
+        @NotNull(message = "Trạng thái phim là bắt buộc.") MovieStatus status,
+        Boolean isFeatured
 ) {
+    public MovieRequest(String title, String description, Integer durationMinutes,
+                        String genre, String ageRating, LocalDate releaseDate,
+                        String posterUrl, MovieStatus status) {
+        this(title, description, durationMinutes, genre, ageRating, releaseDate, posterUrl, status, false);
+    }
 }

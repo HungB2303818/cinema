@@ -126,17 +126,24 @@ export const HomePage: React.FC = () => {
           <div className="space-y-8">
             <div className="flex items-center justify-between text-xs text-zinc-400 px-1">
               <span>
-                Tìm thấy <strong className="text-zinc-200">{totalElements}</strong> bộ phim
-              </span>
-              <span>
                 Trang {currentPage + 1} / {totalPages || 1}
               </span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 lg:gap-6">
-              {movies.map((movie) => (
-                <MovieCard key={movie.id} movie={movie} />
-              ))}
+              {(() => {
+                let featuredCount = 0;
+                return movies.map((movie) => {
+                  const rank = movie.isFeatured ? ++featuredCount : undefined;
+                  return (
+                    <MovieCard
+                      key={movie.id}
+                      movie={movie}
+                      featuredRank={rank}
+                    />
+                  );
+                });
+              })()}
             </div>
 
             {/* Pagination Controls */}
