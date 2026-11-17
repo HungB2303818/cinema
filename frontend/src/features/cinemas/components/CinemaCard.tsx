@@ -16,7 +16,7 @@ export const CinemaCard: React.FC<CinemaCardProps> = ({ cinema, onSelectCinema }
   const showImage = imageInfo.imageUrl && !imageError;
 
   return (
-    <article className="group relative flex flex-col justify-between overflow-hidden rounded-2xl bg-[#13151d] border border-[#242733] shadow-xl shadow-black/40 hover:border-[#e6e2c1]/60 hover:shadow-black/60 transition-all duration-300">
+    <article className="group relative flex flex-col justify-between overflow-hidden rounded-2xl bg-[#13151d] border border-[#242733] shadow-xl shadow-black/40 hover:shadow-black/60 transition-all duration-300">
       <Link
         to={`/showtimes?cinemaId=${cinema.id}`}
         aria-label={`Xem lịch chiếu rạp ${cinema.name}`}
@@ -56,17 +56,6 @@ export const CinemaCard: React.FC<CinemaCardProps> = ({ cinema, onSelectCinema }
             </span>
           </div>
         )}
-
-        {/* Operating status badge */}
-        <span
-          className={`absolute top-2.5 right-2.5 z-10 px-2.5 py-0.5 text-[11px] font-bold rounded-full shadow-md border-none pointer-events-none ${
-            cinema.status === 'ACTIVE'
-              ? 'bg-emerald-500/90 text-white backdrop-blur'
-              : 'bg-zinc-800/90 text-zinc-300 backdrop-blur'
-          }`}
-        >
-          {cinema.status === 'ACTIVE' ? 'Đang hoạt động' : 'Tạm dừng'}
-        </span>
       </div>
 
       {/* Cinema Information */}

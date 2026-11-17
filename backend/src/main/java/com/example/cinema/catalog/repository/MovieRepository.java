@@ -6,8 +6,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Repository
@@ -20,4 +24,9 @@ public interface MovieRepository extends JpaRepository<Movie, Long>, JpaSpecific
     Page<Movie> findByStatusIn(List<MovieStatus> statuses, Pageable pageable);
 
     List<Movie> findByStatus(MovieStatus status);
+
+    @Modifying(clearAutomatically = true)
+    @Query("update Movie m set m.status = 'SHOWING' " +
+           "where m.status = 'UPCOMING' and m.releaseDate is not null and m.releaseDate <= :targetDate")
+    int transitionUpcomingToShowing(@Param("targetDate") LocalDate targetDate);
 }

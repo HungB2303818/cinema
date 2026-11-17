@@ -7,10 +7,17 @@ import java.time.LocalDate;
 
 public record MovieResponse(Long id, String title, String description, Integer durationMinutes,
                             String genre, String ageRating, LocalDate releaseDate,
-                            String posterUrl, MovieStatus status) {
+                            String posterUrl, MovieStatus status, Boolean isFeatured) {
+    public MovieResponse(Long id, String title, String description, Integer durationMinutes,
+                         String genre, String ageRating, LocalDate releaseDate,
+                         String posterUrl, MovieStatus status) {
+        this(id, title, description, durationMinutes, genre, ageRating, releaseDate, posterUrl, status, false);
+    }
+
     public static MovieResponse from(Movie movie) {
         return new MovieResponse(movie.getId(), movie.getTitle(), movie.getDescription(),
                 movie.getDurationMinutes(), movie.getGenre(), movie.getAgeRating(),
-                movie.getReleaseDate(), movie.getPosterUrl(), movie.getStatus());
+                movie.getReleaseDate(), movie.getPosterUrl(), movie.getStatus(),
+                movie.getIsFeatured() != null ? movie.getIsFeatured() : false);
     }
 }

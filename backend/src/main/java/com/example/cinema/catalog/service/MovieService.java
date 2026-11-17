@@ -18,6 +18,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.Locale;
 import java.util.Set;
 
@@ -26,7 +27,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class MovieService {
-    private static final Set<String> SORT_FIELDS = Set.of("id", "title", "releaseDate", "durationMinutes", "status");
+    private static final Set<String> SORT_FIELDS = Set.of("id", "title", "releaseDate", "durationMinutes", "status", "isFeatured");
     private final MovieRepository movieRepository;
 
     public MoviePageResponse list(String keyword, MovieStatus status, String genre,
@@ -49,8 +50,10 @@ public class MovieService {
             String value = genre.strip().toLowerCase(Locale.ROOT);
             filter = filter.and((root, query, cb) -> cb.equal(cb.lower(root.get("genre")), value));
         }
+        Sort requestedSort = parseSort(sort);
+        Sort finalSort = Sort.by(Sort.Direction.DESC, "isFeatured").and(requestedSort);
         return MoviePageResponse.from(movieRepository.findAll(filter,
-                PageRequest.of(page, size, parseSort(sort))).map(MovieResponse::from));
+                PageRequest.of(page, size, finalSort)).map(MovieResponse::from));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
@@ -113,6 +116,18 @@ public class MovieService {
         return MovieResponse.from(movie);
     }
 
+    @Transactional
+    public int transitionUpcomingToShowing(LocalDate targetDate) {
+        if (targetDate == null) {
+            throw invalid("Ngày chuyển trạng thái không được để trống.");
+        }
+        int count = movieRepository.transitionUpcomingToShowing(targetDate);
+        if (count > 0) {
+            log.info("movie.transitionUpcoming actor=SYSTEM targetDate={} updatedCount={}", targetDate, count);
+        }
+        return count;
+    }
+
     private Movie find(Long id) {
         if (id == null || id <= 0) {
             throw invalid("Mã phim phải là số nguyên dương.");
@@ -129,13 +144,14 @@ public class MovieService {
         movie.setReleaseDate(request.releaseDate());
         movie.setPosterUrl(request.posterUrl());
         movie.setStatus(request.status());
+        movie.setIsFeatured(request.isFeatured() != null ? request.isFeatured() : false);
     }
 
     private Sort parseSort(String value) {
         String[] parts = value == null ? new String[0] : value.split(",", -1);
         if (parts.length != 2 || !SORT_FIELDS.contains(parts[0])
                 || !(parts[1].equalsIgnoreCase("asc") || parts[1].equalsIgnoreCase("desc"))) {
-            throw invalid("sort phải có dạng trường,asc hoặc trường,desc; trường: id, title, releaseDate, durationMinutes, status.");
+            throw invalid("sort phải có dạng trường,asc hoặc trường,desc; trường: id, title, releaseDate, durationMinutes, status, isFeatured.");
         }
         Sort sort = Sort.by(Sort.Direction.fromString(parts[1]), parts[0]);
         return parts[0].equals("id") ? sort : sort.and(Sort.by("id"));

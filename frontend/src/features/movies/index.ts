@@ -8,6 +8,7 @@ export * from './hooks/useCreateMovie';
 export * from './hooks/useUpdateMovie';
 export * from './hooks/useUploadMoviePoster';
 export * from './components/MovieCard';
+export * from './components/RankRosetteBadge';
 export * from './components/MovieHeroBanner';
 export * from './components/admin/AdminMovieList';
 export * from './components/admin/AdminMovieForm';

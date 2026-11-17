@@ -12,6 +12,7 @@ export interface Movie {
   releaseDate: string | null;
   posterUrl: string | null;
   status: MovieStatus;
+  isFeatured?: boolean;
 }
 
 export interface MovieQueryParams {
@@ -35,6 +36,7 @@ export interface MovieRequest {
   ageRating?: string | null;
   releaseDate?: string | null;
   posterUrl?: string | null;
+  isFeatured?: boolean;
 }
 
 /**

@@ -64,6 +64,11 @@ app:
   jwt:
     secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+  movie:
+    transition:
+      enabled: ${APP_MOVIE_TRANSITION_ENABLED:true}
+      cron: "${APP_MOVIE_TRANSITION_CRON:0 1 0 * * *}"
+      zone: "${APP_MOVIE_TRANSITION_ZONE:Asia/Ho_Chi_Minh}"
 
 # Swagger / OpenAPI documentation
 springdoc:

@@ -6,12 +6,14 @@ import {
   formatDate,
   getAgeRatingBadge,
 } from "@/shared/utils/format";
+import { RankRosetteBadge } from "./RankRosetteBadge";
 
 interface MovieCardProps {
   movie: Movie;
+  featuredRank?: number;
 }
 
-export const MovieCard: React.FC<MovieCardProps> = ({ movie }) => {
+export const MovieCard: React.FC<MovieCardProps> = ({ movie, featuredRank }) => {
   const ageBadge = getAgeRatingBadge(movie.ageRating);
   const fallbackPoster =
     "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=400&q=80";
@@ -19,6 +21,8 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie }) => {
   const [imageSrc, setImageSrc] = useState<string>(
     movie.posterUrl || fallbackPoster,
   );
+
+  const rankToDisplay = featuredRank ?? (movie.isFeatured ? 1 : undefined);
 
   return (
     <article className="group flex flex-col bg-[#13151d] rounded-2xl overflow-hidden transition-all duration-300 cursor-pointer hover:shadow-xl hover:shadow-black/40">
@@ -52,6 +56,13 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie }) => {
           >
             {movie.ageRating || "P"}
           </span>
+
+          {/* Special Ranking Rosette Ribbon Badge */}
+          {rankToDisplay && (
+            <div className="absolute top-1 right-1 sm:top-1.5 sm:right-1.5 z-20">
+              <RankRosetteBadge rank={rankToDisplay} />
+            </div>
+          )}
         </div>
 
         {/* Info Section */}
@@ -85,8 +96,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie }) => {
           </div>
           {/* Action Button */}
           <div className="mt-3">
-            <Link
-              to={`/movies/${movie.id}`}
+            <span
               className={`block w-full text-center py-2 sm:py-2.5 px-4 text-xs sm:text-sm font-bold rounded-full border-none transition-all duration-200 active:scale-[0.98] ${
                 movie.status === "SHOWING"
                   ? "bg-[#181a24] hover:bg-[#222530] text-zinc-200"
@@ -98,7 +108,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie }) => {
                 : movie.status === "UPCOMING"
                   ? "Xem thông tin"
                   : "Chi tiết phim"}
-            </Link>
+            </span>
           </div>
         </div>
       </Link>
