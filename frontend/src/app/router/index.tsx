@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { MainLayout, AdminLayout, AuthLayout } from '@/shared/components/layout';
 import {
   HomePage,
@@ -14,7 +14,6 @@ import {
   StaffCheckinPage,
   LoginPage,
   RegisterPage,
-  AdminDashboardPage,
   AdminMoviesPage,
   AdminMovieCreatePage,
   AdminMovieEditPage,
@@ -79,11 +78,11 @@ export const AppRouter: React.FC = () => {
           }
         />
 
-        {/* Staff & Admin Ticket Check-in Route (FE-08) */}
+        {/* Staff Ticket Check-in Route (FE-08) */}
         <Route
           path="/staff/check-in"
           element={
-            <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
+            <ProtectedRoute allowedRoles={['STAFF']}>
               <StaffCheckinPage />
             </ProtectedRoute>
           }
@@ -108,7 +107,7 @@ export const AppRouter: React.FC = () => {
           </AdminRoute>
         }
       >
-        <Route index element={<AdminDashboardPage />} />
+        <Route index element={<Navigate to="/admin/movies" replace />} />
         <Route path="movies" element={<AdminMoviesPage />} />
         <Route path="movies/new" element={<AdminMovieCreatePage />} />
         <Route path="movies/:movieId/edit" element={<AdminMovieEditPage />} />

@@ -22,11 +22,16 @@ describe('AdminLayout sidebar', () => {
   it('renders sidebar navigation items and no public navigation items', () => {
     renderWithProviders(<AdminLayout />, { initialEntries: ['/admin'] });
 
-    expect(screen.getByRole('link', { name: /dashboard/i })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /dashboard/i })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /quản lý phim/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /phòng chiếu & ghế/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /suất chiếu/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /soát vé/i })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /soát vé/i })).not.toBeInTheDocument();
+
+    // Brand links back to the public home page
+    const brandLinks = screen.getAllByRole('link', { name: /cinemaplus/i });
+    expect(brandLinks.length).toBeGreaterThan(0);
+    brandLinks.forEach((link) => expect(link).toHaveAttribute('href', '/'));
 
     expect(screen.queryByText('Trang chủ')).not.toBeInTheDocument();
     expect(screen.queryByText('Rạp phim')).not.toBeInTheDocument();
@@ -39,9 +44,9 @@ describe('AdminLayout sidebar', () => {
     expect(moviesLink).toHaveAttribute('aria-current', 'page');
     unmount();
 
-    renderWithProviders(<AdminLayout />, { initialEntries: ['/admin'] });
-    const dashboardLink = screen.getByRole('link', { name: /dashboard/i });
-    expect(dashboardLink).toHaveClass('bg-[#e6e2c1]');
+    renderWithProviders(<AdminLayout />, { initialEntries: ['/admin/showtimes'] });
+    const showtimesLink = screen.getByRole('link', { name: /suất chiếu/i });
+    expect(showtimesLink).toHaveClass('bg-[#e6e2c1]');
   });
 
   it('renders mobile sidebar toggle with aria attributes', () => {

@@ -38,7 +38,7 @@ export const AdminLayout: React.FC = () => {
           {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
         <Link
-          to="/admin"
+          to="/"
           className="flex items-center gap-2 text-white font-bold tracking-tight"
         >
           <span className="text-sm">CINEMA<span className="text-[#e6e2c1]">PLUS</span></span>

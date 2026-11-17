@@ -44,7 +44,7 @@ export const Header: React.FC<HeaderProps> = ({ variant = 'customer' }) => {
   const isCheckinActive = pathname === '/staff/check-in' || pathname.startsWith('/staff/check-in/');
   const isAdminActive = pathname.startsWith('/admin');
   const isCustomer = isAuthenticated && user?.role === 'CUSTOMER';
-  const isStaffOrAdmin = isAuthenticated && (user?.role === 'STAFF' || user?.role === 'ADMIN');
+  const isStaff = isAuthenticated && user?.role === 'STAFF';
 
   const getNavLinkClass = (isActive: boolean) =>
     `px-3 py-1.5 xl:px-4 xl:py-2 rounded-full text-xs xl:text-sm font-semibold transition-all duration-200 border-none shrink-0 ${
@@ -104,7 +104,7 @@ export const Header: React.FC<HeaderProps> = ({ variant = 'customer' }) => {
             {/* Left: Brand + Admin Badge */}
             <div className="flex items-center gap-3">
               <Link
-                to="/admin"
+                to="/"
                 className="flex items-center gap-2 text-white font-bold text-lg sm:text-xl tracking-tight group"
               >
                 <Film className="w-6 h-6 sm:w-7 sm:h-7 text-[#e6e2c1] transition-transform duration-300 group-hover:scale-110" />
@@ -157,15 +157,6 @@ export const Header: React.FC<HeaderProps> = ({ variant = 'customer' }) => {
               >
                 <Calendar className="w-3.5 h-3.5" />
                 <span>Suất chiếu</span>
-              </Link>
-
-              <Link
-                to="/staff/check-in"
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold text-zinc-300 hover:text-white bg-[#161821] hover:bg-[#20232d] rounded-full border-none transition-colors"
-                title="Soát vé"
-              >
-                <Ticket className="w-3.5 h-3.5 text-[#e6e2c1]" />
-                <span>Soát vé</span>
               </Link>
 
               <Link
@@ -234,7 +225,7 @@ export const Header: React.FC<HeaderProps> = ({ variant = 'customer' }) => {
                 Vé của tôi
               </Link>
             )}
-            {isStaffOrAdmin && (
+            {isStaff && (
               <Link to="/staff/check-in" className={getNavLinkClass(isCheckinActive)}>
                 <span className="flex items-center gap-1.5">
                   <Ticket className="w-3.5 h-3.5" />
@@ -345,7 +336,7 @@ export const Header: React.FC<HeaderProps> = ({ variant = 'customer' }) => {
                   Vé của tôi
                 </Link>
               )}
-              {isStaffOrAdmin && (
+              {isStaff && (
                 <Link to="/staff/check-in" className={getMobileNavLinkClass(isCheckinActive)}>
                   <Ticket className={`w-5 h-5 ${isCheckinActive ? 'text-black' : 'text-[#e6e2c1]'}`} />
                   <span>Soát vé</span>

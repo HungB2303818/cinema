@@ -63,7 +63,7 @@ describe('FE-08: Staff/Admin Ticket Check-in', () => {
         <Route
           path="/staff/check-in"
           element={
-            <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
+            <ProtectedRoute allowedRoles={['STAFF']}>
               <StaffCheckinPage />
             </ProtectedRoute>
           }
@@ -74,22 +74,15 @@ describe('FE-08: Staff/Admin Ticket Check-in', () => {
     );
   };
 
-  it('Test 1: STAFF and ADMIN can access route /staff/check-in and see form controls', () => {
-    // 1. STAFF
-    const { unmount: unmountStaff } = renderCheckinRoute(staffUser);
+  it('Test 1: STAFF can access route /staff/check-in and see form controls', () => {
+    renderCheckinRoute(staffUser);
     expect(screen.getByRole('heading', { name: /soát vé vào rạp/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/mã vé/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /xác nhận check-in/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /vé tiếp theo/i })).toBeInTheDocument();
-    unmountStaff();
-
-    // 2. ADMIN
-    renderCheckinRoute(adminUser);
-    expect(screen.getByRole('heading', { name: /soát vé vào rạp/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/mã vé/i)).toBeInTheDocument();
   });
 
-  it('Test 2: Guest is redirected to /login with state; CUSTOMER sees access denied error', () => {
+  it('Test 2: Guest is redirected to /login with state; CUSTOMER and ADMIN see access denied error', () => {
     // 1. Guest -> redirected to /login
     const { unmount: unmountGuest } = renderCheckinRoute(null);
     expect(screen.getByText('Màn hình Đăng nhập')).toBeInTheDocument();
@@ -97,10 +90,19 @@ describe('FE-08: Staff/Admin Ticket Check-in', () => {
     unmountGuest();
 
     // 2. CUSTOMER -> access denied
-    renderCheckinRoute(customerUser);
+    const { unmount: unmountCustomer } = renderCheckinRoute(customerUser);
     expect(screen.getByText('Không có quyền truy cập')).toBeInTheDocument();
     expect(
-      screen.getByText(/Trang này yêu cầu quyền STAFF hoặc ADMIN. Tài khoản hiện tại \(CUSTOMER\) không có quyền truy cập./i)
+      screen.getByText(/Trang này yêu cầu quyền STAFF\. Tài khoản hiện tại \(CUSTOMER\) không có quyền truy cập./i)
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /soát vé vào rạp/i })).not.toBeInTheDocument();
+    unmountCustomer();
+
+    // 3. ADMIN -> check-in is staff-only now
+    renderCheckinRoute(adminUser);
+    expect(screen.getByText('Không có quyền truy cập')).toBeInTheDocument();
+    expect(
+      screen.getByText(/Trang này yêu cầu quyền STAFF\. Tài khoản hiện tại \(ADMIN\) không có quyền truy cập./i)
     ).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /soát vé vào rạp/i })).not.toBeInTheDocument();
   });
