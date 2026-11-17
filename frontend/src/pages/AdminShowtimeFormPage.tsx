@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import {
   ArrowLeft,
-  Sparkles,
   Clock,
   DollarSign,
   ShieldAlert,
@@ -20,6 +19,7 @@ import { useAdminCinemas, useAdminRooms, useAdminSeats } from '@/features/cinema
 import { useAdminMovies } from '@/features/movies';
 import {
   Button,
+  DateTimePicker,
   Input,
   AlertMessage,
   LoadingSpinner,
@@ -54,13 +54,13 @@ export const AdminShowtimeFormPage: React.FC = () => {
   const [cinemaId, setCinemaId] = useState<number | ''>(initialCinemaId || '');
   const [roomId, setRoomId] = useState<number | ''>(initialRoomId || '');
   const [startsAt, setStartsAt] = useState('');
-  const [endsAt, setEndsAt] = useState('');
   const [cleanupMinutes, setCleanupMinutes] = useState(15);
   const [basePrice, setBasePrice] = useState<number | ''>(75000);
   const [vipSurcharge, setVipSurcharge] = useState<number | ''>(20000);
 
   // Status & feedback
   const [formError, setFormError] = useState<string | null>(null);
+  const [startsAtError, setStartsAtError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdResult, setCreatedResult] = useState<ShowtimeCreatedResponse | null>(null);
 
@@ -103,7 +103,6 @@ export const AdminShowtimeFormPage: React.FC = () => {
       setCinemaId(existingShowtime.cinemaId);
       setRoomId(existingShowtime.roomId);
       setStartsAt(utcIsoToVietnamLocalInput(existingShowtime.startsAt));
-      setEndsAt(utcIsoToVietnamLocalInput(existingShowtime.endsAt));
       setCleanupMinutes(existingShowtime.cleanupMinutes ?? 15);
       setBasePrice(existingShowtime.basePrice);
       setVipSurcharge(existingShowtime.vipSurcharge ?? 0);
@@ -128,30 +127,25 @@ export const AdminShowtimeFormPage: React.FC = () => {
     return moviesData.content.find((m) => m.id === movieId);
   }, [movieId, moviesData]);
 
-  // Auto-suggest endsAt based on startsAt and movie duration
-  const handleSuggestEndsAt = () => {
-    if (!startsAt) {
-      setFormError('Vui lòng chọn thời gian bắt đầu trước khi gợi ý giờ kết thúc.');
-      return;
-    }
-    if (!selectedMovie?.durationMinutes) {
-      setFormError('Vui lòng chọn phim để lấy thời lượng chiếu.');
-      return;
-    }
-    const suggested = addMinutesToVietnamLocal(startsAt, selectedMovie.durationMinutes);
-    setEndsAt(suggested);
-    setFormError(null);
-  };
-
-  // Next available room time calculation
-  const nextAvailableTime = useMemo(() => {
-    if (!endsAt) return '';
+  // Auto-calculate end time from start time and movie duration
+  const computedEndsAt = useMemo(() => {
+    if (!startsAt || !selectedMovie?.durationMinutes) return '';
     try {
-      return addMinutesToVietnamLocal(endsAt, cleanupMinutes || 0);
+      return addMinutesToVietnamLocal(startsAt, selectedMovie.durationMinutes);
     } catch {
       return '';
     }
-  }, [endsAt, cleanupMinutes]);
+  }, [startsAt, selectedMovie]);
+
+  // Next available room time calculation
+  const nextAvailableTime = useMemo(() => {
+    if (!computedEndsAt) return '';
+    try {
+      return addMinutesToVietnamLocal(computedEndsAt, cleanupMinutes || 0);
+    } catch {
+      return '';
+    }
+  }, [computedEndsAt, cleanupMinutes]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,8 +163,13 @@ export const AdminShowtimeFormPage: React.FC = () => {
       setFormError('Phòng phải có ghế ACTIVE trước khi tạo suất chiếu. Vui lòng kiểm tra cấu hình ghế.');
       return;
     }
-    if (!startsAt || !endsAt) {
-      setFormError('Vui lòng chọn thời gian bắt đầu và kết thúc chiếu.');
+    if (!startsAt) {
+      setStartsAtError('Chọn giờ bắt đầu');
+      setFormError('Vui lòng chọn giờ bắt đầu chiếu.');
+      return;
+    }
+    if (!computedEndsAt) {
+      setFormError('Không thể tính giờ kết thúc. Vui lòng chọn phim và giờ bắt đầu.');
       return;
     }
 
@@ -179,24 +178,18 @@ export const AdminShowtimeFormPage: React.FC = () => {
     let endsAtUtc: string;
     try {
       startsAtUtc = vietnamLocalInputToUtcIso(startsAt);
-      endsAtUtc = vietnamLocalInputToUtcIso(endsAt);
+      endsAtUtc = vietnamLocalInputToUtcIso(computedEndsAt);
     } catch {
       setFormError('Định dạng thời gian không hợp lệ.');
       return;
     }
 
-    const startMs = new Date(startsAtUtc).getTime();
-    const endMs = new Date(endsAtUtc).getTime();
-
-    if (endMs <= startMs) {
-      setFormError('Thời gian kết thúc phải sau thời gian bắt đầu.');
+    if (basePrice === '') {
+      setFormError('Vui lòng nhập giá vé cơ bản.');
       return;
     }
-
-    if (selectedMovie && endMs < startMs + selectedMovie.durationMinutes * 60 * 1000) {
-      setFormError(
-        `Thời lượng chiếu không đủ cho phim "${selectedMovie.title}" (${selectedMovie.durationMinutes} phút).`
-      );
+    if (vipSurcharge === '') {
+      setFormError('Vui lòng nhập phụ thu ghế VIP.');
       return;
     }
 
@@ -214,6 +207,7 @@ export const AdminShowtimeFormPage: React.FC = () => {
 
     setIsSubmitting(true);
     setFormError(null);
+    setStartsAtError(null);
 
     const payload = {
       movieId,
@@ -361,7 +355,7 @@ export const AdminShowtimeFormPage: React.FC = () => {
               onClick={() => {
                 setCreatedResult(null);
                 setStartsAt('');
-                setEndsAt('');
+                setStartsAtError(null);
               }}
             >
               Tạo tiếp suất khác
@@ -387,7 +381,7 @@ export const AdminShowtimeFormPage: React.FC = () => {
       </div>
 
       {/* Main Form */}
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} noValidate className="space-y-6">
         {formError && <AlertMessage variant="error">{formError}</AlertMessage>}
 
         {/* Section 1: Film selection */}
@@ -520,53 +514,32 @@ export const AdminShowtimeFormPage: React.FC = () => {
 
         {/* Section 3: Time and Cleanup */}
         <div className="bg-[#13151d] border border-[#242733] rounded-2xl p-6 space-y-4">
-          <div className="flex items-center justify-between border-b border-[#20232e] pb-3">
-            <div className="flex items-center gap-2 text-sm font-bold text-white">
-              <Clock className="w-4 h-4 text-[#e6e2c1]" />
-              <span>3. Thời Gian Chiếu & Dọn Phòng (Giờ Việt Nam)</span>
-            </div>
-
-            {selectedMovie && startsAt && (
-              <button
-                type="button"
-                onClick={handleSuggestEndsAt}
-                className="inline-flex items-center gap-1.5 text-xs text-[#e6e2c1] hover:underline font-semibold cursor-pointer"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Gợi ý giờ kết thúc (+{selectedMovie.durationMinutes}m)</span>
-              </button>
-            )}
+          <div className="flex items-center gap-2 text-sm font-bold text-white border-b border-[#20232e] pb-3">
+            <Clock className="w-4 h-4 text-[#e6e2c1]" />
+            <span>3. Thời Gian Chiếu & Dọn Phòng (Giờ Việt Nam)</span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label htmlFor="startsAtInput" className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">
-                Bắt đầu chiếu <span className="text-red-400">*</span>
+                Giờ bắt đầu <span className="text-red-400">*</span>
               </label>
-              <Input
+              <DateTimePicker
                 id="startsAtInput"
-                type="datetime-local"
                 value={startsAt}
-                onChange={(e) => setStartsAt(e.target.value)}
-                required
+                onChange={(nextValue) => {
+                  setStartsAt(nextValue);
+                  setStartsAtError(null);
+                }}
+                error={Boolean(startsAtError)}
                 disabled={isSubmitting}
+                placeholder="Chọn ngày giờ"
               />
-              <p className="text-[11px] text-zinc-500 mt-1">Múi giờ Asia/Ho_Chi_Minh (+07:00)</p>
-            </div>
-
-            <div>
-              <label htmlFor="endsAtInput" className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">
-                Kết thúc chiếu <span className="text-red-400">*</span>
-              </label>
-              <Input
-                id="endsAtInput"
-                type="datetime-local"
-                value={endsAt}
-                onChange={(e) => setEndsAt(e.target.value)}
-                required
-                disabled={isSubmitting}
-              />
-              <p className="text-[11px] text-zinc-500 mt-1">Phải đủ thời lượng phim</p>
+              {startsAtError ? (
+                <p className="text-[11px] text-red-400 mt-1">{startsAtError}</p>
+              ) : (
+                <p className="text-[11px] text-zinc-500 mt-1">Múi giờ Asia/Ho_Chi_Minh (+07:00)</p>
+              )}
             </div>
 
             <div>
@@ -585,6 +558,16 @@ export const AdminShowtimeFormPage: React.FC = () => {
               />
               <p className="text-[11px] text-zinc-500 mt-1">Mặc định 15 phút</p>
             </div>
+          </div>
+
+          <div className="bg-[#090a0f] border border-[#252836] rounded-xl p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-xs">
+            <span className="text-zinc-400">
+              Kết thúc dự kiến (giờ bắt đầu + thời lượng phim
+              {selectedMovie ? ` ${selectedMovie.durationMinutes} phút` : ''}):
+            </span>
+            <span className={`font-bold ${computedEndsAt ? 'text-[#e6e2c1]' : 'text-zinc-500'}`}>
+              {computedEndsAt ? computedEndsAt.replace('T', ' ') : 'Chọn phim và giờ bắt đầu'}
+            </span>
           </div>
 
           {nextAvailableTime && (
