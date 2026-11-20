@@ -35,11 +35,16 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 String email = jwtUtils.getEmailFromToken(jwt);
                 UserDetails userDetails = userDetailsService.loadUserByUsername(email);
 
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                // An email may be reassigned after a profile update. Never authenticate
+                // the new owner using a token issued for the previous account.
+                if (userDetails instanceof UserPrincipal principal &&
+                        principal.getId().equals(jwtUtils.getUserIdFromToken(jwt)) &&
+                        principal.isEnabled() && principal.isAccountNonLocked()) {
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                }
             }
         } catch (Exception e) {
             log.error("Cannot set user authentication: {}", e.getMessage());

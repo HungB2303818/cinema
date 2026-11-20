@@ -1,5 +1,5 @@
 import { httpClient } from '@/shared/api/http-client';
-import type { AuthResponse, LoginCredentials, RegisterData, User } from '../types/auth.types';
+import type { AuthResponse, LoginCredentials, RegisterData, UpdateProfileData, User } from '../types/auth.types';
 
 export const authApi = {
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
@@ -14,6 +14,11 @@ export const authApi = {
 
   getMe: async (): Promise<User> => {
     const res = await httpClient.get<User>('/auth/me');
+    return res.data;
+  },
+
+  updateMe: async (data: UpdateProfileData): Promise<AuthResponse> => {
+    const res = await httpClient.put<AuthResponse>('/auth/me', data);
     return res.data;
   },
 };

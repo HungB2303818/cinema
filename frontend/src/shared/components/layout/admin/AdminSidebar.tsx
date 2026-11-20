@@ -44,10 +44,10 @@ const navItems: NavItem[] = [
 ];
 
 const linkClass = (active: boolean) =>
-  `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e6e2c1] motion-reduce:transition-none ${
+   `group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e6e2c1] motion-reduce:transition-none ${
     active
-      ? 'bg-[#e6e2c1] text-black font-semibold'
-      : 'text-zinc-300 hover:bg-[#1a1c24] hover:text-white'
+      ? "bg-[#1a1c24] text-[#e6e2c1] font-semibold"
+      : "text-zinc-300 hover:bg-[#1a1c24] hover:text-white"
   }`;
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen = false, onMobileClose }) => {
@@ -112,9 +112,9 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen = false, 
               aria-current={active ? 'page' : undefined}
               className={linkClass(active)}
             >
-              <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-black' : 'text-[#e6e2c1]'}`} />
+              <Icon className={`w-4 h-4 shrink-0 transition-colors motion-reduce:transition-none ${active ? 'text-[#e6e2c1]' : 'text-zinc-400 group-hover:text-white'}`} />
               <span className="truncate">{item.label}</span>
-              {active && <ChevronRight className="w-3.5 h-3.5 ml-auto text-black/70" />}
+              {active && <ChevronRight className="w-3.5 h-3.5 ml-auto text-[#e6e2c1]" />}
             </Link>
           );
         })}
@@ -123,7 +123,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen = false, 
       {/* Account / logout */}
       <div className="border-t border-[#20232e] px-3 py-4 space-y-2">
         {user && (
-          <div className="flex items-center gap-2.5 px-2 py-2 rounded-lg bg-[#0d0e14] border border-[#20232e]">
+          <Link to="/profile" onClick={onMobileClose} aria-label="Thông tin cá nhân" className="flex items-center gap-2.5 px-2 py-2 rounded-lg bg-[#0d0e14] border border-[#20232e] hover:bg-[#1a1c24] focus-visible:outline-2 focus-visible:outline-primary">
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#e6e2c1] text-black text-xs font-bold">
               {user.fullName.charAt(0).toUpperCase()}
             </span>
@@ -131,7 +131,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen = false, 
               <p className="text-xs font-semibold text-zinc-100 truncate">{user.fullName}</p>
               <p className="text-[10px] text-[#e6e2c1] font-mono font-bold truncate">{user.role}</p>
             </div>
-          </div>
+          </Link>
         )}
 
         <Link

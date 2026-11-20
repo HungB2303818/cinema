@@ -113,9 +113,6 @@ export const AdminShowtimesPage: React.FC = () => {
             <span>Quản trị Lịch Chiếu</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white">Quản lý Suất Chiếu</h1>
-          <p className="text-zinc-400 text-sm mt-1">
-            Tra cứu toàn bộ lịch chiếu theo rạp, phòng, phim và ngày; kiểm soát trạng thái và giá vé
-          </p>
         </div>
 
         <Link to="/admin/showtimes/new">

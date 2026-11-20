@@ -4,6 +4,7 @@ import com.example.cinema.auth.dto.LoginRequest;
 import com.example.cinema.auth.dto.LoginResponse;
 import com.example.cinema.auth.dto.RegisterRequest;
 import com.example.cinema.auth.dto.UserResponse;
+import com.example.cinema.auth.dto.UpdateProfileRequest;
 import com.example.cinema.auth.security.UserPrincipal;
 import com.example.cinema.auth.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -42,5 +43,12 @@ public class AuthController {
     public ResponseEntity<UserResponse> getCurrentUser(@AuthenticationPrincipal UserPrincipal principal) {
         UserResponse response = authService.getCurrentUser(principal);
         return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/me")
+    @Operation(summary = "Cập nhật họ tên và email của tài khoản hiện tại")
+    public ResponseEntity<LoginResponse> updateProfile(@AuthenticationPrincipal UserPrincipal principal,
+                                                     @Valid @RequestBody UpdateProfileRequest request) {
+        return ResponseEntity.ok(authService.updateProfile(principal, request));
     }
 }

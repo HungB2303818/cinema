@@ -43,6 +43,7 @@ export const Header: React.FC<HeaderProps> = ({ variant = 'customer' }) => {
   const isTicketsActive = pathname.startsWith('/my-tickets');
   const isCheckinActive = pathname === '/staff/check-in' || pathname.startsWith('/staff/check-in/');
   const isAdminActive = pathname.startsWith('/admin');
+  const isProfileActive = pathname === '/profile';
   const isCustomer = isAuthenticated && user?.role === 'CUSTOMER';
   const isStaff = isAuthenticated && user?.role === 'STAFF';
 
@@ -247,10 +248,10 @@ export const Header: React.FC<HeaderProps> = ({ variant = 'customer' }) => {
           <div className="hidden lg:flex items-center gap-2.5 shrink-0">
             {isAuthenticated && user ? (
               <div className="flex items-center gap-2.5">
-                <div className="flex flex-col items-end">
+                <Link to="/profile" aria-label="Thông tin cá nhân" aria-current={isProfileActive ? 'page' : undefined} className="flex flex-col items-end rounded-lg p-1 transition-colors hover:bg-[#1a1c24] focus-visible:outline-2 focus-visible:outline-primary">
                   <span className="text-xs xl:text-sm font-medium text-zinc-200">{user.fullName}</span>
                   <StatusBadge status={user.role} size="sm" className="mt-0.5" />
-                </div>
+                </Link>
                 <button
                   type="button"
                   onClick={handleLogout}
@@ -283,9 +284,9 @@ export const Header: React.FC<HeaderProps> = ({ variant = 'customer' }) => {
           {/* Mobile / Tablet controls (< lg: 1024px) */}
           <div className="flex items-center gap-2 lg:hidden">
             {isAuthenticated && user && (
-              <div className="w-8 h-8 rounded-full bg-[#e6e2c1] text-black font-bold flex items-center justify-center text-xs shadow-sm">
+              <Link to="/profile" onClick={closeMobileMenu} aria-label="Thông tin cá nhân" className="w-8 h-8 rounded-full bg-[#e6e2c1] text-black font-bold flex items-center justify-center text-xs shadow-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary">
                 {user.fullName.charAt(0).toUpperCase()}
-              </div>
+              </Link>
             )}
             <button
               type="button"
@@ -331,6 +332,12 @@ export const Header: React.FC<HeaderProps> = ({ variant = 'customer' }) => {
               <Link to="/cinemas" className={getMobileNavLinkClass(isCinemasActive)}>
                 Rạp phim
               </Link>
+              {isAuthenticated && (
+                <Link to="/profile" className={getMobileNavLinkClass(isProfileActive)} aria-current={isProfileActive ? 'page' : undefined}>
+                  <UserIcon className="w-5 h-5" aria-hidden="true" />
+                  <span>Thông tin cá nhân</span>
+                </Link>
+              )}
               {isCustomer && (
                 <Link to="/my-tickets" className={getMobileNavLinkClass(isTicketsActive)}>
                   Vé của tôi

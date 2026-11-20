@@ -7,7 +7,7 @@ export interface AuthContextType {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (token: string, user: User) => void;
+  login: (token: string, user: User, options?: { preserveBookingState?: boolean }) => void;
   logout: () => void;
   hasRole: (role: UserRole) => boolean;
 }
@@ -38,10 +38,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initAuth();
   }, []);
 
-  const login = (newToken: string, newUser: User) => {
+  const login = (newToken: string, newUser: User, options?: { preserveBookingState?: boolean }) => {
     try {
       Object.keys(sessionStorage).forEach((key) => {
-        if (key.startsWith('cinema_booking_intent_') || key.startsWith('cinema_payment_attempt_')) {
+        if (!options?.preserveBookingState && (key.startsWith('cinema_booking_intent_') || key.startsWith('cinema_payment_attempt_'))) {
           sessionStorage.removeItem(key);
         }
       });
