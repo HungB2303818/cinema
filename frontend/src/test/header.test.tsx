@@ -131,7 +131,7 @@ describe('Header Navigation & Role Scoping', () => {
     expect(screen.getAllByRole('link', { name: 'Vé của tôi' })[0]).toBeInTheDocument();
   });
 
-  it('displays "Soát vé" link ONLY for STAFF and ADMIN, and NOT for Guest or CUSTOMER', () => {
+  it('displays "Soát vé" link ONLY for STAFF', () => {
     // 1. Guest -> NO "Soát vé"
     vi.spyOn(authModule, 'useAuth').mockReturnValue({
       user: null,
@@ -176,7 +176,7 @@ describe('Header Navigation & Role Scoping', () => {
     expect(staffCheckinLinks[0]).toHaveAttribute('href', '/staff/check-in');
     uStaff();
 
-    // 4. ADMIN -> SHOWS "Soát vé" on main layout
+    // 4. ADMIN -> NO "Soát vé" on main layout
     vi.spyOn(authModule, 'useAuth').mockReturnValue({
       user: { id: 1, fullName: 'Admin User', email: 'admin@example.com', role: 'ADMIN', status: 'ACTIVE' },
       token: 'admin-token',
@@ -187,14 +187,11 @@ describe('Header Navigation & Role Scoping', () => {
       hasRole: (r) => r === 'ADMIN',
     });
     const { unmount: uAdmin } = renderHeader('/');
-    const adminCheckinLinks = screen.getAllByRole('link', { name: /soát vé/i });
-    expect(adminCheckinLinks.length).toBeGreaterThanOrEqual(1);
-    expect(adminCheckinLinks[0]).toHaveAttribute('href', '/staff/check-in');
+    expect(screen.queryByText('Soát vé')).not.toBeInTheDocument();
     uAdmin();
 
-    // 5. ADMIN Header variant -> SHOWS "Soát vé" button/link
+    // 5. ADMIN Header variant -> NO "Soát vé"
     renderHeader('/admin', 'admin');
-    const adminPanelCheckin = screen.getByRole('link', { name: /soát vé/i });
-    expect(adminPanelCheckin).toHaveAttribute('href', '/staff/check-in');
+    expect(screen.queryByText('Soát vé')).not.toBeInTheDocument();
   });
 });

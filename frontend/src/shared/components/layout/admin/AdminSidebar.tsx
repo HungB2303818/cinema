@@ -1,11 +1,9 @@
 import React, { useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard,
   Film,
   Armchair,
   Calendar,
-  Ticket,
   LogOut,
   X,
   ChevronRight,
@@ -26,12 +24,6 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   {
-    to: '/admin',
-    label: 'Dashboard',
-    icon: LayoutDashboard,
-    isActive: (pathname) => pathname === '/admin' || pathname === '/admin/',
-  },
-  {
     to: '/admin/movies',
     label: 'Quản lý phim',
     icon: Film,
@@ -48,12 +40,6 @@ const navItems: NavItem[] = [
     label: 'Suất chiếu',
     icon: Calendar,
     isActive: (pathname) => pathname.startsWith('/admin/showtimes'),
-  },
-  {
-    to: '/staff/check-in',
-    label: 'Soát vé',
-    icon: Ticket,
-    isActive: (pathname) => pathname.startsWith('/staff/check-in'),
   },
 ];
 
@@ -89,7 +75,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen = false, 
       {/* Brand */}
       <div className="flex items-center justify-between px-4 py-5 border-b border-[#20232e]">
         <Link
-          to="/admin"
+          to="/"
           className="flex items-center gap-2.5 text-white font-bold tracking-tight group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e6e2c1] rounded-lg"
           onClick={onMobileClose}
         >

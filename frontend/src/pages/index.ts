@@ -11,7 +11,6 @@ export * from './MyTicketsPage';
 export * from './StaffCheckinPage';
 export * from './LoginPage';
 export * from './RegisterPage';
-export * from './AdminDashboardPage';
 export * from './AdminMoviesPage';
 export * from './AdminMovieCreatePage';
 export * from './AdminMovieEditPage';

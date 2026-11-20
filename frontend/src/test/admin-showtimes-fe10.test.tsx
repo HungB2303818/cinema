@@ -310,6 +310,16 @@ describe('FE-10: Admin Quản Lý Suất Chiếu (Showtimes)', () => {
   });
 
   describe('3. Form Tạo Suất Chiếu Mới (AdminShowtimeFormPage - Create)', () => {
+    const pickStartTime = (day: number, hour: number, minute: number) => {
+      fireEvent.click(screen.getByRole('button', { name: /Giờ bắt đầu/i }));
+      fireEvent.change(screen.getByLabelText('Tháng'), { target: { value: '11' } });
+      fireEvent.change(screen.getByLabelText('Năm'), { target: { value: '2026' } });
+      fireEvent.click(screen.getByRole('button', { name: `Ngày ${day} tháng 11 năm 2026` }));
+      fireEvent.click(screen.getByRole('button', { name: `Giờ ${String(hour).padStart(2, '0')}` }));
+      fireEvent.click(screen.getByRole('button', { name: `Phút ${String(minute).padStart(2, '0')}` }));
+      fireEvent.click(screen.getByRole('button', { name: 'Xong' }));
+    };
+
     it('chặn gửi khi tải ghế lỗi và cho phép thử lại', async () => {
       vi.spyOn(adminCinemasApi, 'listSeats')
         .mockRejectedValueOnce(new Error('Không thể tải ghế'))
@@ -372,30 +382,27 @@ describe('FE-10: Admin Quản Lý Suất Chiếu (Showtimes)', () => {
       expect(screen.queryByRole('option', { name: /Phim Đang Ẩn/i })).not.toBeInTheDocument();
     });
 
-    it('gợi ý giờ kết thúc tự động từ thời lượng phim và tính thời điểm phòng sẵn sàng', async () => {
+    it('tự động tính giờ kết thúc từ thời lượng phim và thời điểm phòng sẵn sàng', async () => {
       renderWithProviders(<AdminShowtimeFormPage />, { initialEntries: ['/admin/showtimes/new'] });
 
       await waitFor(() => {
         expect(screen.getByRole('combobox', { name: /Phim chiếu/i })).toBeInTheDocument();
       });
 
+      // Không còn ô nhập giờ kết thúc thủ công
+      expect(screen.queryByLabelText(/Kết thúc chiếu/i)).not.toBeInTheDocument();
+
       // Chọn phim "Đào, Phở và Piano" (100 phút)
       const movieSelect = screen.getByRole('combobox', { name: /Phim chiếu/i });
       fireEvent.change(movieSelect, { target: { value: '100' } });
 
       // Nhập giờ bắt đầu: 2026-11-15T09:00 (giờ VN)
-      const startsAtInput = screen.getByLabelText(/Bắt đầu chiếu/i);
-      fireEvent.change(startsAtInput, { target: { value: '2026-11-15T09:00' } });
-
-      // Click nút "Gợi ý giờ kết thúc (+100m)"
-      await waitFor(() => {
-        expect(screen.getByText(/Gợi ý giờ kết thúc/i)).toBeInTheDocument();
-      });
-      fireEvent.click(screen.getByText(/Gợi ý giờ kết thúc/i));
+      pickStartTime(15, 9, 0);
 
       // Giờ kết thúc tự động điền: 09:00 + 100m = 10:40
-      const endsAtInput = screen.getByLabelText(/Kết thúc chiếu/i) as HTMLInputElement;
-      expect(endsAtInput.value).toBe('2026-11-15T10:40');
+      await waitFor(() => {
+        expect(screen.getByText(/2026-11-15 10:40/i)).toBeInTheDocument();
+      });
 
       // Thời điểm phòng sẵn sàng (+15 phút cleanup) = 10:55
       await waitFor(() => {
@@ -440,9 +447,8 @@ describe('FE-10: Admin Quản Lý Suất Chiếu (Showtimes)', () => {
       });
       fireEvent.change(screen.getByLabelText(/Phòng chiếu/i), { target: { value: '10' } });
 
-      // 3. Thời gian: 2026-11-15 09:00 VN đến 10:40 VN
-      fireEvent.change(screen.getByLabelText(/Bắt đầu chiếu/i), { target: { value: '2026-11-15T09:00' } });
-      fireEvent.change(screen.getByLabelText(/Kết thúc chiếu/i), { target: { value: '2026-11-15T10:40' } });
+      // 3. Thời gian: 2026-11-15 09:00 VN (kết thúc tự động 10:40 VN theo thời lượng phim)
+      pickStartTime(15, 9, 0);
       fireEvent.change(screen.getByLabelText(/Thời gian dọn phòng/i), { target: { value: '15' } });
 
       // 4. Giá vé
@@ -479,32 +485,25 @@ describe('FE-10: Admin Quản Lý Suất Chiếu (Showtimes)', () => {
       });
     });
 
-    it('báo lỗi khi thời lượng chiếu nhỏ hơn thời lượng phim', async () => {
+    it('hiển thị lỗi "Chọn giờ bắt đầu" khi chưa nhập giờ chiếu', async () => {
       renderWithProviders(<AdminShowtimeFormPage />, { initialEntries: ['/admin/showtimes/new'] });
 
       await waitFor(() => {
         expect(screen.getByRole('combobox', { name: /Phim chiếu/i })).toBeInTheDocument();
       });
 
-      // Phim Mai: 120 phút
-      fireEvent.change(screen.getByRole('combobox', { name: /Phim chiếu/i }), { target: { value: '101' } });
+      fireEvent.change(screen.getByRole('combobox', { name: /Phim chiếu/i }), { target: { value: '100' } });
       fireEvent.change(screen.getByLabelText(/Cụm rạp/i), { target: { value: '1' } });
       await waitFor(() => {
         expect(screen.getByLabelText(/Phòng chiếu/i)).not.toBeDisabled();
       });
       fireEvent.change(screen.getByLabelText(/Phòng chiếu/i), { target: { value: '10' } });
 
-      // Chỉ cho chiếu 60 phút (từ 09:00 đến 10:00)
-      fireEvent.change(screen.getByLabelText(/Bắt đầu chiếu/i), { target: { value: '2026-11-15T09:00' } });
-      fireEvent.change(screen.getByLabelText(/Kết thúc chiếu/i), { target: { value: '2026-11-15T10:00' } });
-
       const submitBtn = screen.getByRole('button', { name: 'Tạo suất chiếu' });
       await waitFor(() => expect(submitBtn).toBeEnabled());
       fireEvent.click(submitBtn);
 
-      await waitFor(() => {
-        expect(screen.getByText(/Thời lượng chiếu không đủ cho phim "Mai"/i)).toBeInTheDocument();
-      });
+      expect(await screen.findByText('Chọn giờ bắt đầu')).toBeInTheDocument();
     });
 
     it('xử lý lỗi 409 SHOWTIME_OVERLAP khi phòng bị trùng lịch chiếu bao gồm cleanup', async () => {
@@ -528,8 +527,7 @@ describe('FE-10: Admin Quản Lý Suất Chiếu (Showtimes)', () => {
         expect(screen.getByLabelText(/Phòng chiếu/i)).not.toBeDisabled();
       });
       fireEvent.change(screen.getByLabelText(/Phòng chiếu/i), { target: { value: '10' } });
-      fireEvent.change(screen.getByLabelText(/Bắt đầu chiếu/i), { target: { value: '2026-11-15T09:00' } });
-      fireEvent.change(screen.getByLabelText(/Kết thúc chiếu/i), { target: { value: '2026-11-15T11:00' } });
+      pickStartTime(15, 9, 0);
 
       const submitBtn = screen.getByRole('button', { name: 'Tạo suất chiếu' });
       await waitFor(() => expect(submitBtn).toBeEnabled());
@@ -573,8 +571,8 @@ describe('FE-10: Admin Quản Lý Suất Chiếu (Showtimes)', () => {
       });
 
       // Kiểm tra input đã được điền sẵn giờ Việt Nam (2026-11-10T07:00:00Z -> 14:00 VN)
-      const startsInput = screen.getByLabelText(/Bắt đầu chiếu/i) as HTMLInputElement;
-      expect(startsInput.value).toBe('2026-11-10T14:00');
+      const startsInput = screen.getByRole('button', { name: /Giờ bắt đầu/i });
+      expect(startsInput).toHaveTextContent('10/11/2026 14:00');
 
       // Cập nhật giá vé mới: 95000
       const basePriceInput = screen.getByLabelText(/Giá vé cơ bản/i);
