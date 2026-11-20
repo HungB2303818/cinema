@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router-dom';
 import { AdminLayout } from '@/shared/components/layout/AdminLayout';
 import * as authModule from '@/features/auth';
@@ -40,13 +41,31 @@ describe('AdminLayout sidebar', () => {
   it('highlights active menu based on pathname', () => {
     const { unmount } = renderWithProviders(<AdminLayout />, { initialEntries: ['/admin/movies'] });
     const moviesLink = screen.getByRole('link', { name: /quản lý phim/i });
-    expect(moviesLink).toHaveClass('bg-[#e6e2c1]');
+    expect(moviesLink).toHaveClass('bg-[#1a1c24]', 'text-[#e6e2c1]');
+    expect(moviesLink.querySelector('svg')).toHaveClass('text-[#e6e2c1]');
     expect(moviesLink).toHaveAttribute('aria-current', 'page');
     unmount();
 
     renderWithProviders(<AdminLayout />, { initialEntries: ['/admin/showtimes'] });
     const showtimesLink = screen.getByRole('link', { name: /suất chiếu/i });
-    expect(showtimesLink).toHaveClass('bg-[#e6e2c1]');
+    expect(showtimesLink).toHaveClass('bg-[#1a1c24]', 'text-[#e6e2c1]');
+    expect(showtimesLink.querySelector('svg')).toHaveClass('text-[#e6e2c1]');
+  });
+
+  it('keeps the selected icon bright after clicking another menu item', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<AdminLayout />, { initialEntries: ['/admin/movies'] });
+
+    const roomsLink = screen.getByRole('link', { name: /phòng chiếu & ghế/i });
+    expect(roomsLink.querySelector('svg')).toHaveClass('text-zinc-400');
+    await user.click(roomsLink);
+    await user.unhover(roomsLink);
+
+    expect(roomsLink).toHaveAttribute('aria-current', 'page');
+    expect(roomsLink.querySelector('svg')).toHaveClass('text-[#e6e2c1]');
+    const moviesLink = screen.getByRole('link', { name: /quản lý phim/i });
+    expect(moviesLink).not.toHaveAttribute('aria-current');
+    expect(moviesLink.querySelector('svg')).toHaveClass('text-zinc-400');
   });
 
   it('renders mobile sidebar toggle with aria attributes', () => {

@@ -170,14 +170,7 @@ export const AdminRoomsPage: React.FC = () => {
       {/* Header */}
       <div className="border-b border-[#20232e] pb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-[#e6e2c1] text-sm font-bold mb-1">
-            <Tv className="w-4 h-4" />
-            <span>Quản trị Hạ tầng Rạp</span>
-          </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white">Quản lý Phòng Chiếu</h1>
-          <p className="text-zinc-400 text-sm mt-1">
-            Xem danh sách phòng chiếu theo rạp, quản lý trạng thái và sơ đồ ghế vật lý
-          </p>
         </div>
 
         {selectedCinemaId && (
@@ -193,22 +186,10 @@ export const AdminRoomsPage: React.FC = () => {
         )}
       </div>
 
-      {/* Business rule banner */}
-      <div className="bg-[#13151d] border border-amber-500/30 rounded-xl p-4 flex items-start gap-3.5 text-xs text-amber-200/90">
-        <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-        <div className="space-y-1">
-          <p className="font-bold text-amber-300">Quy tắc bất biến quản lý phòng & ghế (MVP):</p>
-          <p className="leading-relaxed">
-            Hệ thống bảo vệ toàn vẹn lịch sử và inventory: <strong>Không thể đổi tên, trạng thái phòng hoặc thêm/sửa ghế vật lý</strong> khi phòng đã có bất kỳ suất chiếu nào (kể cả suất đã hủy hoặc đã hoàn tất).
-          </p>
-        </div>
-      </div>
-
       {/* Cinema selector */}
       <div className="bg-[#13151d] border border-[#242733] rounded-2xl p-6 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-zinc-200 font-bold text-sm">
-            <Building2 className="w-4 h-4 text-[#e6e2c1]" />
             <span>Chọn Cụm Rạp Chiếu:</span>
           </div>
           {cinemasData && cinemasData.totalPages > 1 && (
@@ -256,7 +237,7 @@ export const AdminRoomsPage: React.FC = () => {
                   onClick={() => handleSelectCinema(cinema.id)}
                   className={`text-left p-4 rounded-xl border transition-all cursor-pointer ${
                     isSelected
-                      ? 'bg-[#1e202a] border-[#e6e2c1] shadow-lg shadow-black/40 ring-1 ring-[#e6e2c1]'
+                      ? 'bg-[#15161e] shadow-lg shadow-black/40 ring-1'
                       : 'bg-[#0f1016] border-[#222430] hover:border-[#383c4e] hover:bg-[#161822]'
                   }`}
                 >

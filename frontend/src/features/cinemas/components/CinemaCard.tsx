@@ -75,20 +75,6 @@ export const CinemaCard: React.FC<CinemaCardProps> = ({ cinema, onSelectCinema }
             <span className="leading-relaxed">{cinema.address}</span>
           </p>
         </div>
-
-        <div className="relative z-20 pt-1">
-          <button
-            type="button"
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              onSelectCinema?.(cinema);
-            }}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full bg-[#161821] hover:bg-[#20232d] text-zinc-200 hover:text-white transition-colors cursor-pointer border-none"
-          >
-            Phòng chiếu
-          </button>
-        </div>
       </div>
     </article>
   );

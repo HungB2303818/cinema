@@ -44,10 +44,10 @@ const navItems: NavItem[] = [
 ];
 
 const linkClass = (active: boolean) =>
-  `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e6e2c1] motion-reduce:transition-none ${
+   `group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e6e2c1] motion-reduce:transition-none ${
     active
-      ? 'bg-[#e6e2c1] text-black font-semibold'
-      : 'text-zinc-300 hover:bg-[#1a1c24] hover:text-white'
+      ? "bg-[#1a1c24] text-[#e6e2c1] font-semibold"
+      : "text-zinc-300 hover:bg-[#1a1c24] hover:text-white"
   }`;
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen = false, onMobileClose }) => {
@@ -112,9 +112,9 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen = false, 
               aria-current={active ? 'page' : undefined}
               className={linkClass(active)}
             >
-              <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-black' : 'text-[#e6e2c1]'}`} />
+              <Icon className={`w-4 h-4 shrink-0 transition-colors motion-reduce:transition-none ${active ? 'text-[#e6e2c1]' : 'text-zinc-400 group-hover:text-white'}`} />
               <span className="truncate">{item.label}</span>
-              {active && <ChevronRight className="w-3.5 h-3.5 ml-auto text-black/70" />}
+              {active && <ChevronRight className="w-3.5 h-3.5 ml-auto text-[#e6e2c1]" />}
             </Link>
           );
         })}

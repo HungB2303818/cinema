@@ -177,14 +177,7 @@ export const AdminMovieList: React.FC = () => {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-[#20232e] pb-6">
         <div>
-          <div className="flex items-center gap-2 text-[#e6e2c1] text-xs font-bold uppercase tracking-wider mb-1">
-            <Film className="w-4 h-4" />
-            <span>Danh mục quản trị</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-white">Quản lý Phim & Poster</h1>
-          <p className="text-zinc-400 text-xs sm:text-sm mt-1">
-            Thêm mới, cập nhật thông tin phim, tải poster Cloudinary và điều chỉnh trạng thái hiển thị
-          </p>
+          <h1 className="text-2xl sm:text-3xl font-black text-white">Quản lý Phim & Poster</h1>    
         </div>
         <Link to="/admin/movies/new">
           <Button variant="primary" size="md" className="gap-2 shrink-0">
