@@ -8,7 +8,7 @@ interface MovieHeroBannerProps {
 const slides = [
   {
     name: 'Dune: Hành Tinh Cát - Phần Ba',
-    image: '/banners/dune_fullwidth_seamless.jpg',
+    image: '/banners/dune_banner_2.webp',
     alt: 'Paul Atreides và Chani - Dune: Hành Tinh Cát - Phần Ba',
     title: 'DUNE: HÀNH TINH CÁT –',
     highlight: 'PHẦN BA',
@@ -28,12 +28,12 @@ const slides = [
   },
   {
     name: 'Godzilla Minus Zero',
-    image: '/banners/godzilla_banner.avif',
+    image: '/banners/godzilla_banner.webp',
     alt: 'Godzilla trồi lên từ biển trước một chiếc máy bay',
     title: 'GODZILLA',
     highlight: 'MINUS ZERO',
     description: 'Godzilla trở lại, gieo rắc nỗi kinh hoàng khi Nhật Bản vừa gượng dậy sau thảm hoạ.',
-    imageClass: 'object-center',
+    imageClass: 'object-[center_5%] sm:object-[center_40%]',
     accent: '#a9dbdc',
   },
 ] as const;
