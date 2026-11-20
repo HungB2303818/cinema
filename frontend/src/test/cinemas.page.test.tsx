@@ -93,7 +93,7 @@ describe('CinemasPage (FE-03, Section B)', () => {
 
     renderWithProviders(<CinemasPage />);
 
-    expect(await screen.findByText('CGV Sense City Cần Thơ')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 2, name: 'CGV Sense City Cần Thơ' })).toBeInTheDocument();
 
     // The first cinema should have an img with alt
     const imgSenseCity = screen.getByAltText('Hình ảnh rạp CGV Sense City Cần Thơ');

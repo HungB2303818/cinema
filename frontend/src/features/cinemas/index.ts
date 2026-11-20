@@ -11,4 +11,5 @@ export * from './hooks/useCreateSeats';
 export * from './hooks/useUpdateSeat';
 export * from './components/CinemaCard';
 export * from './components/CinemaDetailModal';
+export * from './components/CinemaHeroBanner';
 export * from './data/cinemasFallback';
