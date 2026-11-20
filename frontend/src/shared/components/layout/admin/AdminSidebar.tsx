@@ -123,7 +123,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen = false, 
       {/* Account / logout */}
       <div className="border-t border-[#20232e] px-3 py-4 space-y-2">
         {user && (
-          <div className="flex items-center gap-2.5 px-2 py-2 rounded-lg bg-[#0d0e14] border border-[#20232e]">
+          <Link to="/profile" onClick={onMobileClose} aria-label="Thông tin cá nhân" className="flex items-center gap-2.5 px-2 py-2 rounded-lg bg-[#0d0e14] border border-[#20232e] hover:bg-[#1a1c24] focus-visible:outline-2 focus-visible:outline-primary">
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#e6e2c1] text-black text-xs font-bold">
               {user.fullName.charAt(0).toUpperCase()}
             </span>
@@ -131,7 +131,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen = false, 
               <p className="text-xs font-semibold text-zinc-100 truncate">{user.fullName}</p>
               <p className="text-[10px] text-[#e6e2c1] font-mono font-bold truncate">{user.role}</p>
             </div>
-          </div>
+          </Link>
         )}
 
         <Link

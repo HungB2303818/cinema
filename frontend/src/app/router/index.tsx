@@ -22,6 +22,7 @@ import {
   AdminShowtimesPage,
   AdminShowtimeFormPage,
   NotFoundPage,
+  ProfilePage,
 } from '@/pages';
 import { ProtectedRoute } from './ProtectedRoute';
 import { AdminRoute } from './AdminRoute';
@@ -35,6 +36,7 @@ export const AppRouter: React.FC = () => {
         <Route path="/movies" element={<HomePage />} />
         <Route path="/movies/:id" element={<MovieDetailsPage />} />
         <Route path="/cinemas" element={<CinemasPage />} />
+        <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
         <Route path="/showtimes" element={<ShowtimesPage />} />
         <Route path="/showtimes/:showtimeId/seats" element={<SeatSelectionPage />} />
 

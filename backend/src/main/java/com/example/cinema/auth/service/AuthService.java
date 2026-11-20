@@ -4,6 +4,7 @@ import com.example.cinema.auth.dto.LoginRequest;
 import com.example.cinema.auth.dto.LoginResponse;
 import com.example.cinema.auth.dto.RegisterRequest;
 import com.example.cinema.auth.dto.UserResponse;
+import com.example.cinema.auth.dto.UpdateProfileRequest;
 import com.example.cinema.auth.entity.User;
 import com.example.cinema.auth.entity.UserRole;
 import com.example.cinema.auth.entity.UserStatus;
@@ -20,7 +21,10 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Locale;
 
 @Slf4j
 @Service
@@ -90,5 +94,39 @@ public class AuthService {
         User user = userRepository.findById(principal.getId())
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Không tìm thấy thông tin người dùng."));
         return UserResponse.fromEntity(user);
+    }
+
+    @Transactional
+    public LoginResponse updateProfile(UserPrincipal principal, UpdateProfileRequest request) {
+        User user = userRepository.findById(principal.getId())
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Không tìm thấy thông tin tài khoản."));
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new AppException(ErrorCode.ACCESS_DENIED, "Tài khoản của bạn không hoạt động.");
+        }
+
+        String normalizedEmail = request.getEmail().trim().toLowerCase(Locale.ROOT);
+        if (!normalizedEmail.equals(user.getEmail())) {
+            if (request.getCurrentPassword() == null ||
+                    !passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
+                throw new AppException(ErrorCode.VALIDATION_ERROR, "Mật khẩu hiện tại không chính xác. Vui lòng xác nhận để đổi email.");
+            }
+            if (userRepository.existsByEmail(normalizedEmail)) {
+                throw new AppException(ErrorCode.DUPLICATE_RESOURCE, "Email này đã được sử dụng.");
+            }
+        }
+
+        user.setFullName(request.getFullName().trim());
+        user.setEmail(normalizedEmail);
+        try {
+            userRepository.saveAndFlush(user);
+        } catch (DataIntegrityViolationException ex) {
+            throw new AppException(ErrorCode.DUPLICATE_RESOURCE, "Email này đã được sử dụng.");
+        }
+
+        return LoginResponse.builder()
+                .token(jwtUtils.generateToken(UserPrincipal.create(user)))
+                .tokenType("Bearer")
+                .user(UserResponse.fromEntity(user))
+                .build();
     }
 }

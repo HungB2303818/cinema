@@ -4,6 +4,7 @@ import com.example.cinema.auth.dto.LoginRequest;
 import com.example.cinema.auth.dto.LoginResponse;
 import com.example.cinema.auth.dto.RegisterRequest;
 import com.example.cinema.auth.dto.UserResponse;
+import com.example.cinema.auth.dto.UpdateProfileRequest;
 import com.example.cinema.auth.entity.User;
 import com.example.cinema.auth.entity.UserRole;
 import com.example.cinema.auth.entity.UserStatus;
@@ -21,6 +22,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.Optional;
 
@@ -137,5 +139,124 @@ class AuthServiceTest {
         assertThatThrownBy(() -> authService.login(request))
                 .isInstanceOf(AppException.class)
                 .satisfies(ex -> assertThat(((AppException) ex).getErrorCode()).isEqualTo(ErrorCode.UNAUTHENTICATED));
+    }
+
+    private User profileUser() {
+        return User.builder().id(7L).fullName("Old Name").email("old@example.com")
+                .passwordHash("hashed").role(UserRole.STAFF).status(UserStatus.ACTIVE).build();
+    }
+
+    @Test
+    void updateProfile_nameOnlyPreservesProtectedFieldsAndRenewsToken() {
+        User user = profileUser();
+        var createdAt = user.getCreatedAt();
+        when(userRepository.findById(7L)).thenReturn(Optional.of(user));
+        when(jwtUtils.generateToken(any())).thenReturn("updated-token");
+
+        LoginResponse response = authService.updateProfile(UserPrincipal.create(user),
+                UpdateProfileRequest.builder().fullName("  New Name  ").email("OLD@example.com").build());
+
+        assertThat(response.getUser().getFullName()).isEqualTo("New Name");
+        assertThat(response.getUser().getEmail()).isEqualTo("old@example.com");
+        assertThat(response.getToken()).isEqualTo("updated-token");
+        assertThat(user.getRole()).isEqualTo(UserRole.STAFF);
+        assertThat(user.getStatus()).isEqualTo(UserStatus.ACTIVE);
+        assertThat(user.getPasswordHash()).isEqualTo("hashed");
+        assertThat(user.getCreatedAt()).isEqualTo(createdAt);
+        verify(userRepository).saveAndFlush(user);
+        verifyNoInteractions(passwordEncoder);
+    }
+
+    @Test
+    void updateProfile_emailChangeRequiresPasswordAndIssuesTokenForNewEmail() {
+        User user = profileUser();
+        when(userRepository.findById(7L)).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("secret", "hashed")).thenReturn(true);
+        when(jwtUtils.generateToken(any())).thenAnswer(invocation -> {
+            UserPrincipal principal = invocation.getArgument(0);
+            assertThat(principal.getId()).isEqualTo(7L);
+            assertThat(principal.getEmail()).isEqualTo("new@example.com");
+            return "new-email-token";
+        });
+
+        LoginResponse response = authService.updateProfile(UserPrincipal.create(user),
+                UpdateProfileRequest.builder().fullName("New Name").email(" NEW@EXAMPLE.COM ")
+                        .currentPassword("secret").build());
+
+        assertThat(response.getUser().getEmail()).isEqualTo("new@example.com");
+        assertThat(response.getToken()).isEqualTo("new-email-token");
+    }
+
+    @Test
+    void updateProfile_wrongPasswordDoesNotChangeAnyFields() {
+        User user = profileUser();
+        when(userRepository.findById(7L)).thenReturn(Optional.of(user));
+        assertThatThrownBy(() -> authService.updateProfile(UserPrincipal.create(user),
+                UpdateProfileRequest.builder().fullName("New Name").email("new@example.com")
+                        .currentPassword("wrong").build()))
+                .isInstanceOf(AppException.class).hasMessageContaining("Mật khẩu hiện tại không chính xác");
+        assertThat(user.getFullName()).isEqualTo("Old Name");
+        assertThat(user.getEmail()).isEqualTo("old@example.com");
+        verify(userRepository, never()).saveAndFlush(any());
+        verifyNoInteractions(jwtUtils);
+    }
+
+    @Test
+    void updateProfile_missingPasswordCannotChangeEmail() {
+        User user = profileUser();
+        when(userRepository.findById(7L)).thenReturn(Optional.of(user));
+        assertThatThrownBy(() -> authService.updateProfile(UserPrincipal.create(user),
+                UpdateProfileRequest.builder().fullName("New Name").email("new@example.com").build()))
+                .isInstanceOf(AppException.class).hasMessageContaining("Mật khẩu hiện tại không chính xác");
+        verify(userRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void updateProfile_duplicateEmailIsRejectedBeforeSaving() {
+        User user = profileUser();
+        when(userRepository.findById(7L)).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("secret", "hashed")).thenReturn(true);
+        when(userRepository.existsByEmail("new@example.com")).thenReturn(true);
+        assertThatThrownBy(() -> authService.updateProfile(UserPrincipal.create(user),
+                UpdateProfileRequest.builder().fullName("New Name").email("new@example.com")
+                        .currentPassword("secret").build()))
+                .isInstanceOf(AppException.class)
+                .satisfies(ex -> assertThat(((AppException) ex).getErrorCode()).isEqualTo(ErrorCode.DUPLICATE_RESOURCE));
+        verify(userRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void updateProfile_concurrentDuplicateEmailIsMappedToConflict() {
+        User user = profileUser();
+        when(userRepository.findById(7L)).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("secret", "hashed")).thenReturn(true);
+        when(userRepository.saveAndFlush(user)).thenThrow(new DataIntegrityViolationException("duplicate"));
+        assertThatThrownBy(() -> authService.updateProfile(UserPrincipal.create(user),
+                UpdateProfileRequest.builder().fullName("New Name").email("new@example.com")
+                        .currentPassword("secret").build()))
+                .isInstanceOf(AppException.class)
+                .satisfies(ex -> assertThat(((AppException) ex).getErrorCode()).isEqualTo(ErrorCode.DUPLICATE_RESOURCE));
+        verifyNoInteractions(jwtUtils);
+    }
+
+    @Test
+    void updateProfile_missingUserIsNotFound() {
+        when(userRepository.findById(7L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> authService.updateProfile(UserPrincipal.create(profileUser()),
+                UpdateProfileRequest.builder().fullName("Name").email("old@example.com").build()))
+                .isInstanceOf(AppException.class)
+                .satisfies(ex -> assertThat(((AppException) ex).getErrorCode()).isEqualTo(ErrorCode.RESOURCE_NOT_FOUND));
+    }
+
+    @Test
+    void updateProfile_inactiveAccountIsForbidden() {
+        User user = profileUser();
+        user.setStatus(UserStatus.INACTIVE);
+        when(userRepository.findById(7L)).thenReturn(Optional.of(user));
+        assertThatThrownBy(() -> authService.updateProfile(UserPrincipal.create(user),
+                UpdateProfileRequest.builder().fullName("Name").email("old@example.com").build()))
+                .isInstanceOf(AppException.class)
+                .satisfies(ex -> assertThat(((AppException) ex).getErrorCode()).isEqualTo(ErrorCode.ACCESS_DENIED));
+        verify(userRepository, never()).saveAndFlush(any());
     }
 }

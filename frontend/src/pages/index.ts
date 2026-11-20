@@ -19,3 +19,4 @@ export * from './AdminSeatsPage';
 export * from './AdminShowtimesPage';
 export * from './AdminShowtimeFormPage';
 export * from './NotFoundPage';
+export * from './ProfilePage';

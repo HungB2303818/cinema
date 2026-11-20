@@ -5,7 +5,8 @@ export interface User {
   fullName: string;
   email: string;
   role: UserRole;
-  status: 'ACTIVE' | 'LOCKED';
+  status: 'ACTIVE' | 'INACTIVE';
+  createdAt?: string;
 }
 
 export interface AuthResponse {
@@ -17,6 +18,12 @@ export interface AuthResponse {
 export interface LoginCredentials {
   email: string;
   password: string;
+}
+
+export interface UpdateProfileData {
+  fullName: string;
+  email: string;
+  currentPassword?: string;
 }
 
 export interface RegisterData {
