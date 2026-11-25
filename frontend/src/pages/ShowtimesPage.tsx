@@ -435,7 +435,12 @@ export const ShowtimesPage: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                 {(movieShowtimeData?.content || []).map((st) => (
-                  <ShowtimeCard key={st.id} showtime={st} now={now} />
+                  <ShowtimeCard
+                    key={st.id}
+                    showtime={st}
+                    movieTitle={selectedMovie?.title}
+                    now={now}
+                  />
                 ))}
               </div>
 

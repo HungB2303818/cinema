@@ -2,6 +2,7 @@ export * from './types/booking.types';
 export * from './api/bookings.api';
 export * from './hooks/useBookings';
 export * from './utils/seat-utils';
+export * from './utils/seat-styles';
 export * from './utils/booking-intent';
 export * from './components/Seat';
 export * from './components/SeatLegend';

@@ -1,5 +1,6 @@
 import React from 'react';
-import { X, Clock } from 'lucide-react';
+import { X, Check } from 'lucide-react';
+import { SEAT_SURFACE_STYLES } from '../utils/seat-styles';
 
 export const SeatLegend: React.FC = () => {
   return (
@@ -7,43 +8,46 @@ export const SeatLegend: React.FC = () => {
       <div className="flex flex-wrap gap-x-5 gap-y-3 items-center justify-center lg:justify-start">
         {/* Available Standard */}
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-md bg-[#13151d] border border-[#2c3040] flex items-center justify-center text-[10px] text-zinc-300 font-medium">
-            □
+          <div
+            className={`w-6 h-6 rounded-md border flex items-center justify-center text-[10px] font-semibold ${SEAT_SURFACE_STYLES.standardStatic}`}
+            aria-hidden="true"
+          >
+            A1
           </div>
           <span className="text-zinc-300">Ghế thường</span>
         </div>
 
         {/* Available VIP */}
         <div className="flex items-center gap-2">
-          <div className="relative w-6 h-6 rounded-md bg-[#1c1724] border border-purple-500/60 flex items-center justify-center text-[10px] text-purple-300 font-medium">
-            VIP
-            <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-purple-500" />
+          <div
+            className={`w-6 h-6 rounded-md border flex items-center justify-center text-[10px] font-semibold ${SEAT_SURFACE_STYLES.vipStatic}`}
+            aria-hidden="true"
+          >
+            D1
           </div>
           <span className="text-zinc-300">Ghế VIP</span>
         </div>
 
         {/* Selected */}
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-md bg-[#e6e2c1] border border-[#f0ecd2] flex items-center justify-center text-[10px] text-[#090a0f] font-bold">
-            ✓
+          <div
+            className={`w-6 h-6 rounded-md border flex items-center justify-center font-bold ${SEAT_SURFACE_STYLES.selectedStatic}`}
+            aria-hidden="true"
+          >
+            <Check className="w-3.5 h-3.5" />
           </div>
-          <span className="text-[#e6e2c1] font-medium">Đang chọn</span>
-        </div>
-
-        {/* Held */}
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-md bg-amber-950/30 border border-amber-800/50 flex items-center justify-center text-amber-500/80">
-            <Clock className="w-3.5 h-3.5" />
-          </div>
-          <span className="text-amber-500/90">Đang giữ chỗ</span>
+          <span className="text-zinc-200 font-medium">Đang chọn</span>
         </div>
 
         {/* Booked */}
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-md bg-[#1a1c24] border border-[#252836] flex items-center justify-center text-zinc-600">
+          <div
+            className={`w-6 h-6 rounded-md border flex items-center justify-center ${SEAT_SURFACE_STYLES.booked}`}
+            aria-hidden="true"
+          >
             <X className="w-3.5 h-3.5" />
           </div>
-          <span className="text-zinc-500">Đã bán</span>
+          <span className="text-zinc-400">Đã bán</span>
         </div>
       </div>
     </div>
