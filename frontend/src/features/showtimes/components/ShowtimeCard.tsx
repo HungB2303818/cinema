@@ -6,10 +6,11 @@ import { formatTime, formatDateTime, formatCurrency, isPastCutoff } from '@/shar
 
 interface ShowtimeCardProps {
   showtime: Showtime;
+  movieTitle?: string;
   now?: Date;
 }
 
-export const ShowtimeCard: React.FC<ShowtimeCardProps> = ({ showtime, now }) => {
+export const ShowtimeCard: React.FC<ShowtimeCardProps> = ({ showtime, movieTitle, now }) => {
   const isCutoff = isPastCutoff(showtime.startsAt, null, 10, now);
   const isScheduled = showtime.status === 'SCHEDULED';
   const canBook = isScheduled && !isCutoff;
@@ -77,6 +78,12 @@ export const ShowtimeCard: React.FC<ShowtimeCardProps> = ({ showtime, now }) => 
         {canBook ? (
           <Link
             to={`/showtimes/${showtime.id}/seats`}
+            state={{
+              movieTitle,
+              cinemaName: showtime.cinemaName,
+              roomName: showtime.roomName,
+              startsAt: showtime.startsAt,
+            }}
             className="block w-full text-center py-2.5 px-4 text-xs font-bold rounded-full bg-[#e6e2c1] hover:bg-[#dad6b2] text-black shadow-md transition-all duration-200 active:scale-[0.98] border-none"
           >
             Chọn ghế

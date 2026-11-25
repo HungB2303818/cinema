@@ -1,13 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, MemoryRouter } from 'react-router-dom';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { SeatSelectionPage } from '@/pages/SeatSelectionPage';
 import { showtimesApi } from '@/features/showtimes/api/showtimes.api';
 import type { SeatMapResponse } from '@/features/showtimes';
 import * as authModule from '@/features/auth';
 import { bookingsApi } from '@/features/bookings';
-import { renderWithProviders } from './test-utils';
+import { renderWithProviders, createTestQueryClient } from './test-utils';
 
 vi.mock('@/features/showtimes/api/showtimes.api', () => ({
   showtimesApi: {
@@ -51,7 +52,30 @@ describe('SeatSelectionPage (FE-04)', () => {
     });
   });
 
-  const renderSeatPage = (initialUrl = '/showtimes/101/seats') => {
+  const renderSeatPage = (
+    initialUrl = '/showtimes/101/seats',
+    state?: {
+      movieTitle?: string;
+      cinemaName?: string;
+      roomName?: string;
+      startsAt?: string;
+    }
+  ) => {
+    if (state) {
+      const queryClient = createTestQueryClient();
+      return render(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={[{ pathname: initialUrl, state }]}>
+            <Routes>
+              <Route path="/showtimes/:showtimeId/seats" element={<SeatSelectionPage />} />
+              <Route path="/showtimes" element={<div>Trang lịch chiếu</div>} />
+              <Route path="/login" element={<div>Trang đăng nhập</div>} />
+            </Routes>
+          </MemoryRouter>
+        </QueryClientProvider>
+      );
+    }
+
     return renderWithProviders(
       <Routes>
         <Route path="/showtimes/:showtimeId/seats" element={<SeatSelectionPage />} />
@@ -85,6 +109,44 @@ describe('SeatSelectionPage (FE-04)', () => {
     expect(screen.getByRole('button', { name: /Ghế B1/i })).toBeInTheDocument();
     expect(screen.getByText('Mã suất #101')).toBeInTheDocument();
     expect(screen.getByLabelText('Sơ đồ ghế')).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Vị trí ghế mang tính tham khảo/i)
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Ghế đã chọn/i)).not.toBeInTheDocument();
+  });
+
+  it('displays movie, cinema, room, and showtime info in the right summary panel without outer row labels', async () => {
+    vi.mocked(showtimesApi.getSeats).mockResolvedValue(mockSeatMapData);
+
+    renderSeatPage('/showtimes/101/seats', {
+      movieTitle: 'Mưa Đỏ',
+      cinemaName: 'Cinema Cần Thơ',
+      roomName: 'Phòng 02',
+      startsAt: futureDate,
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Màn hình / Screen')).toBeInTheDocument();
+    });
+
+    const aside = screen.getByRole('complementary', {
+      name: /Thông tin suất chiếu và đặt vé/i,
+    });
+    expect(aside).toHaveTextContent('Mưa Đỏ');
+    expect(aside).toHaveTextContent('Cinema Cần Thơ');
+    expect(aside).toHaveTextContent('Phòng 02');
+    expect(aside).toHaveTextContent('Tạm tính');
+    expect(aside).not.toHaveTextContent('Ghế đã chọn');
+    // Showtime info block contains no icons
+    const infoDl = aside.querySelector('dl');
+    expect(infoDl).not.toBeNull();
+    expect(infoDl?.querySelectorAll('svg').length).toBe(0);
+
+    const seatMapRegion = screen.getByLabelText('Sơ đồ ghế');
+    expect(seatMapRegion.querySelectorAll('button').length).toBe(11);
+    expect(screen.queryByText(/^A$/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^B$/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Đang giữ chỗ')).not.toBeInTheDocument();
   });
 
   it('disables HELD and BOOKED seats from selection', async () => {
@@ -105,7 +167,7 @@ describe('SeatSelectionPage (FE-04)', () => {
     expect(a4Button).toHaveAttribute('aria-label', expect.stringContaining('Đã bán'));
   });
 
-  it('allows selecting available seats, updating summary, and removing seats', async () => {
+  it('allows selecting and deselecting available seats and updating total amount', async () => {
     const user = userEvent.setup();
     vi.mocked(showtimesApi.getSeats).mockResolvedValue(mockSeatMapData);
 
@@ -115,37 +177,38 @@ describe('SeatSelectionPage (FE-04)', () => {
       expect(screen.getByRole('button', { name: /Ghế A1/i })).toBeInTheDocument();
     });
 
-    // Initially 0 seats selected
-    expect(screen.getByText('Ghế đã chọn (0/8)')).toBeInTheDocument();
-    expect(screen.getByText(/Chọn ghế trên sơ đồ để tiếp tục/i)).toBeInTheDocument();
+    // Initially 0 ₫
+    expect(screen.getByText('0 ₫')).toBeInTheDocument();
 
-    // Select seat A1 (STANDARD, 90,000 đ)
+    // Select seat A1 (STANDARD, 90,000 đ) -> deep pink
     const a1Button = screen.getByRole('button', { name: /Ghế A1/i });
     await user.click(a1Button);
 
-    expect(screen.getByText('Ghế đã chọn (1/8)')).toBeInTheDocument();
+    expect(a1Button).toHaveAttribute('aria-pressed', 'true');
+    expect(a1Button.className).toContain('bg-[#db2777]');
     expect(screen.getAllByText('90.000 ₫').length).toBeGreaterThan(0);
 
-    // Select seat B1 (VIP, 110,000 đ)
+    // Select seat B1 (VIP, 110,000 đ) -> same deep pink regardless of seat type
     const b1Button = screen.getByRole('button', { name: /Ghế B1/i });
     await user.click(b1Button);
 
-    expect(screen.getByText('Ghế đã chọn (2/8)')).toBeInTheDocument();
+    expect(b1Button).toHaveAttribute('aria-pressed', 'true');
+    expect(b1Button.className).toContain('bg-[#db2777]');
     // Total: 90k + 110k = 200,000 ₫
     expect(screen.getByText('200.000 ₫')).toBeInTheDocument();
 
     // Deselect B1 by clicking it again
     await user.click(b1Button);
-    expect(screen.getByText('Ghế đã chọn (1/8)')).toBeInTheDocument();
+    expect(b1Button).toHaveAttribute('aria-pressed', 'false');
     expect(screen.getAllByText('90.000 ₫').length).toBeGreaterThan(0);
 
-    // Deselect A1 via remove button in summary
-    const removeA1 = screen.getByRole('button', { name: /Bỏ chọn ghế A1/i });
-    await user.click(removeA1);
-    expect(screen.getByText('Ghế đã chọn (0/8)')).toBeInTheDocument();
+    // Deselect A1 by clicking it again
+    await user.click(a1Button);
+    expect(a1Button).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByText('0 ₫')).toBeInTheDocument();
   });
 
-  it('enforces maximum 8 seats limit and displays Vietnamese warning', async () => {
+  it('enforces maximum 8 seats limit', async () => {
     const user = userEvent.setup();
     vi.mocked(showtimesApi.getSeats).mockResolvedValue(mockSeatMapData);
 
@@ -171,14 +234,14 @@ describe('SeatSelectionPage (FE-04)', () => {
       await user.click(btn);
     }
 
-    expect(screen.getByText('Ghế đã chọn (8/8)')).toBeInTheDocument();
+    expect(seatButtons.every((btn) => btn.getAttribute('aria-pressed') === 'true')).toBe(true);
 
     // Attempting to select 9th seat (B7)
     const b7Button = screen.getByRole('button', { name: /Ghế B7/i });
     expect(b7Button).toBeDisabled();
     await user.click(b7Button);
 
-    expect(screen.getByText('Ghế đã chọn (8/8)')).toBeInTheDocument();
+    expect(b7Button).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('redirects unauthenticated guest to login page with return state', async () => {

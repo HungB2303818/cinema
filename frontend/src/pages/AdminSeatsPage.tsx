@@ -20,6 +20,7 @@ import {
 } from '@/shared/components/ui';
 import type { ApiError } from '@/shared/types/api.types';
 import { ApiErrorResponse } from '@/shared/api/http-client';
+import { SeatTile, SeatBadge, SEAT_SURFACE_STYLES } from '@/features/bookings';
 
 export const AdminSeatsPage: React.FC = () => {
   const { roomId } = useParams<{ roomId: string }>();
@@ -369,7 +370,7 @@ export const AdminSeatsPage: React.FC = () => {
           />
         </div>
       ) : (
-        <div className="bg-[#13151d] border border-[#242733] rounded-2xl p-6 sm:p-8 shadow-2xl shadow-black/40 space-y-8">
+        <div className="bg-[#13151d] border border-[#242733] rounded-xl p-6 sm:p-8 shadow-2xl shadow-black/40 space-y-8">
           {/* Cinema Screen Simulator */}
           <div className="space-y-2 max-w-xl mx-auto">
             <div className="h-2 w-full bg-gradient-to-r from-transparent via-[#e6e2c1] to-transparent rounded-full opacity-80 shadow-[0_0_20px_rgba(230,226,193,0.5)]" />
@@ -381,59 +382,50 @@ export const AdminSeatsPage: React.FC = () => {
           {/* Seat Legend */}
           <div className="flex flex-wrap items-center justify-center gap-6 text-xs text-zinc-300 pt-2 border-b border-[#20232e] pb-6">
             <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-md bg-[#252836] border border-[#3b4055] inline-block shadow-sm" />
+              <span
+                className={`w-6 h-6 rounded-md border flex items-center justify-center text-[10px] font-semibold ${SEAT_SURFACE_STYLES.standardStatic}`}
+                aria-hidden="true"
+              >
+                A1
+              </span>
               <span>Standard (Hoạt động)</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-md bg-[#e6e2c1] text-black font-bold text-[10px] flex items-center justify-center shadow-sm">
-                VIP
+              <span
+                className={`w-6 h-6 rounded-md border flex items-center justify-center text-[10px] font-semibold ${SEAT_SURFACE_STYLES.vipStatic}`}
+                aria-hidden="true"
+              >
+                D1
               </span>
               <span>VIP (Hoạt động)</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-md bg-red-950/60 border border-red-500/50 inline-block shadow-sm" />
+              <span
+                className={`w-6 h-6 rounded-md border flex items-center justify-center text-[10px] font-semibold ${SEAT_SURFACE_STYLES.maintenance}`}
+                aria-hidden="true"
+              >
+                B2
+              </span>
               <span>Bảo trì (Maintenance)</span>
             </div>
           </div>
 
           {/* Interactive Seat Rows */}
           <div className="overflow-x-auto pb-4">
-            <div className="min-w-max mx-auto space-y-3 flex flex-col items-center">
+            <div className="min-w-max mx-auto space-y-2.5 flex flex-col items-center">
               {seatsByRow.map(([rowName, rowSeats]) => (
-                <div key={rowName} className="flex items-center gap-3">
-                  <span className="w-6 text-center font-bold text-xs text-zinc-400 font-mono">
-                    {rowName}
-                  </span>
-
-                  <div className="flex items-center gap-2">
-                    {rowSeats.map((seat) => {
-                      const isVip = seat.seatType === 'VIP';
-                      const isMaint = seat.status === 'MAINTENANCE';
-
-                      let seatClass = 'bg-[#252836] text-zinc-200 border-[#383d52] hover:border-[#e6e2c1] hover:scale-105';
-                      if (isMaint) {
-                        seatClass = 'bg-red-950/60 text-red-300 border-red-500/50 hover:border-red-400';
-                      } else if (isVip) {
-                        seatClass = 'bg-[#e6e2c1] text-black font-bold border-[#e6e2c1] hover:brightness-110 shadow-sm hover:scale-105';
-                      }
-
-                      return (
-                        <button
-                          key={seat.id}
-                          type="button"
-                          onClick={() => openEditModal(seat)}
-                          className={`w-9 h-9 rounded-lg border text-xs font-semibold flex items-center justify-center transition-all cursor-pointer ${seatClass}`}
-                          title={`${seat.label} - ${seat.seatType} - ${seat.status} (Bấm để sửa)`}
-                        >
-                          {seat.seatNumber}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <span className="w-6 text-center font-bold text-xs text-zinc-400 font-mono">
-                    {rowName}
-                  </span>
+                <div key={rowName} className="flex items-center justify-center gap-1.5 sm:gap-2">
+                  {rowSeats.map((seat) => (
+                    <SeatTile
+                      key={seat.id}
+                      label={seat.label}
+                      seatType={seat.seatType}
+                      visualState={seat.status}
+                      onClick={() => openEditModal(seat)}
+                      ariaLabel={`Ghế ${seat.label} - ${seat.seatType} - ${seat.status}`}
+                      title={`${seat.label} - ${seat.seatType} - ${seat.status} (Bấm để sửa)`}
+                    />
+                  ))}
                 </div>
               ))}
             </div>
@@ -657,16 +649,12 @@ export const AdminSeatsPage: React.FC = () => {
               <div className="max-h-36 overflow-y-auto pr-2 space-y-1 text-xs">
                 <div className="flex flex-wrap gap-1.5">
                   {batchPreview.list.slice(0, 80).map((s, idx) => (
-                    <span
+                    <SeatBadge
                       key={idx}
-                      className={`px-2 py-0.5 rounded text-[11px] font-mono ${
-                        s.seatType === 'VIP'
-                          ? 'bg-[#e6e2c1] text-black font-bold'
-                          : 'bg-[#181a24] text-zinc-300 border border-[#292c3c]'
-                      }`}
-                    >
-                      {s.seatRow}{s.seatNumber}
-                    </span>
+                      label={`${s.seatRow}${s.seatNumber}`}
+                      seatType={s.seatType}
+                      className="px-2 py-0.5 font-mono text-[11px]"
+                    />
                   ))}
                   {batchPreview.list.length > 80 && (
                     <span className="px-2 py-0.5 text-zinc-500 text-[11px]">

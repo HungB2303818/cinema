@@ -13,6 +13,7 @@ import type { SeatItem } from '@/features/showtimes';
 import {
   SeatMap,
   SeatLegend,
+  SeatBadge,
   BookingSummary,
   saveBookingIntent,
   getSavedBookingIntent,
@@ -24,7 +25,7 @@ import type { BookingIntent } from '@/features/bookings';
 import { useAuth } from '@/features/auth';
 import { ApiErrorResponse } from '@/shared/api/http-client';
 import { LoadingSpinner, ErrorState, EmptyState, Button } from '@/shared/components/ui';
-import { formatVietnamDateTime, formatCurrency } from '@/shared/utils';
+import { formatCurrency } from '@/shared/utils';
 import { useQueryClient } from '@tanstack/react-query';
 
 export const SeatSelectionPage: React.FC = () => {
@@ -156,13 +157,6 @@ export const SeatSelectionPage: React.FC = () => {
       }
       setSelectedSeatIds((prev) => [...prev, seat.seatId]);
     }
-  };
-
-  const handleRemoveSeat = (seatId: number) => {
-    if (isSubmitting) return;
-    setMaxWarning(null);
-    setBookingError(null);
-    setSelectedSeatIds((prev) => prev.filter((id) => id !== seatId));
   };
 
   const allSeats = seatMap?.seats;
@@ -432,20 +426,13 @@ export const SeatSelectionPage: React.FC = () => {
 
   return (
     <div className="max-w-[1440px] mx-auto space-y-6 pb-16">
-      <header className="border-b border-[#30313b] pb-6">
-        <Link to="/movies" className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-[#e6e2c1] focus-visible:outline-2 focus-visible:outline-[#e6e2c1] rounded-sm mb-5">
+      <header className="border-b border-[#30313b] pb-5">
+        <Link to="/movies" className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-[#e6e2c1] focus-visible:outline-2 focus-visible:outline-[#e6e2c1] rounded-sm mb-3">
           <ArrowLeft className="w-4 h-4" /> Trở lại danh sách phim
         </Link>
-        <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white leading-tight">
-          {routerState?.movieTitle || 'Chọn ghế xem phim'}
+        <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white leading-tight">
+          Chọn ghế xem phim
         </h1>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-zinc-400 mt-3">
-          {routerState?.cinemaName && <span className="text-zinc-200">{routerState.cinemaName}</span>}
-          {routerState?.roomName && <span>{routerState.roomName}</span>}
-          {startsAt && <time dateTime={startsAt}>{formatVietnamDateTime(startsAt)}</time>}
-          {!routerState?.cinemaName && !routerState?.roomName && <span>Mã suất #{showtimeId}</span>}
-        </div>
-        {isCutoff && <p className="mt-2 text-sm text-rose-300">Đã ngừng nhận đặt vé</p>}
       </header>
 
       {/* Cutoff Warning Banner */}
@@ -543,7 +530,7 @@ export const SeatSelectionPage: React.FC = () => {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        <div className="lg:col-span-8 xl:col-span-9 space-y-5">
+        <div className="lg:col-span-7 xl:col-span-8 space-y-4">
           {seats.length === 0 ? (
             <EmptyState
               title="Chưa có sơ đồ ghế"
@@ -560,10 +547,14 @@ export const SeatSelectionPage: React.FC = () => {
           <SeatLegend />
         </div>
 
-        <div className="lg:col-span-4 xl:col-span-3 lg:sticky lg:top-6">
+        <div className="lg:col-span-5 xl:col-span-4 lg:sticky lg:top-6">
           <BookingSummary
             selectedSeats={selectedSeats}
-            onRemoveSeat={handleRemoveSeat}
+            showtimeId={showtimeId}
+            movieTitle={routerState?.movieTitle}
+            cinemaName={routerState?.cinemaName}
+            roomName={routerState?.roomName}
+            startsAt={startsAt}
             isCutoff={isCutoff}
             onContinue={handleInitiateBooking}
           />
@@ -577,17 +568,17 @@ export const SeatSelectionPage: React.FC = () => {
           role="dialog"
           aria-modal="true"
         >
-          <div className="bg-[#171922] border border-[#323440] rounded-[28px] p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-6">
+          <div className="bg-[#171922] border border-[#323440] rounded-xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-6">
             <div className="space-y-3">
               <h3 className="text-xl font-semibold text-white">Xác nhận giữ ghế</h3>
               <div className="flex flex-wrap gap-1.5">
                 {selectedSeats.map((s) => (
-                  <span
+                  <SeatBadge
                     key={s.seatId}
-                    className="px-2.5 py-1 rounded-lg bg-[#181a24] text-[#e6e2c1] font-bold text-xs border border-[#242733]"
-                  >
-                    {s.label} ({s.seatType})
-                  </span>
+                    label={`${s.label} (${s.seatType})`}
+                    seatType={s.seatType}
+                    className="px-2.5 py-1"
+                  />
                 ))}
               </div>
             </div>

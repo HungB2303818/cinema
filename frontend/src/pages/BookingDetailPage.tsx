@@ -14,7 +14,7 @@ import {
   RefreshCw,
   Ticket,
 } from 'lucide-react';
-import { useBookingDetail, CancelBookingModal } from '@/features/bookings';
+import { useBookingDetail, CancelBookingModal, SeatBadge } from '@/features/bookings';
 import { useAuth } from '@/features/auth';
 import { LoadingSpinner, ErrorState, Button } from '@/shared/components/ui';
 import { formatCurrency, formatVietnamDateTime } from '@/shared/utils';
@@ -287,9 +287,11 @@ export const BookingDetailPage: React.FC = () => {
                   className="py-3 flex items-center justify-between text-xs sm:text-sm"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="w-10 h-8 rounded-lg bg-[#181a24] text-[#e6e2c1] font-bold flex items-center justify-center border border-[#242733]">
-                      {seat.label}
-                    </span>
+                    <SeatBadge
+                      label={seat.label}
+                      seatType={seat.seatType}
+                      className="w-10 h-8"
+                    />
                     <div>
                       <span className="font-semibold text-white">Ghế {seat.label}</span>
                       <span className="block text-[11px] text-zinc-400">
