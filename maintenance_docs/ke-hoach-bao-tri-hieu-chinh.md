@@ -2,10 +2,10 @@
 
 **Học phần:** Bảo trì phần mềm – CT244  
 **Dự án:** Cinema – hệ thống đặt vé xem phim  
-**Phiên bản kế hoạch:** 1.0  
+**Phiên bản kế hoạch:** 1.1  
 **Ngày lập:** 25/11/2026  
 **Người lập:** Nhóm thực hiện Project 2  
-**Trạng thái:** Kế hoạch đề xuất; **chưa triển khai** mã nguồn cho HC-01, HC-02, HC-03.
+**Trạng thái:** Kế hoạch đã cập nhật theo quyết định D-01…D-07; HC-03 đã được xác nhận thuộc phạm vi; **chưa triển khai** mã nguồn HC-01/02/03. Phiếu phê duyệt CR vẫn ở trạng thái Draft/chưa ký.
 
 > Tài liệu này là kế hoạch tổ chức và kiểm soát hoạt động bảo trì hiệu chỉnh. Tài liệu không phải báo cáo kết quả đã hoàn thành. Mọi kết quả kiểm thử chỉ được ghi nhận sau khi thực thi thực tế; không sử dụng trạng thái “Pass” cho trường hợp chưa chạy.
 
@@ -15,6 +15,7 @@
 |---|---|---|---|---|
 | 0.1 | 25/11/2026 | Nhóm thực hiện | Khung kế hoạch, phạm vi sơ bộ HC-01/HC-02 | Nháp |
 | 1.0 | 25/11/2026 | Nhóm thực hiện | Bổ sung baseline sau pull, HC-03 đề xuất, WBS, nguồn lực, công cụ, kiểm thử và truy vết | Chờ rà soát nội bộ |
+| 1.1 | 25/11/2026 | Nhóm thực hiện | Chốt HC-03 và D-01…D-07; cập nhật ước lượng HC-01 2.5 / HC-02 4.5 / HC-03 2.0 person-days; ghi nhận SRS/SDD/test plan draft đã tạo | Chờ phê duyệt CR |
 
 ## 1. Tóm tắt điều hành
 
@@ -24,7 +25,7 @@ Kế hoạch xử lý ba yêu cầu bảo trì hiệu chỉnh:
 |---|---|---|---|
 | HC-01 | Cho phép tạo/sửa suất chiếu diễn ra trước ngày khởi chiếu của phim | Cao | Chờ phân tích tác động và phê duyệt |
 | HC-02 | Ẩn phim làm mất lịch chiếu công khai, gây hiểu nhầm cho khách đã đặt vé | Trung bình, nâng cao nếu ảnh hưởng vé đã thanh toán | Chờ phân tích tác động và phê duyệt |
-| HC-03 | Cho phép tạo/sửa suất chiếu trong quá khứ hoặc sát giờ chiếu | Trung bình | **Đề xuất bổ sung** để đáp ứng tối thiểu 03 yêu cầu hiệu chỉnh của đề bài; cần nhóm xác nhận |
+| HC-03 | Cho phép tạo/sửa suất chiếu trong quá khứ hoặc sát giờ chiếu | Trung bình | **Đã xác nhận phạm vi** (D-03, 25/11/2026); chờ phê duyệt CR chính thức |
 
 **Kết quả mong đợi:** ba lỗi được chặn hoặc được xử lý đúng tại cả giao diện và máy chủ, không làm thay đổi quyền sở hữu đơn/vé, không hủy giao dịch đã có và không mở lại việc bán vé cho phim đã ẩn.
 
@@ -285,7 +286,7 @@ Tổng công dự kiến khoảng **16 người-ngày** (mục 5.1). Nhóm có t
 | P3 | Đặc tả yêu cầu thay đổi (SRS) cho HC-01/02/03 | SRS cập nhật, mã yêu cầu | P2 | 1,0 |
 | P4 | Thiết kế bảo trì (SDD) | Thiết kế dữ liệu, API, UI, thuật toán | P3 | 1,5 |
 | P5 | Triển khai HC-01 | Backend + frontend + test | P4 | 2,0 |
-| P6 | Triển khai HC-02 | DTO/API + thông báo + cảnh báo admin + test | P4 | 3,5 |
+| P6 | Triển khai HC-02 | DTO/API + thông báo + cảnh báo admin + test | P4, P5 | 4,5 |
 | P7 | Triển khai HC-03 | Backend + frontend + test | P4 | 1,5 |
 | P8 | Kiểm thử tích hợp và hồi quy | Kết quả thực tế, minh chứng | P5, P6, P7 | 2,0 |
 | P9 | Rà soát, cập nhật tài liệu, slide, kịch bản demo | Báo cáo, slide, demo | P8 | 1,5 |
@@ -321,7 +322,7 @@ Có thể đổi thứ tự HC-01 và HC-03 vì cùng sửa `ShowtimeService`; k
 - Có tài khoản ADMIN và dữ liệu thử cho phim, rạp, phòng, ghế, suất chiếu.
 - Có ít nhất một phim `UPCOMING` có `releaseDate`, một phim `HIDDEN` có booking `CONFIRMED`, một booking `PENDING` còn hạn.
 - Quyết định về `releaseDate` rỗng và thời gian dẫn tối thiểu của HC-03 được chốt trước khi code.
-- HC-03 được ban quản lý thay đổi chấp nhận là yêu cầu hiệu chỉnh thứ ba.
+- HC-03 đã được xác nhận thuộc phạm vi bảo trì hiệu chỉnh (D-03); phiếu phê duyệt CR chính thức vẫn cần chữ ký.
 
 ## 6. Quy trình bảo trì và quản lý thay đổi
 
@@ -609,7 +610,7 @@ Các trường hợp khác:
 | Chức năng | Tạo và chỉnh sửa suất chiếu |
 | Đối tượng | ADMIN; ảnh hưởng vận hành và dữ liệu lịch chiếu |
 | Ưu tiên | Trung bình |
-| Nguồn | **Đề xuất bổ sung của nhóm** từ rà soát mã nguồn; cần phê duyệt |
+| Nguồn | Đề xuất bổ sung của nhóm từ rà soát mã nguồn; **đã xác nhận phạm vi** (D-03), chờ phê duyệt CR chính thức |
 
 ### 7.3.2. Hiện trạng và nguyên nhân gốc
 

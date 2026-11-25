@@ -227,9 +227,10 @@ Các quyết định dưới đây đã được nhóm xác nhận theo đề xu
 | 2 | Hoàn tất hồ sơ phân tích tác động HC-01/02/03 | 04 biểu mẫu/CR, so sánh phương án | **Hoàn tất bản 0.2** |
 | 3 | Chốt D-01…D-07 và phạm vi HC-03 | Quyết định ngày 25/11/2026 | **Hoàn tất** |
 | 4 | Ký phiếu phê duyệt CR | Mẫu 2.4 cho HC-01/02/03 | Chờ |
-| 5 | Cập nhật SRS | REQ-HC01/02/03 | Tiếp theo |
-| 6 | Cập nhật SDD | DES-HC01/02/03 | Chưa |
-| 7 | Triển khai + test | Code, test, minh chứng | Chưa |
+| 5 | Cập nhật SRS | REQ-HC01/02/03 | **Hoàn tất draft v0.1** (`dac-ta-yeu-cau-bao-tri.md`) |
+| 6 | Cập nhật SDD | DES-HC01/02/03 | **Hoàn tất draft v0.1** (`thiet-ke-phan-mem-bao-tri.md`) |
+| 7 | Kế hoạch/test case HC | HC01/02/03 + hồi quy | **Hoàn tất draft v0.1** (`tai-lieu-kiem-thu-bao-tri.md`, tất cả Not Run/Blocked) |
+| 8 | Triển khai + test thực tế | Code HC-03→HC-01→HC-02, kết quả thực thi | Chưa |
 | 8 | Kiểm thử hồi quy, báo cáo, slide | Kết quả thực tế | Chưa |
 
 ---
@@ -256,3 +257,4 @@ Ghi kèm: commit, thời điểm, người chạy, số test pass/fail/skip, log
 |---|---|
 | 25/11/2026 | Tạo tệp; ghi nhận baseline, kết quả kiểm tra, quyết định và việc tiếp theo |
 | 25/11/2026 | Chốt D-01…D-07; xác nhận HC-03 thuộc phạm vi; commit baseline `79c7178`; hoàn tất phân tích tác động v0.2 |
+| 25/11/2026 | Tạo SRS v0.1, SDD v0.1, test plan v0.1 cho HC-01/02/03; cập nhật kế hoạch bảo trì v1.1; chưa triển khai HC code |
