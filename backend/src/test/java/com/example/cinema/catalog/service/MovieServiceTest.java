@@ -8,6 +8,7 @@ import com.example.cinema.common.error.AppException;
 import com.example.cinema.common.error.ErrorCode;
 import com.example.cinema.common.time.DatabaseTime;
 import com.example.cinema.showtime.repository.ShowtimeRepository;
+import com.example.cinema.booking.repository.BookingRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,6 +37,7 @@ import static org.mockito.Mockito.*;
 class MovieServiceTest {
     @Mock private MovieRepository repository;
     @Mock private ShowtimeRepository showtimeRepository;
+    @Mock private BookingRepository bookingRepository;
     @Mock private DatabaseTime databaseTime;
     @InjectMocks private MovieService service;
 

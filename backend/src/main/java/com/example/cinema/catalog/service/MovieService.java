@@ -1,5 +1,6 @@
 package com.example.cinema.catalog.service;
 
+import com.example.cinema.catalog.dto.MovieHideImpactResponse;
 import com.example.cinema.catalog.dto.MoviePageResponse;
 import com.example.cinema.catalog.dto.MovieRequest;
 import com.example.cinema.catalog.dto.MovieResponse;
@@ -10,6 +11,7 @@ import com.example.cinema.common.error.AppException;
 import com.example.cinema.common.error.ErrorCode;
 import com.example.cinema.common.time.DatabaseTime;
 import com.example.cinema.showtime.repository.ShowtimeRepository;
+import com.example.cinema.booking.repository.BookingRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -36,6 +38,7 @@ public class MovieService {
     private static final ZoneId VIETNAM = ZoneId.of("Asia/Ho_Chi_Minh");
     private final MovieRepository movieRepository;
     private final ShowtimeRepository showtimeRepository;
+    private final BookingRepository bookingRepository;
     private final DatabaseTime databaseTime;
 
     public MoviePageResponse list(String keyword, MovieStatus status, String genre,
@@ -101,6 +104,19 @@ public class MovieService {
     public MovieResponse getAdmin(Long id) {
         Movie movie = find(id);
         return MovieResponse.from(movie);
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    public MovieHideImpactResponse getHideImpact(Long id) {
+        Movie movie = find(id);
+        Instant now = databaseTime.now();
+        long activeShowtimes = showtimeRepository.countActiveScheduledByMovie(id, now);
+        long confirmedBookings = bookingRepository.countConfirmedActiveByMovie(id, now);
+        long pendingBookings = bookingRepository.countPendingActiveByMovie(id, now);
+        Instant earliestStart = showtimeRepository.findEarliestActiveStartByMovie(id, now).orElse(null);
+        Instant latestEnd = showtimeRepository.findLatestActiveEndByMovie(id, now).orElse(null);
+        return new MovieHideImpactResponse(movie.getId(), movie.getTitle(), activeShowtimes,
+                confirmedBookings, pendingBookings, earliestStart, latestEnd);
     }
 
     @Transactional

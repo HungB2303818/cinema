@@ -111,4 +111,13 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
             + "and s.endsAt > :now and (:releaseStartVnUtc is null or s.startsAt < :releaseStartVnUtc)")
     Optional<Instant> findEarliestReleaseDateConflict(@Param("movieId") Long movieId, @Param("now") Instant now,
                                                       @Param("releaseStartVnUtc") Instant releaseStartVnUtc);
+
+    @Query("select count(s) from Showtime s where s.movie.id = :movieId and s.status = com.example.cinema.showtime.entity.ShowtimeStatus.SCHEDULED and s.endsAt > :now")
+    long countActiveScheduledByMovie(@Param("movieId") Long movieId, @Param("now") Instant now);
+
+    @Query("select min(s.startsAt) from Showtime s where s.movie.id = :movieId and s.status = com.example.cinema.showtime.entity.ShowtimeStatus.SCHEDULED and s.endsAt > :now")
+    Optional<Instant> findEarliestActiveStartByMovie(@Param("movieId") Long movieId, @Param("now") Instant now);
+
+    @Query("select max(s.endsAt) from Showtime s where s.movie.id = :movieId and s.status = com.example.cinema.showtime.entity.ShowtimeStatus.SCHEDULED and s.endsAt > :now")
+    Optional<Instant> findLatestActiveEndByMovie(@Param("movieId") Long movieId, @Param("now") Instant now);
 }

@@ -88,13 +88,20 @@ export const MovieDetailsPage: React.FC = () => {
           }
           onRetry={!is404 ? () => refetchMovie() : undefined}
           action={
-            <Link
-              to="/movies"
-              className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-[#181a24] hover:bg-[#222530] text-zinc-200 text-xs font-semibold rounded-full border-none transition-colors"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Quay lại danh sách phim</span>
-            </Link>
+            <div className="flex items-center gap-3">
+              {is404 && (
+                <Link to="/my-tickets" className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-[#e6e2c1] text-black text-xs font-semibold rounded-full border-none transition-colors">
+                  <span>Vé của tôi</span>
+                </Link>
+              )}
+              <Link
+                to="/movies"
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-[#181a24] hover:bg-[#222530] text-zinc-200 text-xs font-semibold rounded-full border-none transition-colors"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Quay lại danh sách phim</span>
+              </Link>
+            </div>
           }
         />
       </div>

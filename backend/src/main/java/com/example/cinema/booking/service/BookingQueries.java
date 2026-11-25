@@ -53,9 +53,11 @@ public class BookingQueries {
             return new BookingDetailResponse.SeatItem(seat.getId(), seat.getSeatRow() + seat.getSeatNumber(),
                     seat.getSeatType(), item.getUnitPrice());
         }).toList();
-        return new BookingDetailResponse(id, booking.getBookingCode(), booking.getShowtime().getId(), summary.movieTitle(),
-                booking.getShowtime().getRoom().getName(), summary.startsAt(), booking.getStatus(), summary.effectiveStatus(),
-                booking.getTotalAmount(), booking.getCreatedAt(), booking.getExpiresAt(), items);
+        var showtime = booking.getShowtime();
+        return new BookingDetailResponse(id, booking.getBookingCode(), showtime.getId(), summary.movieTitle(),
+                showtime.getRoom().getName(), summary.startsAt(), booking.getStatus(), summary.effectiveStatus(),
+                booking.getTotalAmount(), booking.getCreatedAt(), booking.getExpiresAt(), items,
+                summary.cinemaName(), summary.movieStatus(), summary.showtimeStatus(), summary.endsAt());
     }
 
     public List<Long> expiredIds() {

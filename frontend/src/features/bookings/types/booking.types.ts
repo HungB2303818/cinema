@@ -1,6 +1,8 @@
 import type { SeatType } from '@/features/showtimes';
 
 export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'EXPIRED' | 'FAILED';
+export type MovieStatus = 'UPCOMING' | 'SHOWING' | 'ENDED' | 'HIDDEN';
+export type ShowtimeStatus = 'SCHEDULED' | 'CANCELLED' | 'COMPLETED';
 
 export interface CreateBookingRequest {
   showtimeId: number;
@@ -38,6 +40,10 @@ export interface BookingDetailResponse {
   createdAt: string;
   expiresAt: string;
   seats: BookingDetailSeatItem[];
+  cinemaName?: string;
+  movieStatus?: MovieStatus;
+  showtimeStatus?: ShowtimeStatus;
+  endsAt?: string;
 }
 
 /**
@@ -53,6 +59,11 @@ export interface BookingSummaryItem {
   totalAmount: number;
   createdAt: string;
   expiresAt: string;
+  cinemaName?: string;
+  roomName?: string;
+  movieStatus?: MovieStatus;
+  showtimeStatus?: ShowtimeStatus;
+  endsAt?: string;
 }
 
 export interface BookingCancelResponse {

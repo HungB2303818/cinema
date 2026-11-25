@@ -51,3 +51,13 @@ export interface AdminMovieQueryParams {
   size?: number;
   sort?: string;
 }
+
+export interface MovieHideImpactResponse {
+  movieId: number;
+  title: string;
+  activeShowtimes: number;
+  confirmedBookings: number;
+  pendingBookings: number;
+  earliestStart: string | null;
+  latestEnd: string | null;
+}

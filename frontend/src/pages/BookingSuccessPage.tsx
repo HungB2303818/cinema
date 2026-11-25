@@ -231,12 +231,17 @@ export const BookingSuccessPage: React.FC = () => {
 
         <div className="space-y-3">
           <h3 className="text-xl font-black text-white">{booking.movieTitle}</h3>
+          {booking.movieStatus === 'HIDDEN' && booking.showtimeStatus === 'SCHEDULED' && booking.endsAt && new Date(booking.endsAt).getTime() > Date.now() && (
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs">
+              Phim đã ngừng hiển thị công khai để đặt mới. Suất chiếu vẫn diễn ra; vé đã thanh toán vẫn có giá trị sử dụng.
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-zinc-300 pt-1">
             <div className="flex items-center gap-2">
               <Building2 className="w-4 h-4 text-[#e6e2c1] shrink-0" />
               <span>
-                Phòng chiếu: <strong>{booking.roomName}</strong>
+                Rạp/Phòng: <strong>{[booking.cinemaName, booking.roomName].filter(Boolean).join(' • ') || booking.roomName}</strong>
               </span>
             </div>
             <div className="flex items-center gap-2">

@@ -1,5 +1,6 @@
 package com.example.cinema.catalog.controller;
 
+import com.example.cinema.catalog.dto.MovieHideImpactResponse;
 import com.example.cinema.catalog.dto.MoviePageResponse;
 import com.example.cinema.catalog.dto.MovieRequest;
 import com.example.cinema.catalog.dto.MovieResponse;
@@ -38,6 +39,12 @@ public class AdminMovieController {
     @Operation(summary = "Xem chi tiết phim dành cho admin (đọc được cả phim ẩn)")
     public MovieResponse detail(@PathVariable Long id) {
         return movieService.getAdmin(id);
+    }
+
+    @GetMapping("/{id}/hide-impact")
+    @Operation(summary = "Xem tác động trước khi ẩn phim (suất/booking còn hiệu lực)")
+    public MovieHideImpactResponse hideImpact(@PathVariable Long id) {
+        return movieService.getHideImpact(id);
     }
 
     @PostMapping
