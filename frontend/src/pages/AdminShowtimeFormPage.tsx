@@ -63,6 +63,7 @@ export const AdminShowtimeFormPage: React.FC = () => {
   const [startsAtError, setStartsAtError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdResult, setCreatedResult] = useState<ShowtimeCreatedResponse | null>(null);
+  const [minStartAt, setMinStartAt] = useState(() => addMinutesToVietnamLocal(utcIsoToVietnamLocalInput(new Date().toISOString()), 10));
 
   // Queries
   const { data: moviesData, isLoading: isLoadingMovies } = useAdminMovies({ size: 100 });
@@ -96,13 +97,16 @@ export const AdminShowtimeFormPage: React.FC = () => {
 
   // Populate data when editing
   const hasInitializedRef = useRef(false);
+  const originalStartsAtRef = useRef<string | null>(null);
   useEffect(() => {
     if (existingShowtime && !hasInitializedRef.current) {
       hasInitializedRef.current = true;
+      const localStartsAt = utcIsoToVietnamLocalInput(existingShowtime.startsAt);
+      originalStartsAtRef.current = localStartsAt;
       setMovieId(existingShowtime.movieId);
       setCinemaId(existingShowtime.cinemaId);
       setRoomId(existingShowtime.roomId);
-      setStartsAt(utcIsoToVietnamLocalInput(existingShowtime.startsAt));
+      setStartsAt(localStartsAt);
       setCleanupMinutes(existingShowtime.cleanupMinutes ?? 15);
       setBasePrice(existingShowtime.basePrice);
       setVipSurcharge(existingShowtime.vipSurcharge ?? 0);
@@ -126,6 +130,13 @@ export const AdminShowtimeFormPage: React.FC = () => {
     if (!movieId || !moviesData?.content) return null;
     return moviesData.content.find((m) => m.id === movieId);
   }, [movieId, moviesData]);
+
+  useEffect(() => {
+    const updateMin = () => setMinStartAt(addMinutesToVietnamLocal(utcIsoToVietnamLocalInput(new Date().toISOString()), 10));
+    updateMin();
+    const interval = window.setInterval(updateMin, 30_000);
+    return () => window.clearInterval(interval);
+  }, []);
 
   // Auto-calculate end time from start time and movie duration
   const computedEndsAt = useMemo(() => {
@@ -166,6 +177,14 @@ export const AdminShowtimeFormPage: React.FC = () => {
     if (!startsAt) {
       setStartsAtError('Chọn giờ bắt đầu');
       setFormError('Vui lòng chọn giờ bắt đầu chiếu.');
+      return;
+    }
+    const currentMinStartAt = addMinutesToVietnamLocal(utcIsoToVietnamLocalInput(new Date().toISOString()), 10);
+    setMinStartAt(currentMinStartAt);
+    const keepExistingPastStart = Boolean(isEdit && originalStartsAtRef.current && startsAt === originalStartsAtRef.current);
+    if (!keepExistingPastStart && startsAt < currentMinStartAt) {
+      setStartsAtError('Giờ bắt đầu phải cách hiện tại ít nhất 10 phút.');
+      setFormError('Giờ bắt đầu phải cách thời điểm hiện tại ít nhất 10 phút. Vui lòng chọn thời điểm muộn hơn.');
       return;
     }
     if (!computedEndsAt) {
@@ -534,11 +553,12 @@ export const AdminShowtimeFormPage: React.FC = () => {
                 error={Boolean(startsAtError)}
                 disabled={isSubmitting}
                 placeholder="Chọn ngày giờ"
+                minDateTime={isEdit && originalStartsAtRef.current === startsAt ? undefined : minStartAt}
               />
               {startsAtError ? (
                 <p className="text-[11px] text-red-400 mt-1">{startsAtError}</p>
               ) : (
-                <p className="text-[11px] text-zinc-500 mt-1">Múi giờ Asia/Ho_Chi_Minh (+07:00)</p>
+                <p className="text-[11px] text-zinc-500 mt-1">Múi giờ Asia/Ho_Chi_Minh (+07:00). Suất mới phải bắt đầu sau hiện tại ít nhất 10 phút.</p>
               )}
             </div>
 

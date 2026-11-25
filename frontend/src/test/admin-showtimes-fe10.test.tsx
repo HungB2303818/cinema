@@ -134,6 +134,8 @@ describe('FE-10: Admin Quản Lý Suất Chiếu (Showtimes)', () => {
   };
 
   beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-01T00:00:00Z'));
     vi.clearAllMocks();
     vi.spyOn(authModule, 'useAuth').mockReturnValue({
       user: adminUser,
@@ -178,6 +180,7 @@ describe('FE-10: Admin Quản Lý Suất Chiếu (Showtimes)', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 

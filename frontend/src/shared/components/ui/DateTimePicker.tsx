@@ -9,6 +9,7 @@ export interface DateTimePickerProps {
   error?: boolean;
   disabled?: boolean;
   placeholder?: string;
+  minDateTime?: string;
 }
 
 interface Parts {
@@ -39,6 +40,17 @@ const nowInVietnam = (): Parts | null =>
 const toValue = (parts: Parts) =>
   `${parts.year}-${pad2(parts.month)}-${pad2(parts.day)}T${pad2(parts.hour)}:${pad2(parts.minute)}`;
 
+const compareParts = (a: Parts, b: Parts) => {
+  if (a.year !== b.year) return a.year - b.year;
+  if (a.month !== b.month) return a.month - b.month;
+  if (a.day !== b.day) return a.day - b.day;
+  if (a.hour !== b.hour) return a.hour - b.hour;
+  return a.minute - b.minute;
+};
+
+const isBeforeMin = (candidate: Parts, min: Parts | null) =>
+  Boolean(min && compareParts(candidate, min) < 0);
+
 const WEEKDAYS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 const MONTHS = Array.from({ length: 12 }, (_, i) => `Tháng ${i + 1}`);
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
@@ -64,6 +76,7 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
   error = false,
   disabled = false,
   placeholder = 'Chọn ngày giờ',
+  minDateTime,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -77,7 +90,8 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
 
   const selected = parseValue(value);
   const today = nowInVietnam();
-  const current = selected ?? today;
+  const min = parseValue(minDateTime ?? '');
+  const current = selected ?? min ?? today;
   const days = useMemo(() => buildDays(view.year, view.month), [view]);
   const yearOptions = useMemo(
     () => Array.from({ length: 11 }, (_, i) => view.year - 5 + i),
@@ -113,9 +127,14 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
     };
   }, [isOpen]);
 
+  const clampToMin = (parts: Parts) => {
+    if (!min) return parts;
+    return compareParts(parts, min) < 0 ? min : parts;
+  };
+
   const openPicker = () => {
     if (disabled) return;
-    const anchor = parseValue(value) ?? nowInVietnam();
+    const anchor = parseValue(value) ?? min ?? nowInVietnam();
     if (anchor) setView({ year: anchor.year, month: anchor.month });
     const rect = triggerRef.current?.getBoundingClientRect();
     if (rect) {
@@ -127,34 +146,42 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
   };
 
   const selectDay = (day: { year: number; month: number; day: number }) => {
-    const time = current ?? { hour: 9, minute: 0 };
-    onChange(
-      toValue({
-        year: day.year,
-        month: day.month,
-        day: day.day,
-        hour: time.hour,
-        minute: time.minute,
-      })
-    );
+    const time = current ?? min ?? { hour: 9, minute: 0, year: day.year, month: day.month, day: day.day };
+    const next = clampToMin({
+      year: day.year,
+      month: day.month,
+      day: day.day,
+      hour: time.hour,
+      minute: time.minute,
+    });
+    onChange(toValue(next));
     setView({ year: day.year, month: day.month });
   };
 
   const selectHour = (hour: number) => {
     if (!current) return;
-    onChange(toValue({ ...current, hour }));
+    const next = clampToMin({ ...current, hour });
+    onChange(toValue(next));
   };
 
   const selectMinute = (minute: number) => {
     if (!current) return;
-    onChange(toValue({ ...current, minute }));
+    const next = clampToMin({ ...current, minute });
+    onChange(toValue(next));
   };
 
   const selectNow = () => {
     const now = nowInVietnam();
     if (!now) return;
-    onChange(toValue(now));
-    setView({ year: now.year, month: now.month });
+    const next = clampToMin(now);
+    onChange(toValue(next));
+    setView({ year: next.year, month: next.month });
+  };
+
+  const isDayDisabled = (day: { year: number; month: number; day: number }) => {
+    if (!min) return false;
+    const dayEnd: Parts = { ...day, hour: 23, minute: 59 };
+    return compareParts(dayEnd, min) < 0;
   };
 
   const shiftMonth = (delta: number) => {
@@ -268,9 +295,12 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
                     today?.month === day.month &&
                     today?.day === day.day;
                   const isCurrentMonth = day.month === view.month;
+                  const dayDisabled = isDayDisabled(day);
 
                   let dayClass = 'text-zinc-600 hover:bg-[#1d202b]';
-                  if (isSelected) {
+                  if (dayDisabled) {
+                    dayClass = 'text-zinc-700 cursor-not-allowed opacity-40';
+                  } else if (isSelected) {
                     dayClass = 'bg-[#e6e2c1] text-black font-bold';
                   } else if (isToday) {
                     dayClass = 'text-[#e6e2c1] ring-1 ring-[#e6e2c1]/50 hover:bg-[#1d202b]';
@@ -282,10 +312,11 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
                     <button
                       key={`${day.year}-${day.month}-${day.day}`}
                       type="button"
+                      disabled={dayDisabled}
                       onClick={() => selectDay(day)}
                       aria-label={`Ngày ${day.day} tháng ${day.month} năm ${day.year}`}
                       aria-pressed={Boolean(isSelected)}
-                      className={`h-8 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${dayClass}`}
+                      className={`h-8 rounded-lg text-xs font-semibold transition-colors ${dayDisabled ? '' : 'cursor-pointer'} ${dayClass}`}
                     >
                       {day.day}
                     </button>
@@ -302,41 +333,53 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
 
               <div className="mt-2 grid grid-cols-2 gap-1.5">
                 <div className={timeColumnClass}>
-                  {HOURS.map((hour) => (
-                    <button
-                      key={hour}
-                      type="button"
-                      onClick={() => selectHour(hour)}
-                      aria-label={`Giờ ${pad2(hour)}`}
-                      aria-pressed={selected?.hour === hour}
-                      className={`w-full rounded-md px-1 py-1 text-xs font-semibold text-center transition-colors cursor-pointer ${
-                        selected?.hour === hour
-                          ? 'bg-[#e6e2c1] text-black'
-                          : 'text-zinc-300 hover:bg-[#1d202b]'
-                      }`}
-                    >
-                      {pad2(hour)}
-                    </button>
-                  ))}
+                  {HOURS.map((hour) => {
+                    const hourDisabled = current ? isBeforeMin({ ...current, hour, minute: 59 }, min) : false;
+                    return (
+                      <button
+                        key={hour}
+                        type="button"
+                        disabled={hourDisabled}
+                        onClick={() => selectHour(hour)}
+                        aria-label={`Giờ ${pad2(hour)}`}
+                        aria-pressed={selected?.hour === hour}
+                        className={`w-full rounded-md px-1 py-1 text-xs font-semibold text-center transition-colors ${
+                          hourDisabled
+                            ? 'text-zinc-700 cursor-not-allowed opacity-40'
+                            : selected?.hour === hour
+                              ? 'bg-[#e6e2c1] text-black cursor-pointer'
+                              : 'text-zinc-300 hover:bg-[#1d202b] cursor-pointer'
+                        }`}
+                      >
+                        {pad2(hour)}
+                      </button>
+                    );
+                  })}
                 </div>
 
                 <div className={timeColumnClass}>
-                  {MINUTES.map((minute) => (
-                    <button
-                      key={minute}
-                      type="button"
-                      onClick={() => selectMinute(minute)}
-                      aria-label={`Phút ${pad2(minute)}`}
-                      aria-pressed={selected?.minute === minute}
-                      className={`w-full rounded-md px-1 py-1 text-xs font-semibold text-center transition-colors cursor-pointer ${
-                        selected?.minute === minute
-                          ? 'bg-[#e6e2c1] text-black'
-                          : 'text-zinc-300 hover:bg-[#1d202b]'
-                      }`}
-                    >
-                      {pad2(minute)}
-                    </button>
-                  ))}
+                  {MINUTES.map((minute) => {
+                    const minuteDisabled = current ? isBeforeMin({ ...current, minute }, min) : false;
+                    return (
+                      <button
+                        key={minute}
+                        type="button"
+                        disabled={minuteDisabled}
+                        onClick={() => selectMinute(minute)}
+                        aria-label={`Phút ${pad2(minute)}`}
+                        aria-pressed={selected?.minute === minute}
+                        className={`w-full rounded-md px-1 py-1 text-xs font-semibold text-center transition-colors ${
+                          minuteDisabled
+                            ? 'text-zinc-700 cursor-not-allowed opacity-40'
+                            : selected?.minute === minute
+                              ? 'bg-[#e6e2c1] text-black cursor-pointer'
+                              : 'text-zinc-300 hover:bg-[#1d202b] cursor-pointer'
+                        }`}
+                      >
+                        {pad2(minute)}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>

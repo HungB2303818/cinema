@@ -47,6 +47,7 @@ class ShowtimeServiceTest {
         showtime = Showtime.builder().id(4L).movie(movie).room(room).startsAt(start).endsAt(start.plusSeconds(7200))
                 .basePrice(new BigDecimal("75000")).vipSurcharge(new BigDecimal("20000")).build();
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken("admin", null, List.of()));
+        lenient().when(time.now()).thenReturn(start.minusSeconds(3600));
     }
     @AfterEach void clear() { SecurityContextHolder.clearContext(); }
 
@@ -150,7 +151,7 @@ class ShowtimeServiceTest {
         showtime.setStatus(ShowtimeStatus.SCHEDULED);
         movie.setStatus(MovieStatus.HIDDEN);
         assertCode(() -> service.seatMap(4L), ErrorCode.RESOURCE_NOT_FOUND);
-        verifyNoInteractions(time, inventory);
+        verifyNoInteractions(inventory);
     }
 
     @Test void convertsVietnamDayToHalfOpenUtcRange() {
@@ -253,6 +254,30 @@ class ShowtimeServiceTest {
         var request = new ShowtimeRequest(1L, 2L, start, start.plusSeconds(7200), null, BigDecimal.ZERO, null);
         assertThat(request.cleanupMinutes()).isEqualTo(15);
         assertThat(request.vipSurcharge()).isEqualByComparingTo(BigDecimal.ZERO);
+    }
+
+    @Test void rejectsCreateWhenStartsTooSoon() {
+        prepareCreate();
+        when(time.now()).thenReturn(start.minusSeconds(599));
+        assertCode(() -> service.create(request(start, start.plusSeconds(7200))), ErrorCode.SCHEDULE_INVALID);
+        verify(showtimes, never()).saveAndFlush(any());
+        verifyNoInteractions(inventory);
+    }
+
+    @Test void allowsCreateAtExactMinimumLeadTime() {
+        prepareCreate();
+        when(time.now()).thenReturn(start.minusSeconds(600));
+        when(seats.findByRoomIdAndStatusOrderByIdAsc(2L, PhysicalSeatStatus.ACTIVE)).thenReturn(List.of(seat(5L, SeatType.STANDARD)));
+        when(showtimes.saveAndFlush(any())).thenAnswer(call -> { Showtime s = call.getArgument(0); s.setId(8L); return s; });
+        var result = service.create(request(start, start.plusSeconds(7200)));
+        assertThat(result.createdSeatCount()).isEqualTo(1);
+    }
+
+    @Test void rejectsUpdateWhenStartsTooSoon() {
+        prepareUpdate();
+        when(time.now()).thenReturn(start.minusSeconds(599));
+        assertCode(() -> service.update(4L, request(start, start.plusSeconds(7200))), ErrorCode.SCHEDULE_INVALID);
+        verify(showtimes, never()).flush();
     }
 
     private void prepareCreate() {

@@ -39,6 +39,7 @@ public class ShowtimeService {
     private static final BigDecimal MAX_PRICE = new BigDecimal("9999999999.99");
     private static final Instant MIN_TIME = Instant.parse("1000-01-01T00:00:00Z");
     private static final Instant MAX_TIME = Instant.parse("9999-12-31T23:59:59.999Z");
+    private static final long MIN_LEAD_SECONDS = 600;
     private final ShowtimeRepository showtimeRepository;
     private final ShowtimeSeatRepository inventoryRepository;
     private final RoomRepository roomRepository;
@@ -260,6 +261,11 @@ public class ShowtimeService {
         }
         if (starts.getNano() % 1_000_000 != 0 || ends.getNano() % 1_000_000 != 0) {
             throw new AppException(ErrorCode.VALIDATION_ERROR, "Thời gian chỉ hỗ trợ tối đa 3 chữ số phần giây.");
+        }
+        Instant earliestStart = databaseTime.now().plusSeconds(MIN_LEAD_SECONDS);
+        if (starts.isBefore(earliestStart)) {
+            throw new AppException(ErrorCode.SCHEDULE_INVALID,
+                    "Giờ bắt đầu phải cách thời điểm hiện tại ít nhất 10 phút.");
         }
     }
 
