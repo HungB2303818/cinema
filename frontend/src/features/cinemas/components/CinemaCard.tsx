@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, Building2, ImageOff } from 'lucide-react';
+import { MapPin, Building2, ImageOff, Tv } from 'lucide-react';
 import type { Cinema } from '../types/cinema.types';
 import { getCinemaImage } from '../utils/cinema-image';
 
@@ -74,6 +74,17 @@ export const CinemaCard: React.FC<CinemaCardProps> = ({ cinema, onSelectCinema }
             <MapPin className="w-3.5 h-3.5 text-[#e6e2c1] shrink-0 mt-0.5" />
             <span className="leading-relaxed">{cinema.address}</span>
           </p>
+        </div>
+
+        <div className="relative z-20 flex justify-end border-t border-[#20232e] pt-3">
+          <button
+            type="button"
+            onClick={() => onSelectCinema?.(cinema)}
+            className="inline-flex items-center gap-1.5 rounded-full border border-[#2b2f3e] bg-[#181a24] px-3.5 py-2 text-xs font-semibold text-zinc-200 transition-colors hover:bg-[#222530] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e6e2c1] cursor-pointer"
+          >
+            <Tv className="w-3.5 h-3.5 text-[#e6e2c1]" aria-hidden="true" />
+            <span>Phòng chiếu</span>
+          </button>
         </div>
       </div>
     </article>
