@@ -101,4 +101,14 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
     @EntityGraph(attributePaths = {"room", "room.cinema", "movie"})
     @Query("select s from Showtime s where s.id = :id")
     Optional<Showtime> findAdminDetailById(@Param("id") Long id);
+
+    @Query("select count(s) from Showtime s where s.movie.id = :movieId and s.status = com.example.cinema.showtime.entity.ShowtimeStatus.SCHEDULED "
+            + "and s.endsAt > :now and (:releaseStartVnUtc is null or s.startsAt < :releaseStartVnUtc)")
+    long countReleaseDateConflicts(@Param("movieId") Long movieId, @Param("now") Instant now,
+                                   @Param("releaseStartVnUtc") Instant releaseStartVnUtc);
+
+    @Query("select min(s.startsAt) from Showtime s where s.movie.id = :movieId and s.status = com.example.cinema.showtime.entity.ShowtimeStatus.SCHEDULED "
+            + "and s.endsAt > :now and (:releaseStartVnUtc is null or s.startsAt < :releaseStartVnUtc)")
+    Optional<Instant> findEarliestReleaseDateConflict(@Param("movieId") Long movieId, @Param("now") Instant now,
+                                                      @Param("releaseStartVnUtc") Instant releaseStartVnUtc);
 }

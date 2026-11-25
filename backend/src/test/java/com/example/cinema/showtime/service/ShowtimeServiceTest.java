@@ -42,7 +42,8 @@ class ShowtimeServiceTest {
     Showtime showtime;
 
     @BeforeEach void setup() {
-        movie = Movie.builder().id(1L).title("Phim").durationMinutes(120).status(MovieStatus.SHOWING).build();
+        movie = Movie.builder().id(1L).title("Phim").durationMinutes(120).status(MovieStatus.SHOWING)
+                .releaseDate(java.time.LocalDate.of(2026, 11, 1)).build();
         room = Room.builder().id(2L).name("Phòng").cinema(Cinema.builder().id(3L).name("Rạp").build()).build();
         showtime = Showtime.builder().id(4L).movie(movie).room(room).startsAt(start).endsAt(start.plusSeconds(7200))
                 .basePrice(new BigDecimal("75000")).vipSurcharge(new BigDecimal("20000")).build();
@@ -109,6 +110,20 @@ class ShowtimeServiceTest {
         var request = new ShowtimeRequest(1L, 2L, start, start.plusSeconds(7200), 15,
                 new BigDecimal("9999999999.99"), BigDecimal.ONE);
         assertCode(() -> service.create(request), ErrorCode.SCHEDULE_INVALID);
+    }
+
+    @Test void rejectsCreateWhenMovieHasNoReleaseDate() {
+        prepareCreate();
+        movie.setReleaseDate(null);
+        assertCode(() -> service.create(request(start, start.plusSeconds(7200))), ErrorCode.SCHEDULE_INVALID);
+        verify(showtimes, never()).saveAndFlush(any());
+    }
+
+    @Test void rejectsCreateWhenStartsBeforeReleaseDate() {
+        prepareCreate();
+        movie.setReleaseDate(java.time.LocalDate.of(2026, 11, 18));
+        assertCode(() -> service.create(request(start, start.plusSeconds(7200))), ErrorCode.SCHEDULE_INVALID);
+        verify(showtimes, never()).saveAndFlush(any());
     }
 
     @Test void refusesUpdateForAnyHistoricalBooking() {

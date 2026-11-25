@@ -138,6 +138,17 @@ export const AdminShowtimeFormPage: React.FC = () => {
     return () => window.clearInterval(interval);
   }, []);
 
+  const releaseDateMin = useMemo(() => {
+    if (!selectedMovie?.releaseDate) return undefined;
+    return `${selectedMovie.releaseDate}T00:00`;
+  }, [selectedMovie]);
+
+  const effectiveMinStartAt = useMemo(() => {
+    if (isEdit && originalStartsAtRef.current === startsAt) return undefined;
+    if (!releaseDateMin) return minStartAt;
+    return releaseDateMin > minStartAt ? releaseDateMin : minStartAt;
+  }, [isEdit, minStartAt, releaseDateMin, startsAt]);
+
   // Auto-calculate end time from start time and movie duration
   const computedEndsAt = useMemo(() => {
     if (!startsAt || !selectedMovie?.durationMinutes) return '';
@@ -182,9 +193,15 @@ export const AdminShowtimeFormPage: React.FC = () => {
     const currentMinStartAt = addMinutesToVietnamLocal(utcIsoToVietnamLocalInput(new Date().toISOString()), 10);
     setMinStartAt(currentMinStartAt);
     const keepExistingPastStart = Boolean(isEdit && originalStartsAtRef.current && startsAt === originalStartsAtRef.current);
-    if (!keepExistingPastStart && startsAt < currentMinStartAt) {
-      setStartsAtError('Giờ bắt đầu phải cách hiện tại ít nhất 10 phút.');
-      setFormError('Giờ bắt đầu phải cách thời điểm hiện tại ít nhất 10 phút. Vui lòng chọn thời điểm muộn hơn.');
+    const releaseMin = selectedMovie?.releaseDate ? `${selectedMovie.releaseDate}T00:00` : null;
+    const requiredMin = releaseMin && releaseMin > currentMinStartAt ? releaseMin : currentMinStartAt;
+    if (!keepExistingPastStart && startsAt < requiredMin) {
+      const isReleaseDateError = Boolean(releaseMin && startsAt < releaseMin);
+      const msg = isReleaseDateError
+        ? `Giờ bắt đầu không được trước ngày khởi chiếu ${selectedMovie?.releaseDate}.`
+        : 'Giờ bắt đầu phải cách hiện tại ít nhất 10 phút.';
+      setStartsAtError(msg);
+      setFormError(isReleaseDateError ? msg : 'Giờ bắt đầu phải cách thời điểm hiện tại ít nhất 10 phút. Vui lòng chọn thời điểm muộn hơn.');
       return;
     }
     if (!computedEndsAt) {
@@ -434,15 +451,26 @@ export const AdminShowtimeFormPage: React.FC = () => {
               </select>
             )}
             <p className="text-[11px] text-zinc-500 mt-1">
-              Phim ở trạng thái HIDDEN bị loại trừ khỏi danh sách lựa chọn lập lịch.
+              Phim HIDDEN bị loại trừ. Suất chiếu không được trước ngày khởi chiếu (HC-01).
             </p>
           </div>
 
           {selectedMovie && (
-            <div className="bg-[#090a0f] border border-[#252836] rounded-xl p-3 flex items-center justify-between text-xs">
-              <span className="text-zinc-400">Thời lượng phim:</span>
-              <span className="font-bold text-[#e6e2c1]">{selectedMovie.durationMinutes} phút</span>
+            <div className="bg-[#090a0f] border border-[#252836] rounded-xl p-3 space-y-1 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-zinc-400">Thời lượng phim:</span>
+                <span className="font-bold text-[#e6e2c1]">{selectedMovie.durationMinutes} phút</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-zinc-400">Ngày khởi chiếu:</span>
+                <span className={`font-bold ${selectedMovie.releaseDate ? 'text-[#e6e2c1]' : 'text-red-400'}`}>
+                  {selectedMovie.releaseDate || 'Chưa có — cần cập nhật'}
+                </span>
+              </div>
             </div>
+          )}
+          {selectedMovie && !selectedMovie.releaseDate && (
+            <AlertMessage variant="warning">Phim chưa có ngày khởi chiếu. Vui lòng cập nhật trước khi lập lịch (HC-01).</AlertMessage>
           )}
         </div>
 
@@ -553,12 +581,15 @@ export const AdminShowtimeFormPage: React.FC = () => {
                 error={Boolean(startsAtError)}
                 disabled={isSubmitting}
                 placeholder="Chọn ngày giờ"
-                minDateTime={isEdit && originalStartsAtRef.current === startsAt ? undefined : minStartAt}
+                minDateTime={effectiveMinStartAt}
               />
               {startsAtError ? (
                 <p className="text-[11px] text-red-400 mt-1">{startsAtError}</p>
               ) : (
-                <p className="text-[11px] text-zinc-500 mt-1">Múi giờ Asia/Ho_Chi_Minh (+07:00). Suất mới phải bắt đầu sau hiện tại ít nhất 10 phút.</p>
+                <p className="text-[11px] text-zinc-500 mt-1">
+                  Múi giờ Asia/Ho_Chi_Minh (+07:00). Suất mới phải sau hiện tại ít nhất 10 phút
+                  {selectedMovie?.releaseDate ? ` và không trước ngày khởi chiếu ${selectedMovie.releaseDate}` : ''}.
+                </p>
               )}
             </div>
 

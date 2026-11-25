@@ -262,6 +262,16 @@ public class ShowtimeService {
         if (starts.getNano() % 1_000_000 != 0 || ends.getNano() % 1_000_000 != 0) {
             throw new AppException(ErrorCode.VALIDATION_ERROR, "Thời gian chỉ hỗ trợ tối đa 3 chữ số phần giây.");
         }
+        java.time.LocalDate releaseDate = movie.getReleaseDate();
+        if (releaseDate == null) {
+            throw new AppException(ErrorCode.SCHEDULE_INVALID,
+                    "Phim chưa có ngày khởi chiếu; vui lòng cập nhật ngày khởi chiếu trước khi lập lịch.");
+        }
+        java.time.LocalDate startDateVn = starts.atZone(VIETNAM).toLocalDate();
+        if (startDateVn.isBefore(releaseDate)) {
+            throw new AppException(ErrorCode.SCHEDULE_INVALID,
+                    "Giờ bắt đầu không được trước ngày khởi chiếu " + releaseDate + " (Asia/Ho_Chi_Minh).");
+        }
         Instant earliestStart = databaseTime.now().plusSeconds(MIN_LEAD_SECONDS);
         if (starts.isBefore(earliestStart)) {
             throw new AppException(ErrorCode.SCHEDULE_INVALID,
