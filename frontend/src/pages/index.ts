@@ -18,5 +18,8 @@ export * from './AdminRoomsPage';
 export * from './AdminSeatsPage';
 export * from './AdminShowtimesPage';
 export * from './AdminShowtimeFormPage';
+export * from './AdminSchedulePlansPage';
+export * from './AdminSchedulePlanFormPage';
+export * from './AdminSchedulePlanLogsPage';
 export * from './NotFoundPage';
 export * from './ProfilePage';

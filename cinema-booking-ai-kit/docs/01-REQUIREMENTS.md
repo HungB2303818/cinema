@@ -20,6 +20,7 @@
 | FR-14 | Idempotency cho tạo booking và payment; trùng key khác payload phải bị từ chối. | System | Must | UC-03,04 |
 | FR-15 | API lỗi có mã máy đọc được, xác thực dữ liệu, phân trang danh sách. | All | Must | All |
 | FR-16 | Gửi thông báo, websocket ghế, quét QR bằng camera. | Various | Could | — |
+| FR-17 | Admin cấu hình kế hoạch lịch tự động theo phòng, khoảng ngày, thứ, khung giờ và thứ tự ưu tiên phim; job sinh trước 7 ngày, bỏ qua khung bị chiếm và ghi nhật ký; Admin có thể “Sinh ngay” bổ sung khung trống tối đa 31 ngày. | Admin/System | Must | UC-10 |
 
 `Guest+` = các vai trò cũng có thể xem dữ liệu public.
 

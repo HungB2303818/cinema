@@ -63,6 +63,7 @@ export const adminShowtimesApi = {
     if (filters.cinemaId) query.append('cinemaId', filters.cinemaId.toString());
     if (filters.roomId) query.append('roomId', filters.roomId.toString());
     if (filters.movieId) query.append('movieId', filters.movieId.toString());
+    if (filters.planId) query.append('planId', filters.planId.toString());
     if (filters.date) query.append('date', filters.date);
     if (filters.status) query.append('status', filters.status);
     if (filters.page !== undefined) query.append('page', filters.page.toString());

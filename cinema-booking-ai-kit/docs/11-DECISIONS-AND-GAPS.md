@@ -20,6 +20,7 @@ Trang này phân biệt **quyết định đã khóa cho MVP** với **chủ đ�
 | ADR-012 | Không xóa dữ liệu đã phát sinh giao dịch | Bảo toàn khóa ngoại, lịch sử và audit. |
 | ADR-013 | HTTP 200 cho retry payment FAILED giả lập; 409 cho payment key mới sau CONFIRMED | Hợp đồng nhất quán, không tạo payment SUCCESS mới. |
 | ADR-014 | Chọn rạp/ngày hiển thị ngay các phim kèm poster và nút giờ, không bắt chọn phim trước | Yêu cầu bố cục người dùng 05/11/2026; bổ sung API đọc theo rạp, phân trang nhóm phim; chưa triển khai khi ghi nhận. |
+| ADR-015 | Lịch tự động theo phòng: một kế hoạch/khung giờ/giá, job sinh trước 7 ngày, không preview, không xóa kế hoạch, không tự hủy suất đã sinh | Giữ mô hình dễ hiểu, tránh sửa lịch sử; nhiều khung giá tách thành nhiều kế hoạch rời giờ. |
 
 ## 2. Điểm dễ cần chốt khi viết code
 
@@ -36,6 +37,7 @@ Trang này phân biệt **quyết định đã khóa cho MVP** với **chủ đ�
 | GAP-09 | Lịch phim và cleanup | Admin cung cấp endsAt hợp lệ; cleanupMinutes default 15; validate thời lượng theo policy | Nếu tự tính từ runtime/trailer |
 | GAP-10 | Token check-in | Random ≥128-bit; lưu chuỗi duy nhất; không chứa thông tin cá nhân | Nếu thêm QR/signature/hết hạn riêng |
 | GAP-11 | Endpoint admin ngoài danh sách hiện tại | Chỉ yêu cầu minimum movie/room/showtime; `cinemas` seed một rạp | Nếu cần UI quản lý nhiều cụm |
+| GAP-12 | Job sinh lịch chạy trên nhiều instance | Guard `AtomicBoolean` trong một JVM; overlap + log bảo vệ dữ liệu, có thể sinh trùng nỗ lực | Khi triển khai nhiều instance: distributed lock hoặc unique `(plan_id,target_date)` |
 
 ### Chi tiết hóa khi triển khai TASK-06/07/08
 
@@ -74,6 +76,15 @@ Trang này phân biệt **quyết định đã khóa cho MVP** với **chủ đ�
 - Không tự bổ sung định dạng chiếu/ngôn ngữ/phụ đề hoặc hardcode nhãn trong ảnh mẫu; schema chưa có các trường đó. Ảnh rạp và poster phim là hai metadata khác nhau; giữ ảnh đúng danh tính, fallback không tạo dữ liệu giao dịch giả.
 - FE-05 lưu intent theo tài khoản trong phiên, không tự POST khi mount. Retry kỹ thuật giữ nguyên key/payload, timeout là kết quả chưa xác định; checkout GET detail và expiresAt/effectiveStatus là nguồn dữ liệu, không reset TTL. Payment/vé vẫn ở FE-06; hủy ở FE-07. Không thêm API cleanup/extend hold hay thay policy cutoff/TTL.
 - Toàn bộ phần này là cập nhật thiết kế và acceptance (TC-46…49 cùng các TC booking hiện có), không xác nhận implementation hoặc test đã chạy.
+
+### Chi tiết hóa UC-10 — Lịch chiếu tự động (2026-11-24)
+
+- ADR-015: kế hoạch gắn một phòng, một khoảng ngày, một khung giờ/ngày, một mức giá và danh sách phim ưu tiên. Hai kế hoạch `ACTIVE` cùng phòng được phép giao khoảng ngày nếu khung giờ rời nhau; không hỗ trợ khung qua nửa đêm. Không preview, không xóa kế hoạch, không tự hủy/sửa suất đã sinh.
+- `showtimes.schedule_plan_id` nullable, FK `ON DELETE SET NULL`, chỉ để truy vết; suất tự động vẫn là suất bình thường, chịu quy tắc sửa hiện tại. Tắt kế hoạch chỉ dừng sinh mới.
+- Job mặc định 00:30 `Asia/Ho_Chi_Minh`, horizon 7 ngày, chạy bù khi khởi động; “Sinh ngay” tối đa 31 ngày bao gồm hai đầu. Job bỏ qua ngày đã `SUCCESS`/`PARTIAL` có `createdCount > 0`, retry `SKIPPED`/`FAILED`; “Sinh ngay” chỉ bổ sung khung trống.
+- Mỗi suất sinh trong transaction riêng qua `ShowtimeService.createInternal` để một overlap không rollback cả ngày; log ghi `REQUIRES_NEW`. Overlap/không hợp lệ được bỏ qua và đếm, không dừng cả lần chạy.
+- Giới hạn 40 suất/phòng/ngày; phim `SHOWING` hoặc `UPCOMING` đã đến `release_date`; không sinh trước `now + 10 phút`.
+- GAP-12: guard chống chạy chồng chỉ trong một JVM. Đa instance dựa vào overlap + log, chưa có distributed lock/unique `(plan_id,target_date)`.
 
 ## 3. Ngoài phạm vi — không tự thêm
 

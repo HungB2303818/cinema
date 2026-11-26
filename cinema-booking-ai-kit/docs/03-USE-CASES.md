@@ -1,4 +1,4 @@
-# 03. Use Case Specifications — UC-01 đến UC-09
+# 03. Use Case Specifications — UC-01 đến UC-10
 
 **Ký hiệu:** `S` = luồng thành công, `E` = luồng ngoại lệ/nhánh. Mọi trạng thái ở đây phải tuân thủ [`02-BUSINESS-RULES.md`](02-BUSINESS-RULES.md).
 
@@ -90,6 +90,18 @@
 - **S:** (1) chọn range UTC/khung ngày local được chuyển sang UTC; (2) query `payments.status=SUCCESS`, group theo `paid_at`, join showtime/phim/rạp nếu cần; (3) trả tổng tiền, tổng giao dịch và biểu đồ theo ngày.
 - **E:** Không cộng INITIATED/FAILED; không lấy `bookings.total_amount` của PENDING làm doanh thu.
 - **Quy tắc:** BR-22; **API:** `GET /api/admin/reports/revenue`.
+
+## UC-10 — Cấu hình và sinh suất chiếu tự động
+
+- **Actor:** Admin (cấu hình, bật/tắt, “Sinh ngay”); Scheduler (job hằng ngày).
+- **Điều kiện trước:** Admin authenticated; phòng thuộc rạp đã cấu hình; kế hoạch `ACTIVE`; rạp/phòng `ACTIVE`; phòng có ghế `ACTIVE`; phim `SHOWING` hoặc `UPCOMING` đã đến ngày phát hành.
+- **Đầu vào:** `name`, `roomId`, `effectiveFrom`, `effectiveTo`, `daysOfWeek`, `openTime`, `closeTime`, `slotStepMinutes`, `cleanupMinutes`, `basePrice`, `vipSurcharge`, `movieIds` theo thứ tự ưu tiên, `status`. Sinh lịch: `from`, `to` (tối đa 31 ngày).
+- **S — cấu hình:** (1) Validate khoảng ngày, thứ, khung giờ cùng ngày, bước slot, giá và danh sách phim; (2) khóa `rooms` theo `roomId`; (3) kiểm tra xung đột với kế hoạch `ACTIVE` cùng phòng khi vừa giao khoảng ngày vừa giao khung giờ; (4) lưu kế hoạch và thứ tự phim; (5) bật/tắt chỉ đổi `status`, không đụng suất đã sinh.
+- **S — job hằng ngày (00:30 giờ Việt Nam):** (1) Lấy kế hoạch `ACTIVE`; (2) với mỗi ngày trong horizon 7 ngày đúng thứ và hiệu lực, bỏ qua ngày đã có log `SUCCESS`/`PARTIAL` với `createdCount > 0`; (3) xếp suất theo thứ tự ưu tiên phim, tôn trọng duration + cleanup, bước slot, khung giờ, khoảng bận của suất `SCHEDULED`, `notBefore = now + 10 phút`, tối đa 40 suất/phòng/ngày; (4) tạo từng suất trong transaction riêng qua luồng tạo suất chuẩn (room lock + overlap + inventory); (5) ghi log `SUCCESS`/`PARTIAL`/`SKIPPED`/`FAILED` cho từng ngày; (6) tiếp tục các ngày/kế hoạch khác khi một ngày lỗi.
+- **S — “Sinh ngay”:** Admin chọn khoảng ngày trong hiệu lực, tối đa 31 ngày; hệ thống bỏ qua log thành công trước đó và chỉ bổ sung khung trống, trả tổng hợp theo ngày.
+- **E:** Kế hoạch `INACTIVE` → 409 khi sinh thủ công, job bỏ qua; phòng bảo trì/không có ghế → `SKIPPED`; không có phim hợp lệ → `SKIPPED`; khung bị chiếm → bỏ qua khung và ghi log, không dừng cả ngày; một suất lỗi → rollback riêng suất đó và tiếp tục; hai kế hoạch xung đột → 409; sửa kế hoạch đã có log chỉ áp dụng ngày chưa sinh.
+- **Hậu điều kiện:** Suất mới có inventory đầy đủ và `schedule_plan_id` truy vết; log theo ngày tồn tại; không sửa/xóa suất cũ; tắt kế hoạch không hủy suất đã sinh.
+- **Quy tắc:** BR-23…30; **API:** `GET/POST /api/admin/schedule-plans`, `GET/PUT /api/admin/schedule-plans/{id}`, `POST /api/admin/schedule-plans/{id}/generate`, `GET /api/admin/schedule-plans/{id}/logs`; **Tests:** TC-53…58.
 
 ## 10. Quy tắc chung về lỗi
 

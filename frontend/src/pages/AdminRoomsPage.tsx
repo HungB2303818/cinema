@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Tv, Plus, Edit2, Grid, CalendarPlus, ShieldAlert, Building2 } from 'lucide-react';
+import { Tv, Plus, Edit2, Grid, CalendarPlus } from 'lucide-react';
 import {
   useAdminCinemas,
   useAdminRooms,

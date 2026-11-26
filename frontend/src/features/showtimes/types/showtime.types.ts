@@ -13,6 +13,7 @@ export interface Showtime {
   basePrice: number;
   vipSurcharge: number;
   status: ShowtimeStatus;
+  schedulePlanId?: number | null;
 }
 
 export interface ShowtimeQueryParams {
@@ -84,6 +85,7 @@ export interface AdminShowtimeFilters {
   cinemaId?: number;
   roomId?: number;
   movieId?: number;
+  planId?: number;
   date?: string; // YYYY-MM-DD in Asia/Ho_Chi_Minh
   status?: ShowtimeStatus;
   page?: number;
