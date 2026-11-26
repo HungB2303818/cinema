@@ -22,6 +22,7 @@ import {
   AdminShowtimesPage,
   AdminShowtimeFormPage,
   AdminAutoGenerateShowtimesPage,
+  AdminRevenuePage,
   NotFoundPage,
   ProfilePage,
 } from '@/pages';
@@ -120,6 +121,7 @@ export const AppRouter: React.FC = () => {
         <Route path="showtimes/new" element={<AdminShowtimeFormPage />} />
         <Route path="showtimes/auto-generate" element={<AdminAutoGenerateShowtimesPage />} />
         <Route path="showtimes/:showtimeId/edit" element={<AdminShowtimeFormPage />} />
+        <Route path="reports/revenue" element={<AdminRevenuePage />} />
       </Route>
     </Routes>
   );

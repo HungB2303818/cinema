@@ -9,6 +9,8 @@ import com.example.cinema.payment.entity.PaymentStatus;
 import com.example.cinema.payment.service.PaymentService;
 import com.example.cinema.report.controller.RevenueController;
 import com.example.cinema.report.dto.RevenueResponse;
+import com.example.cinema.report.service.RevenueAnalyticsService;
+import com.example.cinema.report.service.RevenueCsvExportService;
 import com.example.cinema.report.service.RevenueService;
 import com.example.cinema.ticket.controller.TicketController;
 import com.example.cinema.ticket.dto.*;
@@ -39,6 +41,8 @@ class PaymentTicketControllerTest {
     @MockBean PaymentService payments;
     @MockBean TicketService tickets;
     @MockBean RevenueService revenue;
+    @MockBean RevenueAnalyticsService revenueAnalytics;
+    @MockBean RevenueCsvExportService revenueCsvExport;
     @MockBean JwtUtils jwtUtils;
     @MockBean UserDetailsService userDetailsService;
     final String paymentPath = "/api/bookings/1/payments/mock";
