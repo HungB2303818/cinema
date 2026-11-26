@@ -3,6 +3,7 @@ package com.example.cinema.showtime.controller;
 import com.example.cinema.common.dto.PageResponse;
 import com.example.cinema.showtime.dto.*;
 import com.example.cinema.showtime.entity.ShowtimeStatus;
+import com.example.cinema.showtime.service.BatchShowtimeAutoGenerationService;
 import com.example.cinema.showtime.service.ShowtimeService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -10,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import java.net.URI;
 import java.time.LocalDate;
@@ -21,6 +23,7 @@ import java.time.LocalDate;
 @Tag(name = "Admin Showtimes", description = "Quản lý lịch chiếu và inventory ghế")
 public class AdminShowtimeController {
     private final ShowtimeService service;
+    private final BatchShowtimeAutoGenerationService batchAutoGenerationService;
 
     @GetMapping
     public PageResponse<ShowtimeResponse> list(
@@ -50,5 +53,22 @@ public class AdminShowtimeController {
     @PutMapping("/{id}")
     public ShowtimeResponse update(@PathVariable Long id, @Valid @RequestBody ShowtimeRequest request) {
         return service.update(id, request);
+    }
+
+    @PostMapping("/auto-generate/preview")
+    public BatchAutoGenerateShowtimesResponse previewAutoGenerate(
+            @Valid @RequestBody BatchAutoGenerateShowtimesRequest request) {
+        return batchAutoGenerationService.preview(request);
+    }
+
+    @PostMapping("/auto-generate")
+    public BatchAutoGenerateShowtimesResponse autoGenerate(
+            @Valid @RequestBody BatchAutoGenerateShowtimesRequest request) {
+        return batchAutoGenerationService.generate(request, currentActor());
+    }
+
+    private String currentActor() {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication == null ? "system" : authentication.getName();
     }
 }

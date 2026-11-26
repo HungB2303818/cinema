@@ -92,3 +92,60 @@ export interface AdminShowtimeFilters {
   size?: number;
   sort?: string;
 }
+
+export interface BatchAutoGenerateShowtimesRequest {
+  cinemaId: number;
+  roomIds: number[];
+  movieIds: number[];
+  from: string; // YYYY-MM-DD
+  to: string; // YYYY-MM-DD
+  daysOfWeek: number[]; // 1..7 (ISO)
+  openTime: string; // HH:mm
+  closeTime: string; // HH:mm
+  slotStepMinutes?: number;
+  cleanupMinutes?: number;
+  staggerMinutes?: number;
+  basePrice: number;
+  vipSurcharge?: number;
+}
+
+export interface BatchShowtimePreviewItem {
+  movieId: number;
+  movieTitle: string;
+  durationMinutes: number;
+  startsAt: string;
+  endsAt: string;
+}
+
+export interface BatchRoomDateResult {
+  date: string;
+  outcome: 'SUCCESS' | 'PARTIAL' | 'SKIPPED' | 'FAILED';
+  plannedCount: number;
+  createdCount: number;
+  skippedCount: number;
+  message: string | null;
+  showtimes: BatchShowtimePreviewItem[];
+}
+
+export interface BatchRoomGenerationResult {
+  roomId: number;
+  roomName: string;
+  plannedCount: number;
+  createdCount: number;
+  skippedCount: number;
+  failedCount: number;
+  dates: BatchRoomDateResult[];
+}
+
+export interface BatchAutoGenerateShowtimesResponse {
+  cinemaId: number;
+  cinemaName: string;
+  from: string;
+  to: string;
+  preview: boolean;
+  totalPlannedCount: number;
+  totalCreatedCount: number;
+  totalSkippedCount: number;
+  totalFailedCount: number;
+  rooms: BatchRoomGenerationResult[];
+}

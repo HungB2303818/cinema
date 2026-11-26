@@ -7,6 +7,8 @@ export * from './hooks/useAdminShowtimes';
 export * from './hooks/useAdminShowtimeDetail';
 export * from './hooks/useCreateShowtime';
 export * from './hooks/useUpdateShowtime';
+export * from './hooks/useAutoGenerateShowtimes';
+export * from './utils/auto-schedule.utils';
 export * from './components/ShowtimeCard';
 export * from './components/CinemaMovieGroup';
 export * from './components/CinemaShowtimeList';

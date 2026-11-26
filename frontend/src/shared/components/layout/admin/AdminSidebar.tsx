@@ -4,7 +4,7 @@ import {
   Film,
   Armchair,
   Calendar,
-  CalendarClock,
+  Sparkles,
   LogOut,
   X,
   ChevronRight,
@@ -40,13 +40,15 @@ const navItems: NavItem[] = [
     to: '/admin/showtimes',
     label: 'Suất chiếu',
     icon: Calendar,
-    isActive: (pathname) => pathname.startsWith('/admin/showtimes'),
+    isActive: (pathname) =>
+      pathname.startsWith('/admin/showtimes') &&
+      !pathname.startsWith('/admin/showtimes/auto-generate'),
   },
   {
-    to: '/admin/schedule-plans',
-    label: 'Lịch tự động',
-    icon: CalendarClock,
-    isActive: (pathname) => pathname.startsWith('/admin/schedule-plans'),
+    to: '/admin/showtimes/auto-generate',
+    label: 'Tạo suất tự động',
+    icon: Sparkles,
+    isActive: (pathname) => pathname.startsWith('/admin/showtimes/auto-generate'),
   },
 ];
 

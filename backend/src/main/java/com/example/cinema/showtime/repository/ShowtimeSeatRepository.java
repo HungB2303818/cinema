@@ -5,6 +5,7 @@ import com.example.cinema.showtime.entity.ShowtimeSeatStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -44,4 +45,12 @@ public interface ShowtimeSeatRepository extends JpaRepository<ShowtimeSeat, Long
     List<ShowtimeSeat> findByCurrentBookingId(Long currentBookingId);
 
     List<ShowtimeSeat> findByStatusAndHoldExpiresAtBefore(ShowtimeSeatStatus status, Instant before);
+
+    @Modifying
+    @Query(value = "INSERT INTO showtime_seats (showtime_id, seat_id, status, version) " +
+            "SELECT :showtimeId, s.id, 'AVAILABLE', 0 " +
+            "FROM seats s " +
+            "WHERE s.room_id = :roomId AND s.status = 'ACTIVE' " +
+            "ORDER BY s.id ASC", nativeQuery = true)
+    int initializeInventoryBulk(@Param("showtimeId") Long showtimeId, @Param("roomId") Long roomId);
 }

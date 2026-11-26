@@ -42,7 +42,6 @@ public class ShowtimeService {
     private static final long MIN_LEAD_SECONDS = 600;
     private final ShowtimeRepository showtimeRepository;
     private final ShowtimeSeatRepository inventoryRepository;
-    private final SchedulePlanRepository schedulePlanRepository;
     private final RoomRepository roomRepository;
     private final SeatRepository seatRepository;
     private final MovieRepository movieRepository;
@@ -65,18 +64,41 @@ public class ShowtimeService {
     public ShowtimeCreatedResponse createInternal(ShowtimeRequest request, String actor, Long schedulePlanId) {
         Room room = lockRoom(request.roomId());
         requireActive(room);
-        requirePlanRoom(schedulePlanId, room.getId());
         Movie movie = movieForSchedule(request.movieId());
         validateSchedule(request, movie);
         List<Seat> seats = activeSeats(room.getId());
         checkOverlap(request, null);
-        Showtime showtime = Showtime.builder().room(room).movie(movie)
-                .schedulePlanId(schedulePlanId).build();
-        apply(showtime, request);
-        showtimeRepository.saveAndFlush(showtime);
+        Showtime showtime = saveShowtimeEntity(request, room, movie, schedulePlanId);
         initializeInventory(showtime, seats);
         audit("showtime.create", showtime.getId(), actor);
         return new ShowtimeCreatedResponse(ShowtimeResponse.from(showtime), seats.size());
+    }
+
+    /**
+     * Batch-optimized variant of {@link #createInternal} that initializes showtime_seats
+     * in a single SQL INSERT ... SELECT statement instead of one INSERT per seat.
+     */
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public ShowtimeCreatedResponse createInternalBulk(ShowtimeRequest request, String actor, Long schedulePlanId) {
+        Room room = lockRoom(request.roomId());
+        requireActive(room);
+        Movie movie = movieForSchedule(request.movieId());
+        validateSchedule(request, movie);
+        checkOverlap(request, null);
+        Showtime showtime = saveShowtimeEntity(request, room, movie, schedulePlanId);
+        int createdSeatCount = inventoryRepository.initializeInventoryBulk(showtime.getId(), room.getId());
+        if (createdSeatCount == 0) {
+            throw new AppException(ErrorCode.ROOM_UNAVAILABLE);
+        }
+        audit("showtime.create", showtime.getId(), actor);
+        return new ShowtimeCreatedResponse(ShowtimeResponse.from(showtime), createdSeatCount);
+    }
+
+    private Showtime saveShowtimeEntity(ShowtimeRequest request, Room room, Movie movie, Long schedulePlanId) {
+        Showtime showtime = Showtime.builder().room(room).movie(movie)
+                .schedulePlanId(schedulePlanId).build();
+        apply(showtime, request);
+        return showtimeRepository.saveAndFlush(showtime);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -245,19 +267,6 @@ public class ShowtimeService {
     private void requireActive(Room room) {
         if (room.getStatus() != RoomStatus.ACTIVE || room.getCinema().getStatus() != CinemaStatus.ACTIVE) {
             throw new AppException(ErrorCode.ROOM_UNAVAILABLE);
-        }
-    }
-
-    private void requirePlanRoom(Long schedulePlanId, Long roomId) {
-        if (schedulePlanId == null) {
-            return;
-        }
-        SchedulePlan plan = schedulePlanRepository.findById(schedulePlanId)
-                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND,
-                        "Không tìm thấy kế hoạch lịch tự động."));
-        if (!plan.getRoom().getId().equals(roomId)) {
-            throw new AppException(ErrorCode.SCHEDULE_INVALID,
-                    "Kế hoạch lịch tự động không thuộc phòng chiếu của suất.");
         }
     }
 
