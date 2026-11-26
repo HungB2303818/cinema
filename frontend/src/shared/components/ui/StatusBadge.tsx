@@ -18,6 +18,10 @@ export type StatusType =
   | 'CUSTOMER'
   | 'STAFF'
   | 'ADMIN'
+  | 'SUCCESS'
+  | 'PARTIAL'
+  | 'SKIPPED'
+  | 'FAILED'
   | string;
 
 export interface StatusBadgeProps {
@@ -72,6 +76,24 @@ const statusConfigMap: Record<string, { label: string; className: string }> = {
   COMPLETED: {
     label: 'Đã hoàn thành',
     className: 'bg-zinc-800 text-zinc-400 font-medium border-none',
+  },
+
+  // Schedule plan generation outcomes
+  SUCCESS: {
+    label: 'Thành công',
+    className: 'bg-emerald-500/20 text-emerald-400 font-semibold border-none',
+  },
+  PARTIAL: {
+    label: 'Một phần',
+    className: 'bg-amber-500/20 text-amber-300 font-semibold border-none',
+  },
+  SKIPPED: {
+    label: 'Bỏ qua',
+    className: 'bg-zinc-800 text-zinc-400 font-medium border-none',
+  },
+  FAILED: {
+    label: 'Thất bại',
+    className: 'bg-red-500/20 text-red-300 font-semibold border-none',
   },
 
   // Cinema statuses

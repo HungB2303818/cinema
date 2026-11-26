@@ -17,6 +17,8 @@ flowchart LR
     TICK --> DB
     REPORT --> DB
     JOB[Scheduled Expiry Job] --> BOOK
+    GEN[Scheduled Auto-generation Job] --> CAT
+    GEN --> DB
 ```
 
 Một Spring Boot app, một MySQL database. Tách theo **business feature** để có thể đổi công nghệ mà không phá vỡ nghiệp vụ. Không cần Kafka, Redis, microservices cho MVP.
@@ -51,7 +53,7 @@ src/test/java/com/example/cinema/
 | `auth` | Password hashing, JWT validation, principal, role | Không tin `userId`/`role` gửi từ client. |
 | `catalog` | Quản lý phim | Soft status, không xóa lịch sử. |
 | `cinema` | Cụm rạp/phòng/ghế vật lý | Physical seat status độc lập inventory. |
-| `showtime` | Tạo/sửa lịch, initialize inventory | Lock room, reject overlap, không sửa suất có booking ảnh hưởng. |
+| `showtime` | Tạo/sửa lịch, initialize inventory, kế hoạch và job sinh tự động | Lock room, reject overlap, không sửa suất có booking ảnh hưởng; sinh idempotent theo ngày. |
 | `booking` | Giữ ghế, cancel, expire, lịch sử | Bảo vệ atomicity, current_booking_id, TTL. |
 | `payment` | Mock result, idempotency, confirm tickets | Một SUCCESS/booking; FAILED không làm FAILED booking. |
 | `ticket` | Lấy vé, check-in | Random ticket code; one checkin per ticket. |
@@ -69,6 +71,8 @@ src/test/java/com/example/cinema/
 | Cancel | Lock booking; lock seats; update CANCELLED; conditional release | `booking` → `showtime_seats.id ASC` | Không release ghế mới đổi chủ. |
 | Expire | Lock booking; lock seats; update EXPIRED; conditional release | `booking` → `showtime_seats.id ASC` | Idempotent, safe to retry. |
 | Check-in | Validate ticket & booking/showtime; insert unique checkin | ticket/booking tùy thiết kế, không đảo thứ tự với payment | Tối đa một check-in. |
+| Generate showtime (mỗi suất) | Lock room; overlap query; insert showtime + inventory | `room` trước | Một suất hoặc không; lỗi một suất không rollback suất khác. |
+| Generate log (mỗi ngày) | `REQUIRES_NEW` insert log | Không khóa room | Log tồn tại kể cả khi sinh lỗi. |
 
 **Ràng buộc khó:** MySQL `REPEATABLE READ` là mặc định và một số query có thể nhận snapshot cũ. Những kiểm tra trạng thái cần sử dụng locking reads trong transaction. Service phải phân biệt entity state đã load trong JPA persistence context và giá trị thay đổi bởi native SQL.
 
@@ -184,6 +188,17 @@ expire(bookingId):
 - `CheckinTransactions`: tra scalar bookingId bằng ticket code → khóa booking → đọc lại ticket/duplicate → DB now và validate CONFIRMED/showtime/phòng/cửa sổ giờ → insert UNIQUE checkin. Không khóa inventory rồi quay lại booking, không đảo thứ tự với payment. Cả STAFF/ADMIN dùng principal, không tin staffId trong request. Audit sau commit chỉ ghi checkinId, không ghi bearer ticket code.
 - `RevenueRepository` aggregate một query duy nhất từ SUCCESS/paid_at, khoảng UTC nửa mở và nhóm ngày UTC+07; `RevenueService` tính tổng từ cùng tập aggregate để không lệch snapshot giữa tổng/ngày. Không cần MySQL timezone tables cho nhóm UTC+07.
 - `SqlExceptionHelper` tắt mặc định vì duplicate errors chứa key/mã vé thô; audit ứng dụng vẫn ghi correlationId/actorId/resourceId/outcome an toàn. Không có outbound payment, Redis, migration hoặc thay đổi giá/lịch sử.
+
+### Sinh lịch tự động — UC-10
+
+- `SchedulePlanService` sở hữu CRUD, kiểm tra xung đột kế hoạch và “Sinh ngay”. Create/update khóa `rooms` trước khi kiểm tra tên/xung đột, dùng `READ_COMMITTED`; conflict xét đồng thời khoảng ngày **và** khung giờ. Update khóa hai phòng theo ID tăng dần nếu đổi phòng, rồi khóa plan row.
+- `ShowtimeAllocationPlanner` là hàm thuần: nhận cửa sổ ngày, `slotStepMinutes`, `cleanupMinutes`, `notBefore`, số suất còn lại, phim theo ưu tiên và các interval bận; trả danh sách slot. Mỗi slot bắt đầu trên lưới bước slot, đủ `duration + cleanup`, kết thúc trước `closeTime`; phim dài hơn cửa sổ bị bỏ qua; tối đa 40 suất/phòng/ngày.
+- `ShowtimeAutoGenerationService.generateDate` **không** bọc transaction cả ngày. Mỗi suất gọi `ShowtimeService.createInternal(request, "system:auto-generation", planId)` trong transaction riêng, tái sử dụng room lock, overlap check và inventory chuẩn. Vì vậy một overlap bị bắt không đánh dấu rollback-only cho các suất sau.
+- Trước khi xếp lịch, service kiểm tra plan `ACTIVE`, ngày trong hiệu lực/thứ, rạp/phòng `ACTIVE`, phòng có ghế `ACTIVE`, phim `SHOWING` hoặc `UPCOMING` đã đến `release_date`, `notBefore = DB now + 10 phút`. Khoảng bận lấy từ suất `SCHEDULED` giao cửa sổ, mở rộng thêm cleanup (lookback 240 phút để bắt suất bắt đầu trước cửa sổ).
+- Kết quả ngày: `SUCCESS` (tạo đủ, không bỏ), `PARTIAL` (tạo một phần hoặc phòng ngừng giữa chừng), `SKIPPED` (không tạo được), `FAILED` (lỗi hệ thống). `ScheduleGenerationLogService.record` dùng `REQUIRES_NEW` để log sống sót khi phần sinh rollback.
+- `ShowtimeAutoGenerationJob` chạy cron mặc định `0 30 0 * * *` theo `Asia/Ho_Chi_Minh`, horizon 7 ngày, chạy bù sau `ApplicationReadyEvent` nếu bật. Job lấy plan `ACTIVE`, bỏ qua ngày đã có log `SUCCESS`/`PARTIAL` với `createdCount > 0`, retry ngày `SKIPPED`/`FAILED`.
+- Guard `AtomicBoolean` chỉ chống chạy chồng trong một JVM. Nhiều instance vẫn an toàn ở mức dữ liệu nhờ unique/overlap + kiểm tra log, nhưng có thể sinh trùng nỗ lực; muốn loại bỏ hoàn toàn cần distributed lock hoặc unique key theo `(plan_id, target_date)` (ngoài phạm vi hiện tại).
+- “Sinh ngay” dùng cùng `generateDate`, bỏ qua ngày đã thành công, giới hạn 31 ngày bao gồm hai đầu và chỉ bổ sung khung trống. Không có preview, không có xóa kế hoạch, không tự hủy suất đã sinh.
 
 ## 7. Time & money
 

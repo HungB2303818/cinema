@@ -92,6 +92,25 @@ Implement UC-03 Create Booking (BR-05…11, BR-14…15).
 
 Đã thêm SDK/config server env, upload multipart ADMIN, kiểm tra nội dung JPEG/PNG và giới hạn 5 MiB/pixel, attach secure_url vào cột poster_url có sẵn sau upload (không giữ DB transaction trong mạng). Giữ API JSON Movie, không đổi schema, không tự xóa asset cũ/orphan. API contract mục 1.1.1; cách cấu hình/export env và curl trong backend/README.md mục 10. Đã chạy `mvnw.cmd verify` Java 17 + MySQL test riêng: 192 tổng, 188 đạt, 4 Movie integration skipped do Docker; 32 test poster mới đều đạt. Chưa chạy upload với tài khoản Cloudinary thật. Không thay trạng thái các task payment/ticket còn lại.
 
+## Mở rộng theo yêu cầu: Lịch chiếu tự động (2026-11-24)
+
+Phạm vi FR-17, UC-10, BR-23…30, TC-53…58.
+
+| Task | Nội dung | Trạng thái |
+|---|---|---|
+| TASK-21 | Flyway `V8__add_schedule_plans.sql`: 3 bảng, `showtimes.schedule_plan_id`, FK/index/CHECK; cập nhật DDL chuẩn và docs 05 | Hoàn thành |
+| TASK-22 | Entity/enum/repository/DTO cho plan, movie priority, generation log; mở rộng `ShowtimeResponse` | Hoàn thành |
+| TASK-23 | `ShowtimeAllocationPlanner` thuần: ưu tiên phim, duration + cleanup, bước slot, interval bận, `notBefore`, giới hạn 40 | Hoàn thành, unit test đạt |
+| TASK-24 | `ShowtimeService.createInternal`, `SchedulePlanService`, `ScheduleGenerationLogService` (`REQUIRES_NEW`), `ShowtimeAutoGenerationService` transaction từng suất | Hoàn thành, unit test đạt |
+| TASK-25 | `ShowtimeAutoGenerationJob`: cron/zone/horizon/startup catch-up, skip ngày thành công, retry ngày lỗi; cấu hình `APP_SHOWTIME_AUTOGEN_*` và tắt trong test profile | Hoàn thành, unit test đạt |
+| TASK-26 | `AdminSchedulePlanController`: list/detail/create/update/generate/logs, ADMIN-only, lỗi theo contract | Hoàn thành, unit test đạt |
+| TASK-27 | Frontend feature `schedule-plans`: types/API/hooks/utils/modal; trang list/form/logs; route, sidebar, StatusBadge, nhãn “Tự động” | Hoàn thành, 7 frontend test đạt; build/lint đạt |
+| TASK-28 | Docs 01/02/03/05/06/07/08/09/11, README, `.env.example`; chạy lại backend/frontend checks | Hoàn thành |
+
+**Kiểm thử đã chạy:** backend full suite 32 test class, 0 failure/error; integration Testcontainers skipped vì Docker không khả dụng và `CINEMA_IT_JDBC_URL` không đặt. Frontend `admin-schedule-plans` 7/7 đạt; full suite còn 3 test lỗi có sẵn ở `cinemas.page.test.tsx` và `movie-hero-banner.test.tsx`, không liên quan thay đổi này. `npm run build` và `npm run lint` đạt (lint còn warning có sẵn/không chặn).
+
+**Giới hạn:** không preview, không xóa kế hoạch, không tự hủy suất đã sinh, không qua nửa đêm, một mức giá/kế hoạch. Job chỉ có guard trong một JVM; đa instance dựa vào overlap + log, chưa có distributed lock.
+
 ## Git workflow đề xuất
 
 - `main`: trạng thái có thể demo.

@@ -69,6 +69,13 @@ app:
       enabled: ${APP_MOVIE_TRANSITION_ENABLED:true}
       cron: "${APP_MOVIE_TRANSITION_CRON:0 1 0 * * *}"
       zone: "${APP_MOVIE_TRANSITION_ZONE:Asia/Ho_Chi_Minh}"
+  showtime:
+    autogeneration:
+      enabled: ${APP_SHOWTIME_AUTOGEN_ENABLED:true}
+      cron: "${APP_SHOWTIME_AUTOGEN_CRON:0 30 0 * * *}"
+      zone: ${APP_SHOWTIME_AUTOGEN_ZONE:Asia/Ho_Chi_Minh}
+      horizon-days: ${APP_SHOWTIME_AUTOGEN_HORIZON_DAYS:7}
+      startup-catchup: ${APP_SHOWTIME_AUTOGEN_STARTUP_CATCHUP:true}
 
 # Swagger / OpenAPI documentation
 springdoc:

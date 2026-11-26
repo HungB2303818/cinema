@@ -61,7 +61,6 @@ export const HomePage: React.FC = () => {
   const { data: cinemas = [] } = useCinemas();
   const movies = movieData?.content || [];
   const totalPages = movieData?.totalPages || 0;
-  const totalElements = movieData?.totalElements || 0;
 
   return (
     <div className="space-y-10 pb-16">

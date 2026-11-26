@@ -8,11 +8,12 @@ import java.time.Instant;
 public record ShowtimeResponse(Long id, Long movieId, Long cinemaId, String cinemaName,
                                Long roomId, String roomName, Instant startsAt, Instant endsAt,
                                Integer cleanupMinutes, BigDecimal basePrice, BigDecimal vipSurcharge,
-                               ShowtimeStatus status) {
+                               ShowtimeStatus status, Long schedulePlanId) {
     public static ShowtimeResponse from(Showtime showtime) {
         var room = showtime.getRoom();
         return new ShowtimeResponse(showtime.getId(), showtime.getMovie().getId(), room.getCinema().getId(),
                 room.getCinema().getName(), room.getId(), room.getName(), showtime.getStartsAt(), showtime.getEndsAt(),
-                showtime.getCleanupMinutes(), showtime.getBasePrice(), showtime.getVipSurcharge(), showtime.getStatus());
+                showtime.getCleanupMinutes(), showtime.getBasePrice(), showtime.getVipSurcharge(), showtime.getStatus(),
+                showtime.getSchedulePlanId());
     }
 }

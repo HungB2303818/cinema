@@ -7,11 +7,11 @@ Hệ thống đặt vé xem phim trực tuyến được xây dựng với kiế
 - **Backend:** Java 17, Spring Boot 3.3.5
 - **Security:** Spring Security 6, JWT (JSON Web Token), BCrypt
 - **Cơ sở dữ liệu:** MySQL 8.0 (InnoDB, Collation `utf8mb4_unicode_ci`, Timezone UTC)
-- **Quản lý Schema Migration:** Flyway (`V1__init_schema.sql`, `V2__seed_test_data.sql`)
+- **Quản lý Schema Migration:** Flyway (`V1__init_schema.sql` … `V8__add_schedule_plans.sql`)
 - **Tài liệu API:** OpenAPI 3 / Swagger UI (`springdoc-openapi`)
 - **Kiểm thử:** JUnit 5, AssertJ, Mockito, Testcontainers MySQL
 - **Container:** Docker & Docker Compose
-- **Frontend (dự kiến):** React + Vite
+- **Frontend:** React + Vite
 
 ## 2. Cấu trúc thư mục
 
@@ -75,6 +75,27 @@ cd backend
 - **Admin:** `admin@cinema.com` / `Password@123`
 - **Staff:** `staff@cinema.com` / `Password@123`
 - **Customer:** `customer1@cinema.com` / `Password@123`
+
+### Lịch chiếu tự động
+
+Admin cấu hình kế hoạch theo phòng tại **Quản trị → Lịch tự động** (`/admin/schedule-plans`): khoảng ngày hiệu lực, thứ trong tuần, khung giờ mỗi ngày, bước slot, thời gian dọn phòng, giá vé và danh sách phim theo thứ tự ưu tiên. Mỗi kế hoạch gắn một phòng; hai kế hoạch cùng phòng chỉ được giao khoảng ngày khi khung giờ rời nhau.
+
+- **Job hằng ngày:** mặc định 00:30 giờ Việt Nam, sinh trước 7 ngày, chạy bù khi backend khởi động. Job bỏ qua ngày đã sinh thành công, retry ngày `SKIPPED`/`FAILED`, bỏ qua khung bị chiếm và ghi nhật ký; một lỗi không dừng cả lần chạy.
+- **Sinh ngay:** Admin chọn khoảng ngày trong hiệu lực, tối đa 31 ngày; hệ thống chỉ bổ sung khung trống, không sửa/xóa suất đã có.
+- **Theo dõi:** trang **Nhật ký** hiển thị `SUCCESS`/`PARTIAL`/`SKIPPED`/`FAILED`, số suất tạo/bỏ qua, lý do và liên kết tới suất chiếu. Suất sinh tự động có nhãn **Tự động** và lưu `schedule_plan_id` để truy vết.
+- **Giới hạn:** không preview, không xóa kế hoạch (chỉ bật/tắt), không tự hủy suất đã sinh, không hỗ trợ khung qua nửa đêm, một mức giá cho cả kế hoạch, tối đa 40 suất/phòng/ngày.
+
+Cấu hình job qua biến môi trường:
+
+| Biến | Mặc định | Ý nghĩa |
+|---|---|---|
+| `APP_SHOWTIME_AUTOGEN_ENABLED` | `true` | Bật/tắt job. |
+| `APP_SHOWTIME_AUTOGEN_CRON` | `0 30 0 * * *` | Cron 6 trường của Spring. |
+| `APP_SHOWTIME_AUTOGEN_ZONE` | `Asia/Ho_Chi_Minh` | Múi giờ chạy cron. |
+| `APP_SHOWTIME_AUTOGEN_HORIZON_DAYS` | `7` | Số ngày sinh trước, tính từ hôm nay. |
+| `APP_SHOWTIME_AUTOGEN_STARTUP_CATCHUP` | `true` | Chạy bù một lần sau khi ứng dụng khởi động. |
+
+Job có thể tắt trong test bằng `app.showtime.autogeneration.enabled=false` (đã đặt trong `application-test.yml`). Khi chạy nhiều instance, guard chỉ có tác dụng trong một JVM; dữ liệu vẫn được bảo vệ bởi kiểm tra overlap và log, nhưng có thể có nỗ lực sinh trùng.
 
 ### Không tạo được suất chiếu do phòng chưa có ghế
 

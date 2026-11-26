@@ -173,6 +173,17 @@ $env:DB_NAME = 'cinema_week4_it_20261104' # context smoke test cũ cũng dùng s
 | TC-51 | `GET /api/admin/showtimes/{id}` chi tiết suất admin | Chỉ ADMIN truy cập; đọc thành công kể cả suất phim HIDDEN hoặc phòng MAINTENANCE; 404 khi ID không tồn tại; 400 khi ID không hợp lệ; không lộ owner hold/ticket code | FR-04/15, UC-02, BR-21 |
 | TC-52 | Frontend Quản lý Phòng, Ghế vật lý & Suất chiếu (FE-10) | Chọn rạp, danh sách phòng phân trang, tạo/sửa phòng; sơ đồ ghế vật lý ACTIVE/MAINTENANCE, tạo batch ghế atomic có preview; tạo/sửa suất với timezone Asia/Ho_Chi_Minh ↔ UTC chuẩn xác, bắt lỗi overlap có cleanup, khóa sửa khi đã có suất/booking | FR-04/05, UC-02, BR-01..05/19/20/21 |
 
+### Lịch chiếu tự động — UC-10 & FE-11 (2026-11-24)
+
+| TC | Kịch bản | Kỳ vọng | Tham chiếu |
+|---|---|---|---|
+| TC-53 | CRUD kế hoạch; validate tên/ngày/giờ/thứ/bước slot/giá/phim; tạo hai kế hoạch `ACTIVE` cùng phòng | Tạo/sửa/đọc đúng payload và thứ tự ưu tiên; lỗi 400/404/409 đúng mã; hai plan giao cả ngày lẫn giờ bị 409, khung giờ rời nhau được phép; phim HIDDEN bị từ chối | FR-17, UC-10, BR-23/25 |
+| TC-54 | Planner xếp suất với nhiều phim, duration/cleanup khác nhau, interval bận, `notBefore`, cửa sổ hẹp | Đúng thứ tự ưu tiên; mỗi slot đủ duration + cleanup, nằm trên lưới bước slot, không vượt `closeTime`; bỏ phim quá dài; tôn trọng `notBefore` và giới hạn 40 suất/ngày | BR-24/26/28 |
+| TC-55 | Generate cho plan `INACTIVE`, phòng MAINTENANCE, không có ghế ACTIVE, không có phim hợp lệ, khung bị chiếm | Trả `SKIPPED`/`PARTIAL` kèm lý do; log theo ngày có outcome/count/message; không tạo suất sai; lỗi một ngày không dừng ngày khác | BR-24/29 |
+| TC-56 | Idempotency: chạy lại cùng ngày; “Sinh ngay” sau khi đã có suất; hai request đồng thời cùng phòng | Không tạo trùng; “Sinh ngay” chỉ bổ sung khung trống; overlap trả 409/bỏ qua và log; inventory không mồ côi | BR-26/27 |
+| TC-57 | Job horizon 7 ngày, bỏ qua ngày `SUCCESS`/`PARTIAL` có `createdCount > 0`, retry `SKIPPED`/`FAILED`, startup catch-up | Chỉ xử lý ngày đúng thứ/hiệu lực; không chạy chồng trong một JVM; retry ngày lỗi; catch-up chạy khi bật và bỏ qua khi tắt | BR-27, FR-17 |
+| TC-58 | Admin UI list/filter/form/generate/logs và phân quyền | List/filter đồng bộ URL; form validate và giữ thứ tự phim; modal hiển thị kết quả theo ngày; logs hiển thị 4 outcome và link suất; sidebar active đúng; non-ADMIN bị chặn | FR-17, UC-10, BR-23/29 |
+
 Frontend FE-05 bổ sung test theo các TC hiện có:
 
 - TC-01/17: click đôi chỉ một intent; retry timeout/5xx và reload dùng key/payload cũ, kể cả thứ tự chọn ghế khác; storage hỏng được xử lý an toàn. Không tự POST khi mount/refresh; replay EXPIRED/CANCELLED/CONFIRMED không tạo hold mới.
@@ -216,6 +227,7 @@ Then tổng số booking create thành công = 1
 | UC-07 | 17,18,21 | POST ticket check-in | 13,14,21 |
 | UC-08 | 16,17,21 | GET bookings/me, {id}, tickets | 15 |
 | UC-09 | 22 | GET revenue | 24 |
+| UC-10 | 23…30 | Admin schedule-plans, generate, logs | 53,54,55,56,57,58 |
 
 ## 5. Definition of Done cho một use case
 
@@ -238,3 +250,6 @@ Then tổng số booking create thành công = 1
 5. Staff check-in vé một lần; lần hai nhận 409.
 6. Admin xem revenue; kiểm tra chỉ SUCCESS được tính.
 7. Lặp với một booking khác để thời hạn 5 phút kết thúc; xác minh có thể giành ghế an toàn.
+8. Tạo kế hoạch lịch tự động cho một phòng, bật và “Sinh ngay” một ngày; mở trang suất chiếu kiểm tra giờ, giá, inventory và nhãn “Tự động”.
+9. Tạo tay một suất chen vào khung, sinh lại và xác nhận khung bị bỏ qua nhưng các khung khác vẫn được tạo, có log `PARTIAL`.
+10. Tắt kế hoạch, chạy lại job/sinh ngay và xác nhận không sinh thêm; suất cũ vẫn tồn tại.

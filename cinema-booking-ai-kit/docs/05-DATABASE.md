@@ -12,6 +12,11 @@ erDiagram
     CINEMAS ||--o{ ROOMS : contains
     ROOMS ||--o{ SEATS : contains
     ROOMS ||--o{ SHOWTIMES : hosts
+    ROOMS ||--o{ SCHEDULE_PLANS : configures
+    SCHEDULE_PLANS ||--o{ SCHEDULE_PLAN_MOVIES : prioritizes
+    MOVIES ||--o{ SCHEDULE_PLAN_MOVIES : included_in
+    SCHEDULE_PLANS ||--o{ SCHEDULE_GENERATION_LOGS : logs
+    SCHEDULE_PLANS |o--o{ SHOWTIMES : generates
     SHOWTIMES ||--o{ SHOWTIME_SEATS : inventories
     SEATS ||--o{ SHOWTIME_SEATS : participates_in
     SHOWTIMES ||--o{ BOOKINGS : ordered_for
@@ -24,7 +29,7 @@ erDiagram
 
 **Chú ý:** `SHOWTIME_SEATS → BOOKING_SEATS` là **1:N theo thời gian**: một ghế/suất có thể xuất hiện trong lịch sử nhiều booking hết hạn/hủy, nhưng `showtime_seats.current_booking_id` chỉ trỏ đến **một chủ hiện hành**. ERD không thể hiện đầy đủ các điều kiện liên bảng phải kiểm tra ở service.
 
-## 2. Từ điển dữ liệu — 11 bảng
+## 2. Từ điển dữ liệu — 14 bảng
 
 ### 2.1 `users`
 
@@ -90,8 +95,9 @@ Index `idx_movies_status_release(status, release_date)`.
 | `base_price` | DECIMAL(12,2) | Giá STANDARD, `>=0`. |
 | `vip_surcharge` | DECIMAL(12,2) | Phụ phí VIP, `>=0`. |
 | `status` | ENUM(SCHEDULED,CANCELLED,COMPLETED) | Trạng thái suất. |
+| `schedule_plan_id` | BIGINT, FK nullable | Kế hoạch tự động đã sinh suất này; NULL nếu tạo thủ công. FK `ON DELETE SET NULL`. |
 
-Index `idx_showtimes_room_time(room_id,starts_at,ends_at)` và `idx_showtimes_movie_time(movie_id,starts_at)`. **Chống giao nhau theo thời gian không thể bảo vệ chỉ bằng UNIQUE**: dùng `rooms` row lock + query overlap trong cùng transaction.
+Index `idx_showtimes_room_time(room_id,starts_at,ends_at)`, `idx_showtimes_movie_time(movie_id,starts_at)` và `idx_showtimes_schedule_plan(schedule_plan_id,starts_at)`. **Chống giao nhau theo thời gian không thể bảo vệ chỉ bằng UNIQUE**: dùng `rooms` row lock + query overlap trong cùng transaction.
 
 ### 2.7 `bookings`
 
@@ -162,6 +168,44 @@ DB **không** đảm bảo `seat.room_id = showtime.room_id`, cũng không đả
 
 `id` BIGINT PK; `booking_seat_id` BIGINT FK + **UNIQUE**; `staff_id` BIGINT FK `users.id`; `checked_in_at` DATETIME(3) UTC. Chỉ STAFF/ADMIN được tạo; DB FK chỉ xác nhận có user, quyền staff/admin phải kiểm tra trong service.
 
+### 2.12 `schedule_plans`
+
+| Column | Kiểu | Ý nghĩa |
+|---|---|---|
+| `id` | BIGINT, PK | Mã kế hoạch. |
+| `room_id` | BIGINT, FK `rooms.id` | Mỗi kế hoạch gắn một phòng; `ON DELETE RESTRICT`. |
+| `name` | VARCHAR(150) | Tên kế hoạch; **UNIQUE (`room_id`,`name`)**. |
+| `effective_from`, `effective_to` | DATE | Khoảng ngày hiệu lực; `effective_to >= effective_from`. |
+| `days_of_week` | INT | Bitmask thứ 1..7 (Thứ 2 = bit 0 … CN = bit 6), `CHECK BETWEEN 1 AND 127`. |
+| `open_time`, `close_time` | TIME | Khung giờ mỗi ngày theo giờ Việt Nam; `open_time < close_time` (không qua nửa đêm). |
+| `slot_step_minutes` | INT | Bước lưới slot, `5..120`, mặc định 15. |
+| `cleanup_minutes` | INT | Thời gian dọn phòng ghi vào suất, `0..240`, mặc định 15. |
+| `base_price`, `vip_surcharge` | DECIMAL(12,2) | Giá áp cho mọi suất sinh từ kế hoạch; `>= 0`. |
+| `status` | ENUM(ACTIVE,INACTIVE) | Chỉ `ACTIVE` mới sinh lịch. |
+| `created_at`, `updated_at` | DATETIME(3) | UTC. |
+
+Index `idx_schedule_plan_room_status(room_id,status,effective_from,effective_to)` phục vụ job và kiểm tra xung đột.
+
+### 2.13 `schedule_plan_movies`
+
+`id` BIGINT PK; `plan_id` BIGINT FK `schedule_plans.id` (`ON DELETE CASCADE`); `movie_id` BIGINT FK `movies.id` (`ON DELETE RESTRICT`); `priority` INT `>= 0` và **UNIQUE (`plan_id`,`movie_id`)**. Service giữ `priority` liên tục từ 0 theo thứ tự ưu tiên; phim đầu tiên được xếp trước. Index `idx_schedule_plan_movies_movie(movie_id)`.
+
+### 2.14 `schedule_generation_logs`
+
+| Column | Kiểu | Ý nghĩa |
+|---|---|---|
+| `id` | BIGINT, PK | Mã log. |
+| `plan_id` | BIGINT, FK `schedule_plans.id` | Kế hoạch; `ON DELETE RESTRICT`. |
+| `target_date` | DATE | Ngày được sinh (giờ Việt Nam). |
+| `outcome` | ENUM(SUCCESS,PARTIAL,SKIPPED,FAILED) | Kết quả ngày. |
+| `created_count` | INT | Số suất tạo được, `>= 0`. |
+| `skipped_count` | INT | Số khung bị bỏ qua do bận/không hợp lệ, `>= 0`. |
+| `message` | VARCHAR(1000), nullable | Lý do/ghi chú ngắn, không chứa dữ liệu nhạy cảm. |
+| `run_id` | VARCHAR(36) | UUID của lần chạy job hoặc “Sinh ngay”. |
+| `created_at` | DATETIME(3) | UTC. |
+
+Index `idx_schedule_log_plan_date(plan_id,target_date,created_at)` và `idx_schedule_log_run(run_id)`.
+
 ## 3. Ràng buộc liên bảng phải bảo vệ trong Service Layer
 
 1. `showtime_seats.seat_id` thuộc `showtimes.room_id` của `showtime_id`.
@@ -172,6 +216,9 @@ DB **không** đảm bảo `seat.room_id = showtime.room_id`, cũng không đả
 6. `ticket_checkins` chỉ được tạo khi booking CONFIRMED, đúng khung giờ và chưa check-in.
 7. Không tạo/sửa showtime chồng interval trong cùng room.
 8. Không xóa/đổi chỗ ghế nếu ảnh hưởng bất kỳ inventory/bookings hiện hữu.
+9. `schedule_plan_movies.priority` liên tục từ 0 trong mỗi kế hoạch; không trùng phim.
+10. Hai kế hoạch `ACTIVE` cùng phòng chỉ được giao khoảng ngày khi khung giờ mỗi ngày **không** giao nhau; kiểm tra dưới room lock.
+11. `showtimes.schedule_plan_id`, nếu có, phải trỏ tới kế hoạch của đúng phòng; service chỉ gán khi sinh từ kế hoạch.
 
 ## 4. Query mẫu hữu ích
 
@@ -204,6 +251,20 @@ WHERE room_id = :roomId AND status = 'SCHEDULED'
 ```
 
 Với UPDATE hiện hữu, loại bỏ chính `showtime.id` đang cập nhật. Phải validate đồng thời `starts_at < ends_at` và không đổi thời gian khi có booking cần bảo toàn.
+
+**Kiểm tra xung đột kế hoạch tự động cùng phòng** (sau khi khóa room):
+
+```sql
+SELECT id FROM schedule_plans
+WHERE room_id = :roomId AND status = 'ACTIVE'
+  AND effective_from <= :newEffectiveTo
+  AND effective_to >= :newEffectiveFrom
+  AND open_time < :newCloseTime
+  AND close_time > :newOpenTime
+  AND (:excludeId IS NULL OR id <> :excludeId);
+```
+
+Chỉ cần không giao **đồng thời** khoảng ngày và khung giờ; hai kế hoạch cùng phòng với khung giờ rời nhau được phép tồn tại.
 
 ## 5. Transaction, lock, migration
 

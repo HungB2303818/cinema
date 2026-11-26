@@ -68,6 +68,14 @@
 | BR-20 | Không thay đổi cấu hình phòng/ghế/lịch chiếu nếu có thể ảnh hưởng booking hiện hữu. | Admin service validate dưới lock, lịch sử giữ nguyên. |
 | BR-21 | Chỉ Admin tạo/sửa suất chiếu; Staff chỉ xử lý check-in (Admin có thể check-in). | Spring Security + method auth. |
 | BR-22 | Doanh thu = tổng `payments.amount` với `payments.status=SUCCESS`, gộp theo `paid_at`, không cộng FAILED/INITIATED. | TC báo cáo. |
+| BR-23 | Chỉ Admin quản lý kế hoạch lịch tự động. Một kế hoạch gắn một phòng, một khoảng ngày, một khung giờ mỗi ngày, một mức giá và danh sách phim ưu tiên. | `@PreAuthorize`; TC-53. |
+| BR-24 | Chỉ sinh khi kế hoạch `ACTIVE`, rạp/phòng `ACTIVE`, phòng có ghế `ACTIVE`; phim phải `SHOWING` hoặc `UPCOMING` đã đến `release_date`. | Scheduler/service validate; TC-55. |
+| BR-25 | Hai kế hoạch `ACTIVE` cùng phòng không được giao cả khoảng ngày và khung giờ; khung giờ không giao nhau được phép. | Conflict check dưới room lock; TC-53. |
+| BR-26 | Suất tự động tôn trọng duration + cleanup + khoảng chiếm dụng của suất `SCHEDULED` hiện có; không sửa/xóa suất cũ. | Planner + `ShowtimeService.createInternal`; TC-54. |
+| BR-27 | Sinh lịch idempotent: job bỏ qua ngày đã tạo suất, retry ngày `SKIPPED`/`FAILED`; “Sinh ngay” chỉ bổ sung khung trống. | Log + overlap query; TC-56, TC-57. |
+| BR-28 | Giờ kế hoạch là giờ Việt Nam, DB lưu UTC; không sinh suất trước `now + 10 phút`; không hỗ trợ khung qua nửa đêm. | `SchedulePlanDays`; TC-54. |
+| BR-29 | Mỗi lần sinh ghi log theo kế hoạch/ngày với outcome, số tạo, số bỏ qua và lý do; log không chứa dữ liệu nhạy cảm. | `ScheduleGenerationLog`; TC-55. |
+| BR-30 | Tắt kế hoạch chỉ dừng sinh mới; suất đã sinh vẫn là suất bình thường và chịu quy tắc sửa hiện tại. | Status check; TC-55. |
 
 ## 5. Những quy tắc dễ bị AI triển khai sai
 
