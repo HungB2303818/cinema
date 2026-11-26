@@ -57,6 +57,7 @@ export const MyTicketsPage: React.FC = () => {
   // Modal and feedback states
   const [cancelTarget, setCancelTarget] = useState<BookingSummaryItem | null>(null);
   const [cancelFeedback, setCancelFeedback] = useState<string | null>(null);
+  const [nowMs] = useState(() => Date.now());
 
   // Fetch real booking history from GET /api/bookings/me
   const {
@@ -237,6 +238,14 @@ export const MyTicketsPage: React.FC = () => {
                       <Film className="w-4 h-4 text-[#e6e2c1] shrink-0" />
                       <span>{b.movieTitle || 'Đơn vé xem phim'}</span>
                     </h3>
+                    {(b.cinemaName || b.roomName) && (
+                      <p className="text-xs text-zinc-400">{[b.cinemaName, b.roomName].filter(Boolean).join(' • ')}</p>
+                    )}
+                    {b.movieStatus === 'HIDDEN' && isConfirmed && b.showtimeStatus === 'SCHEDULED' && b.endsAt && new Date(b.endsAt).getTime() > nowMs && (
+                      <p className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+                        Phim đã ngừng hiển thị để đặt mới. Suất chiếu vẫn diễn ra; vé đã thanh toán vẫn có giá trị sử dụng.
+                      </p>
+                    )}
 
                     <div className="flex flex-wrap items-center gap-4 text-xs text-zinc-400 pt-1">
                       {b.startsAt && (

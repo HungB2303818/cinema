@@ -39,6 +39,7 @@ public class ShowtimeService {
     private static final BigDecimal MAX_PRICE = new BigDecimal("9999999999.99");
     private static final Instant MIN_TIME = Instant.parse("1000-01-01T00:00:00Z");
     private static final Instant MAX_TIME = Instant.parse("9999-12-31T23:59:59.999Z");
+    private static final long MIN_LEAD_SECONDS = 600;
     private final ShowtimeRepository showtimeRepository;
     private final ShowtimeSeatRepository inventoryRepository;
     private final SchedulePlanRepository schedulePlanRepository;
@@ -209,10 +210,14 @@ public class ShowtimeService {
     public SeatMapResponse seatMap(Long id) {
         Requests.positiveId(id);
         Showtime showtime = showtimeRepository.findById(id).orElseThrow(this::notFound);
-        if (showtime.getStatus() != ShowtimeStatus.SCHEDULED || showtime.getMovie().getStatus() == MovieStatus.HIDDEN
+        if (showtime.getStatus() != ShowtimeStatus.SCHEDULED
                 || showtime.getRoom().getStatus() != RoomStatus.ACTIVE
                 || showtime.getRoom().getCinema().getStatus() != CinemaStatus.ACTIVE) {
             throw notFound();
+        }
+        if (showtime.getMovie().getStatus() == MovieStatus.HIDDEN) {
+            throw new AppException(ErrorCode.RESOURCE_NOT_FOUND,
+                    "Phim này hiện tạm ngừng hiển thị để đặt vé mới. Nếu bạn đã có vé, vui lòng kiểm tra trong Vé của tôi.");
         }
         Instant now = databaseTime.now();
         List<SeatMapResponse.SeatItem> seats = inventoryRepository.findSeatMap(id).stream().map(inventory -> {
@@ -265,8 +270,7 @@ public class ShowtimeService {
 
     private void publicMovie(Long id) {
         Requests.positiveId(id);
-        Movie movie = movieRepository.findById(id).orElseThrow(this::notFound);
-        if (movie.getStatus() == MovieStatus.HIDDEN) throw notFound();
+        movieRepository.findById(id).orElseThrow(this::notFound);
     }
 
     private List<Seat> activeSeats(Long roomId) {
@@ -287,6 +291,21 @@ public class ShowtimeService {
         }
         if (starts.getNano() % 1_000_000 != 0 || ends.getNano() % 1_000_000 != 0) {
             throw new AppException(ErrorCode.VALIDATION_ERROR, "Thời gian chỉ hỗ trợ tối đa 3 chữ số phần giây.");
+        }
+        java.time.LocalDate releaseDate = movie.getReleaseDate();
+        if (releaseDate == null) {
+            throw new AppException(ErrorCode.SCHEDULE_INVALID,
+                    "Phim chưa có ngày khởi chiếu; vui lòng cập nhật ngày khởi chiếu trước khi lập lịch.");
+        }
+        java.time.LocalDate startDateVn = starts.atZone(VIETNAM).toLocalDate();
+        if (startDateVn.isBefore(releaseDate)) {
+            throw new AppException(ErrorCode.SCHEDULE_INVALID,
+                    "Giờ bắt đầu không được trước ngày khởi chiếu " + releaseDate + " (Asia/Ho_Chi_Minh).");
+        }
+        Instant earliestStart = databaseTime.now().plusSeconds(MIN_LEAD_SECONDS);
+        if (starts.isBefore(earliestStart)) {
+            throw new AppException(ErrorCode.SCHEDULE_INVALID,
+                    "Giờ bắt đầu phải cách thời điểm hiện tại ít nhất 10 phút.");
         }
     }
 

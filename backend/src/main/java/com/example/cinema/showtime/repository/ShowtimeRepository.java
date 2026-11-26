@@ -54,13 +54,15 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
 
     // Select the movie root once via EXISTS. DISTINCT on s.movie lets Hibernate order by
     // the showtime FK instead of the selected movie PK, which MySQL rejects.
-    @Query(value = "select m from Movie m where m.status <> 'HIDDEN' and exists (" +
+    // HC-02: include HIDDEN movies so customers with existing tickets can still see
+    // their scheduled showtimes; booking creation remains blocked separately.
+    @Query(value = "select m from Movie m where exists (" +
             "select s.id from Showtime s where s.movie = m " +
             "and s.room.cinema.id = :cinemaId and s.status = 'SCHEDULED' " +
             "and s.startsAt >= :start and s.startsAt < :end " +
             "and s.room.status = 'ACTIVE' and s.room.cinema.status = 'ACTIVE' " +
             ") order by m.title asc, m.id asc",
-           countQuery = "select count(m.id) from Movie m where m.status <> 'HIDDEN' and exists (" +
+           countQuery = "select count(m.id) from Movie m where exists (" +
             "select s.id from Showtime s where s.movie = m " +
             "and s.room.cinema.id = :cinemaId and s.status = 'SCHEDULED' " +
             "and s.startsAt >= :start and s.startsAt < :end " +
@@ -72,7 +74,6 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
     @Query("select s from Showtime s where s.room.cinema.id = :cinemaId and s.movie.id in :movieIds " +
             "and s.status = 'SCHEDULED' and s.startsAt >= :start and s.startsAt < :end " +
             "and s.room.status = 'ACTIVE' and s.room.cinema.status = 'ACTIVE' " +
-            "and s.movie.status <> 'HIDDEN' " +
             "order by s.startsAt asc, s.id asc")
     List<Showtime> findShowtimesForCinemaMovies(@Param("cinemaId") Long cinemaId,
             @Param("movieIds") List<Long> movieIds, @Param("start") Instant start, @Param("end") Instant end);
@@ -106,6 +107,25 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
     @EntityGraph(attributePaths = {"room", "room.cinema", "movie"})
     @Query("select s from Showtime s where s.id = :id")
     Optional<Showtime> findAdminDetailById(@Param("id") Long id);
+
+    @Query("select count(s) from Showtime s where s.movie.id = :movieId and s.status = com.example.cinema.showtime.entity.ShowtimeStatus.SCHEDULED "
+            + "and s.endsAt > :now and (:releaseStartVnUtc is null or s.startsAt < :releaseStartVnUtc)")
+    long countReleaseDateConflicts(@Param("movieId") Long movieId, @Param("now") Instant now,
+                                   @Param("releaseStartVnUtc") Instant releaseStartVnUtc);
+
+    @Query("select min(s.startsAt) from Showtime s where s.movie.id = :movieId and s.status = com.example.cinema.showtime.entity.ShowtimeStatus.SCHEDULED "
+            + "and s.endsAt > :now and (:releaseStartVnUtc is null or s.startsAt < :releaseStartVnUtc)")
+    Optional<Instant> findEarliestReleaseDateConflict(@Param("movieId") Long movieId, @Param("now") Instant now,
+                                                      @Param("releaseStartVnUtc") Instant releaseStartVnUtc);
+
+    @Query("select count(s) from Showtime s where s.movie.id = :movieId and s.status = com.example.cinema.showtime.entity.ShowtimeStatus.SCHEDULED and s.endsAt > :now")
+    long countActiveScheduledByMovie(@Param("movieId") Long movieId, @Param("now") Instant now);
+
+    @Query("select min(s.startsAt) from Showtime s where s.movie.id = :movieId and s.status = com.example.cinema.showtime.entity.ShowtimeStatus.SCHEDULED and s.endsAt > :now")
+    Optional<Instant> findEarliestActiveStartByMovie(@Param("movieId") Long movieId, @Param("now") Instant now);
+
+    @Query("select max(s.endsAt) from Showtime s where s.movie.id = :movieId and s.status = com.example.cinema.showtime.entity.ShowtimeStatus.SCHEDULED and s.endsAt > :now")
+    Optional<Instant> findLatestActiveEndByMovie(@Param("movieId") Long movieId, @Param("now") Instant now);
 
     @Query("select s from Showtime s where s.room.id = :roomId " +
            "and s.status = 'SCHEDULED' and s.startsAt < :until and s.endsAt > :from " +

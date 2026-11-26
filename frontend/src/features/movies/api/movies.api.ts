@@ -1,6 +1,6 @@
-import { httpClient } from '@/shared/api/http-client';
+﻿import { httpClient } from '@/shared/api/http-client';
 import type { PageResponse } from '@/shared/types/api.types';
-import type { Movie, MovieQueryParams, MovieRequest, AdminMovieQueryParams } from '../types/movie.types';
+import type { Movie, MovieQueryParams, MovieRequest, AdminMovieQueryParams, MovieHideImpactResponse } from '../types/movie.types';
 
 export const moviesApi = {
   /**
@@ -83,6 +83,14 @@ export const moviesApi = {
         'Content-Type': 'multipart/form-data',
       },
     });
+    return res.data;
+  },
+
+  /**
+   * Admin: Get impact before hiding a movie.
+   */
+  getHideImpact: async (id: number): Promise<MovieHideImpactResponse> => {
+    const res = await httpClient.get<MovieHideImpactResponse>(`/admin/movies/${id}/hide-impact`);
     return res.data;
   },
 };

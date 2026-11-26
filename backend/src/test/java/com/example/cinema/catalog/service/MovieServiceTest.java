@@ -6,6 +6,9 @@ import com.example.cinema.catalog.entity.MovieStatus;
 import com.example.cinema.catalog.repository.MovieRepository;
 import com.example.cinema.common.error.AppException;
 import com.example.cinema.common.error.ErrorCode;
+import com.example.cinema.common.time.DatabaseTime;
+import com.example.cinema.showtime.repository.ShowtimeRepository;
+import com.example.cinema.booking.repository.BookingRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,6 +24,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -32,6 +36,9 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class MovieServiceTest {
     @Mock private MovieRepository repository;
+    @Mock private ShowtimeRepository showtimeRepository;
+    @Mock private BookingRepository bookingRepository;
+    @Mock private DatabaseTime databaseTime;
     @InjectMocks private MovieService service;
 
     @BeforeEach
@@ -52,13 +59,13 @@ class MovieServiceTest {
     }
 
     @Test
-    void hidesHiddenMovieAndMissingMovieWithSameError() {
+    void hiddenMovieIsReadablePubliclyButMissingMovieStill404() {
         when(repository.findById(1L)).thenReturn(Optional.of(movie(MovieStatus.HIDDEN)));
         when(repository.findById(2L)).thenReturn(Optional.empty());
-        for (long id : new long[]{1, 2}) {
-            assertThatThrownBy(() -> service.getPublic(id)).isInstanceOfSatisfying(AppException.class,
-                    ex -> assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.RESOURCE_NOT_FOUND));
-        }
+
+        assertThat(service.getPublic(1L).status()).isEqualTo(MovieStatus.HIDDEN);
+        assertThatThrownBy(() -> service.getPublic(2L)).isInstanceOfSatisfying(AppException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.RESOURCE_NOT_FOUND));
     }
 
     @Test
@@ -147,6 +154,38 @@ class MovieServiceTest {
     void cannotUpdateMissingMovie() {
         when(repository.findById(1L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.update(1L, request(MovieStatus.SHOWING))).isInstanceOf(AppException.class);
+    }
+
+    @Test
+    void rejectsReleaseDateChangeWhenActiveScheduledShowtimeWouldViolate() {
+        Movie movie = movie(MovieStatus.SHOWING);
+        movie.setReleaseDate(LocalDate.of(2026, 11, 1));
+        when(repository.findById(1L)).thenReturn(Optional.of(movie));
+        when(databaseTime.now()).thenReturn(Instant.parse("2026-11-10T00:00:00Z"));
+        when(showtimeRepository.countReleaseDateConflicts(eq(1L), any(), any())).thenReturn(2L);
+        when(showtimeRepository.findEarliestReleaseDateConflict(eq(1L), any(), any()))
+                .thenReturn(Optional.of(Instant.parse("2026-11-15T02:00:00Z")));
+
+        MovieRequest laterRelease = new MovieRequest(" Phim mới ", "Mô tả", 120, "Hành động", "T16",
+                LocalDate.of(2026, 12, 1), null, MovieStatus.SHOWING, null);
+
+        assertThatThrownBy(() -> service.update(1L, laterRelease)).isInstanceOfSatisfying(AppException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.RESOURCE_STATE_CONFLICT));
+        assertThat(movie.getReleaseDate()).isEqualTo(LocalDate.of(2026, 11, 1));
+    }
+
+    @Test
+    void allowsEarlierReleaseDateChange() {
+        Movie movie = movie(MovieStatus.SHOWING);
+        movie.setReleaseDate(LocalDate.of(2026, 11, 20));
+        when(repository.findById(1L)).thenReturn(Optional.of(movie));
+        MovieRequest earlierRelease = new MovieRequest(" Phim mới ", "Mô tả", 120, "Hành động", "T16",
+                LocalDate.of(2026, 11, 10), null, MovieStatus.SHOWING, null);
+
+        var result = service.update(1L, earlierRelease);
+
+        assertThat(result.releaseDate()).isEqualTo(LocalDate.of(2026, 11, 10));
+        verify(showtimeRepository, never()).countReleaseDateConflicts(any(), any(), any());
     }
 
     @Test

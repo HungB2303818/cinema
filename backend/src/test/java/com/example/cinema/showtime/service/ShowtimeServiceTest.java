@@ -43,11 +43,13 @@ class ShowtimeServiceTest {
     Showtime showtime;
 
     @BeforeEach void setup() {
-        movie = Movie.builder().id(1L).title("Phim").durationMinutes(120).status(MovieStatus.SHOWING).build();
+        movie = Movie.builder().id(1L).title("Phim").durationMinutes(120).status(MovieStatus.SHOWING)
+                .releaseDate(java.time.LocalDate.of(2026, 11, 1)).build();
         room = Room.builder().id(2L).name("Phòng").cinema(Cinema.builder().id(3L).name("Rạp").build()).build();
         showtime = Showtime.builder().id(4L).movie(movie).room(room).startsAt(start).endsAt(start.plusSeconds(7200))
                 .basePrice(new BigDecimal("75000")).vipSurcharge(new BigDecimal("20000")).build();
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken("admin", null, List.of()));
+        lenient().when(time.now()).thenReturn(start.minusSeconds(3600));
     }
     @AfterEach void clear() { SecurityContextHolder.clearContext(); }
 
@@ -111,6 +113,20 @@ class ShowtimeServiceTest {
         assertCode(() -> service.create(request), ErrorCode.SCHEDULE_INVALID);
     }
 
+    @Test void rejectsCreateWhenMovieHasNoReleaseDate() {
+        prepareCreate();
+        movie.setReleaseDate(null);
+        assertCode(() -> service.create(request(start, start.plusSeconds(7200))), ErrorCode.SCHEDULE_INVALID);
+        verify(showtimes, never()).saveAndFlush(any());
+    }
+
+    @Test void rejectsCreateWhenStartsBeforeReleaseDate() {
+        prepareCreate();
+        movie.setReleaseDate(java.time.LocalDate.of(2026, 11, 18));
+        assertCode(() -> service.create(request(start, start.plusSeconds(7200))), ErrorCode.SCHEDULE_INVALID);
+        verify(showtimes, never()).saveAndFlush(any());
+    }
+
     @Test void refusesUpdateForAnyHistoricalBooking() {
         prepareUpdate();
         when(bookings.findHistoryForUpdate(4L)).thenReturn(List.of(10L));
@@ -151,7 +167,7 @@ class ShowtimeServiceTest {
         showtime.setStatus(ShowtimeStatus.SCHEDULED);
         movie.setStatus(MovieStatus.HIDDEN);
         assertCode(() -> service.seatMap(4L), ErrorCode.RESOURCE_NOT_FOUND);
-        verifyNoInteractions(time, inventory);
+        verifyNoInteractions(inventory);
     }
 
     @Test void convertsVietnamDayToHalfOpenUtcRange() {
@@ -271,6 +287,30 @@ class ShowtimeServiceTest {
         assertThat(request.vipSurcharge()).isEqualByComparingTo(BigDecimal.ZERO);
     }
 
+    @Test void rejectsCreateWhenStartsTooSoon() {
+        prepareCreate();
+        when(time.now()).thenReturn(start.minusSeconds(599));
+        assertCode(() -> service.create(request(start, start.plusSeconds(7200))), ErrorCode.SCHEDULE_INVALID);
+        verify(showtimes, never()).saveAndFlush(any());
+        verifyNoInteractions(inventory);
+    }
+
+    @Test void allowsCreateAtExactMinimumLeadTime() {
+        prepareCreate();
+        when(time.now()).thenReturn(start.minusSeconds(600));
+        when(seats.findByRoomIdAndStatusOrderByIdAsc(2L, PhysicalSeatStatus.ACTIVE)).thenReturn(List.of(seat(5L, SeatType.STANDARD)));
+        when(showtimes.saveAndFlush(any())).thenAnswer(call -> { Showtime s = call.getArgument(0); s.setId(8L); return s; });
+        var result = service.create(request(start, start.plusSeconds(7200)));
+        assertThat(result.createdSeatCount()).isEqualTo(1);
+    }
+
+    @Test void rejectsUpdateWhenStartsTooSoon() {
+        prepareUpdate();
+        when(time.now()).thenReturn(start.minusSeconds(599));
+        assertCode(() -> service.update(4L, request(start, start.plusSeconds(7200))), ErrorCode.SCHEDULE_INVALID);
+        verify(showtimes, never()).flush();
+    }
+
     private void prepareCreate() {
         when(rooms.findByIdForUpdate(2L)).thenReturn(Optional.of(room));
         when(movies.findById(1L)).thenReturn(Optional.of(movie));
@@ -279,6 +319,7 @@ class ShowtimeServiceTest {
         when(showtimes.findRoomIdById(4L)).thenReturn(Optional.of(2L));
         when(rooms.findByIdForUpdate(2L)).thenReturn(Optional.of(room));
         when(showtimes.findByIdForUpdate(4L)).thenReturn(Optional.of(showtime));
+        lenient().when(movies.findById(1L)).thenReturn(Optional.of(movie));
     }
     private ShowtimeRequest request(Instant starts, Instant ends) {
         return new ShowtimeRequest(1L, 2L, starts, ends, 15, new BigDecimal("75000"), new BigDecimal("20000"));

@@ -29,7 +29,7 @@ describe('MovieHeroBanner', () => {
     // Full-width Image with high priority for LCP
     const img = screen.getByRole('img', { name: /Paul Atreides và Chani/i });
     expect(img).toBeInTheDocument();
-    expect(img).toHaveAttribute('src', '/banners/dune_fullwidth_seamless.jpg');
+    expect(img).toHaveAttribute('src', '/banners/dune_banner_2.webp');
     expect(img).toHaveAttribute('fetchpriority', 'high');
   });
 
@@ -43,7 +43,7 @@ describe('MovieHeroBanner', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Banner tiếp theo' }));
     expect(screen.getByRole('heading', { name: /GODZILLA MINUS ZERO/i })).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: /Godzilla trồi lên từ biển/i })).toHaveAttribute('src', '/banners/godzilla_banner.avif');
+    expect(screen.getByRole('img', { name: /Godzilla trồi lên từ biển/i })).toHaveAttribute('src', '/banners/godzilla_banner.webp');
 
     fireEvent.click(screen.getByRole('button', { name: 'Banner tiếp theo' }));
     expect(screen.getByRole('heading', { name: /DUNE: HÀNH TINH CÁT/i })).toBeInTheDocument();

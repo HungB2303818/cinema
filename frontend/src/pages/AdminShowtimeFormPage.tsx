@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import {
   ArrowLeft,
+  AlertTriangle,
+  CalendarClock,
   Clock,
   DollarSign,
   ShieldAlert,
@@ -33,6 +35,11 @@ import {
 import type { ApiError, FieldErrorItem } from '@/shared/types/api.types';
 import { ApiErrorResponse } from '@/shared/api/http-client';
 
+const formatVnDate = (isoDate: string) => {
+  const [year, month, day] = isoDate.split('-');
+  return `${day}/${month}/${year}`;
+};
+
 export const AdminShowtimeFormPage: React.FC = () => {
   const { showtimeId } = useParams<{ showtimeId: string }>();
   const [searchParams] = useSearchParams();
@@ -63,6 +70,7 @@ export const AdminShowtimeFormPage: React.FC = () => {
   const [startsAtError, setStartsAtError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdResult, setCreatedResult] = useState<ShowtimeCreatedResponse | null>(null);
+  const [minStartAt, setMinStartAt] = useState(() => addMinutesToVietnamLocal(utcIsoToVietnamLocalInput(new Date().toISOString()), 10));
 
   // Queries
   const { data: moviesData, isLoading: isLoadingMovies } = useAdminMovies({ size: 100 });
@@ -96,13 +104,18 @@ export const AdminShowtimeFormPage: React.FC = () => {
 
   // Populate data when editing
   const hasInitializedRef = useRef(false);
+  const originalStartsAtRef = useRef<string | null>(null);
+  const [originalStartsAt, setOriginalStartsAt] = useState<string | null>(null);
   useEffect(() => {
     if (existingShowtime && !hasInitializedRef.current) {
       hasInitializedRef.current = true;
+      const localStartsAt = utcIsoToVietnamLocalInput(existingShowtime.startsAt);
+      originalStartsAtRef.current = localStartsAt;
+      setOriginalStartsAt(localStartsAt);
       setMovieId(existingShowtime.movieId);
       setCinemaId(existingShowtime.cinemaId);
       setRoomId(existingShowtime.roomId);
-      setStartsAt(utcIsoToVietnamLocalInput(existingShowtime.startsAt));
+      setStartsAt(localStartsAt);
       setCleanupMinutes(existingShowtime.cleanupMinutes ?? 15);
       setBasePrice(existingShowtime.basePrice);
       setVipSurcharge(existingShowtime.vipSurcharge ?? 0);
@@ -126,6 +139,39 @@ export const AdminShowtimeFormPage: React.FC = () => {
     if (!movieId || !moviesData?.content) return null;
     return moviesData.content.find((m) => m.id === movieId);
   }, [movieId, moviesData]);
+
+  useEffect(() => {
+    const updateMin = () => setMinStartAt(addMinutesToVietnamLocal(utcIsoToVietnamLocalInput(new Date().toISOString()), 10));
+    updateMin();
+    const interval = window.setInterval(updateMin, 30_000);
+    return () => window.clearInterval(interval);
+  }, []);
+
+  const releaseDateMin = useMemo(() => {
+    if (!selectedMovie?.releaseDate) return undefined;
+    return `${selectedMovie.releaseDate}T00:00`;
+  }, [selectedMovie]);
+
+  // HC-01 UX: the picker deliberately does NOT disable dates before the release date.
+  // Admin can still choose any date/time, but an inline error explains the violation
+  // and submit stays blocked until the selection is valid.
+  const releaseDateViolation = useMemo(() => {
+    if (!startsAt || !releaseDateMin || !selectedMovie?.releaseDate) return null;
+    return startsAt < releaseDateMin ? selectedMovie.releaseDate : null;
+  }, [startsAt, releaseDateMin, selectedMovie]);
+
+  const effectiveMinStartAt = useMemo(() => {
+    if (isEdit && originalStartsAt === startsAt) return undefined;
+    return minStartAt;
+  }, [isEdit, minStartAt, originalStartsAt, startsAt]);
+
+  const chooseReleaseDate = () => {
+    if (!selectedMovie?.releaseDate) return;
+    const timePart = startsAt.includes('T') ? startsAt.split('T')[1] : '09:00';
+    const candidate = `${selectedMovie.releaseDate}T${timePart}`;
+    setStartsAt(candidate < minStartAt ? minStartAt : candidate);
+    setStartsAtError(null);
+  };
 
   // Auto-calculate end time from start time and movie duration
   const computedEndsAt = useMemo(() => {
@@ -166,6 +212,21 @@ export const AdminShowtimeFormPage: React.FC = () => {
     if (!startsAt) {
       setStartsAtError('Chọn giờ bắt đầu');
       setFormError('Vui lòng chọn giờ bắt đầu chiếu.');
+      return;
+    }
+    const currentMinStartAt = addMinutesToVietnamLocal(utcIsoToVietnamLocalInput(new Date().toISOString()), 10);
+    setMinStartAt(currentMinStartAt);
+    const keepExistingPastStart = Boolean(isEdit && originalStartsAtRef.current && startsAt === originalStartsAtRef.current);
+    if (releaseDateViolation) {
+      const msg = `Ngày bắt đầu phải từ ngày khởi chiếu ${formatVnDate(releaseDateViolation)} trở đi. Vui lòng chọn lại.`;
+      setStartsAtError(msg);
+      setFormError(msg);
+      return;
+    }
+    if (!keepExistingPastStart && startsAt < currentMinStartAt) {
+      const msg = 'Giờ bắt đầu phải cách hiện tại ít nhất 10 phút.';
+      setStartsAtError(msg);
+      setFormError('Giờ bắt đầu phải cách thời điểm hiện tại ít nhất 10 phút. Vui lòng chọn thời điểm muộn hơn.');
       return;
     }
     if (!computedEndsAt) {
@@ -376,6 +437,9 @@ export const AdminShowtimeFormPage: React.FC = () => {
             <li>
               <strong>Bảo vệ lịch sử:</strong> Chỉ sửa được suất ở trạng thái <code>SCHEDULED</code> và chưa có bất kỳ booking lịch sử nào (kể cả EXPIRED hoặc CANCELLED).
             </li>
+            <li>
+              <strong>Ngày khởi chiếu (HC-01):</strong> Admin vẫn chọn được ngày tùy ý, nhưng nếu giờ bắt đầu trước ngày khởi chiếu thì hệ thống báo lỗi và yêu cầu chọn lại từ ngày khởi chiếu trở đi.
+            </li>
           </ul>
         </div>
       </div>
@@ -415,15 +479,26 @@ export const AdminShowtimeFormPage: React.FC = () => {
               </select>
             )}
             <p className="text-[11px] text-zinc-500 mt-1">
-              Phim ở trạng thái HIDDEN bị loại trừ khỏi danh sách lựa chọn lập lịch.
+              Phim HIDDEN bị loại trừ. Bạn vẫn chọn được ngày bất kỳ, nhưng hệ thống sẽ báo lỗi nếu giờ bắt đầu trước ngày khởi chiếu (HC-01).
             </p>
           </div>
 
           {selectedMovie && (
-            <div className="bg-[#090a0f] border border-[#252836] rounded-xl p-3 flex items-center justify-between text-xs">
-              <span className="text-zinc-400">Thời lượng phim:</span>
-              <span className="font-bold text-[#e6e2c1]">{selectedMovie.durationMinutes} phút</span>
+            <div className="bg-[#090a0f] border border-[#252836] rounded-xl p-3 space-y-1 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-zinc-400">Thời lượng phim:</span>
+                <span className="font-bold text-[#e6e2c1]">{selectedMovie.durationMinutes} phút</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-zinc-400">Ngày khởi chiếu:</span>
+                <span className={`font-bold ${selectedMovie.releaseDate ? 'text-[#e6e2c1]' : 'text-red-400'}`}>
+                  {selectedMovie.releaseDate || 'Chưa có — cần cập nhật'}
+                </span>
+              </div>
             </div>
+          )}
+          {selectedMovie && !selectedMovie.releaseDate && (
+            <AlertMessage variant="warning">Phim chưa có ngày khởi chiếu. Vui lòng cập nhật trước khi lập lịch (HC-01).</AlertMessage>
           )}
         </div>
 
@@ -521,9 +596,23 @@ export const AdminShowtimeFormPage: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="startsAtInput" className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">
-                Giờ bắt đầu <span className="text-red-400">*</span>
-              </label>
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <label htmlFor="startsAtInput" className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider">
+                  Giờ bắt đầu <span className="text-red-400">*</span>
+                </label>
+                {selectedMovie?.releaseDate && (
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+                      releaseDateViolation
+                        ? 'border-red-500/40 bg-red-500/10 text-red-300'
+                        : 'border-amber-500/30 bg-amber-500/10 text-amber-300'
+                    }`}
+                  >
+                    <CalendarClock className="h-3 w-3" aria-hidden="true" />
+                    Khởi chiếu {formatVnDate(selectedMovie.releaseDate)}
+                  </span>
+                )}
+              </div>
               <DateTimePicker
                 id="startsAtInput"
                 value={startsAt}
@@ -531,14 +620,40 @@ export const AdminShowtimeFormPage: React.FC = () => {
                   setStartsAt(nextValue);
                   setStartsAtError(null);
                 }}
-                error={Boolean(startsAtError)}
+                error={Boolean(startsAtError || releaseDateViolation)}
                 disabled={isSubmitting}
                 placeholder="Chọn ngày giờ"
+                minDateTime={effectiveMinStartAt}
+                highlightDate={selectedMovie?.releaseDate ?? undefined}
               />
-              {startsAtError ? (
+              {releaseDateViolation ? (
+                <div role="alert" className="mt-2 rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-[11px] text-red-200">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" aria-hidden="true" />
+                    <div className="space-y-1">
+                      <p className="font-bold text-red-300">Ngày bắt đầu đang trước ngày khởi chiếu</p>
+                      <p>
+                        Phim <strong className="text-red-100">{selectedMovie?.title}</strong> khởi chiếu từ{' '}
+                        <strong className="text-red-100">{formatVnDate(releaseDateViolation)}</strong>. Vui lòng chọn đúng hoặc sau ngày này.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={chooseReleaseDate}
+                    className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-red-400/40 bg-red-500/15 px-3 py-1.5 text-[11px] font-bold text-red-100 transition-colors hover:bg-red-500/25 cursor-pointer"
+                  >
+                    <CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />
+                    Chọn ngày khởi chiếu
+                  </button>
+                </div>
+              ) : startsAtError ? (
                 <p className="text-[11px] text-red-400 mt-1">{startsAtError}</p>
               ) : (
-                <p className="text-[11px] text-zinc-500 mt-1">Múi giờ Asia/Ho_Chi_Minh (+07:00)</p>
+                <p className="text-[11px] text-zinc-500 mt-1">
+                  Múi giờ Asia/Ho_Chi_Minh (+07:00). Suất mới phải sau hiện tại ít nhất 10 phút
+                  {selectedMovie?.releaseDate ? ` và không trước ngày khởi chiếu ${formatVnDate(selectedMovie.releaseDate)}` : ''}.
+                </p>
               )}
             </div>
 
@@ -639,7 +754,11 @@ export const AdminShowtimeFormPage: React.FC = () => {
               Hủy
             </Button>
           </Link>
-          <Button type="submit" variant="primary" disabled={isSubmitting || isSeatCheckBlocked}>
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={isSubmitting || isSeatCheckBlocked || Boolean(releaseDateViolation)}
+          >
             {isSubmitting ? 'Đang xử lý...' : isEdit ? 'Cập nhật suất chiếu' : 'Tạo suất chiếu'}
           </Button>
         </div>

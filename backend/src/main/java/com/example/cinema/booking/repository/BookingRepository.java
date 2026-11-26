@@ -41,4 +41,12 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     Page<Booking> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
 
     List<Booking> findByStatusAndExpiresAtBefore(BookingStatus status, Instant before);
+
+    @Query("select count(b) from Booking b where b.status = com.example.cinema.booking.entity.BookingStatus.CONFIRMED "
+            + "and b.showtime.movie.id = :movieId and b.showtime.status = com.example.cinema.showtime.entity.ShowtimeStatus.SCHEDULED and b.showtime.endsAt > :now")
+    long countConfirmedActiveByMovie(@Param("movieId") Long movieId, @Param("now") Instant now);
+
+    @Query("select count(b) from Booking b where b.status = com.example.cinema.booking.entity.BookingStatus.PENDING "
+            + "and b.expiresAt > :now and b.showtime.movie.id = :movieId and b.showtime.status = com.example.cinema.showtime.entity.ShowtimeStatus.SCHEDULED and b.showtime.endsAt > :now")
+    long countPendingActiveByMovie(@Param("movieId") Long movieId, @Param("now") Instant now);
 }

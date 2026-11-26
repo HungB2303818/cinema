@@ -1,5 +1,6 @@
 package com.example.cinema.catalog.service;
 
+import com.example.cinema.catalog.dto.MovieHideImpactResponse;
 import com.example.cinema.catalog.dto.MoviePageResponse;
 import com.example.cinema.catalog.dto.MovieRequest;
 import com.example.cinema.catalog.dto.MovieResponse;
@@ -8,6 +9,9 @@ import com.example.cinema.catalog.entity.MovieStatus;
 import com.example.cinema.catalog.repository.MovieRepository;
 import com.example.cinema.common.error.AppException;
 import com.example.cinema.common.error.ErrorCode;
+import com.example.cinema.common.time.DatabaseTime;
+import com.example.cinema.showtime.repository.ShowtimeRepository;
+import com.example.cinema.booking.repository.BookingRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -18,8 +22,11 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
 
 @Slf4j
@@ -28,7 +35,11 @@ import java.util.Set;
 @Transactional(readOnly = true)
 public class MovieService {
     private static final Set<String> SORT_FIELDS = Set.of("id", "title", "releaseDate", "durationMinutes", "status", "isFeatured");
+    private static final ZoneId VIETNAM = ZoneId.of("Asia/Ho_Chi_Minh");
     private final MovieRepository movieRepository;
+    private final ShowtimeRepository showtimeRepository;
+    private final BookingRepository bookingRepository;
+    private final DatabaseTime databaseTime;
 
     public MoviePageResponse list(String keyword, MovieStatus status, String genre,
                                   int page, int size, String sort) {
@@ -82,17 +93,28 @@ public class MovieService {
     }
 
     public MovieResponse getPublic(Long id) {
-        Movie movie = find(id);
-        if (movie.getStatus() == MovieStatus.HIDDEN) {
-            throw notFound();
-        }
-        return MovieResponse.from(movie);
+        // HC-02: keep hidden movies readable so customers with existing tickets
+        // can still understand public schedule/context; booking stays blocked elsewhere.
+        return MovieResponse.from(find(id));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     public MovieResponse getAdmin(Long id) {
         Movie movie = find(id);
         return MovieResponse.from(movie);
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    public MovieHideImpactResponse getHideImpact(Long id) {
+        Movie movie = find(id);
+        Instant now = databaseTime.now();
+        long activeShowtimes = showtimeRepository.countActiveScheduledByMovie(id, now);
+        long confirmedBookings = bookingRepository.countConfirmedActiveByMovie(id, now);
+        long pendingBookings = bookingRepository.countPendingActiveByMovie(id, now);
+        Instant earliestStart = showtimeRepository.findEarliestActiveStartByMovie(id, now).orElse(null);
+        Instant latestEnd = showtimeRepository.findLatestActiveEndByMovie(id, now).orElse(null);
+        return new MovieHideImpactResponse(movie.getId(), movie.getTitle(), activeShowtimes,
+                confirmedBookings, pendingBookings, earliestStart, latestEnd);
     }
 
     @Transactional
@@ -110,6 +132,7 @@ public class MovieService {
     @PreAuthorize("hasRole('ADMIN')")
     public MovieResponse update(Long id, MovieRequest request) {
         Movie movie = find(id);
+        validateReleaseDateChange(movie, request.releaseDate());
         apply(movie, request);
         log.info("movie.update actor={} movieId={} outcome=SUCCESS",
                 SecurityContextHolder.getContext().getAuthentication().getName(), id);
@@ -133,6 +156,29 @@ public class MovieService {
             throw invalid("Mã phim phải là số nguyên dương.");
         }
         return movieRepository.findById(id).orElseThrow(this::notFound);
+    }
+
+    private void validateReleaseDateChange(Movie movie, LocalDate newReleaseDate) {
+        LocalDate oldReleaseDate = movie.getReleaseDate();
+        boolean becomesUnknown = newReleaseDate == null && oldReleaseDate != null;
+        boolean becomesLater = newReleaseDate != null && (oldReleaseDate == null || newReleaseDate.isAfter(oldReleaseDate));
+        if (!becomesUnknown && !becomesLater) {
+            return;
+        }
+        Instant now = databaseTime.now();
+        Instant releaseStartVnUtc = newReleaseDate == null ? null : newReleaseDate.atStartOfDay(VIETNAM).toInstant();
+        long conflicts = showtimeRepository.countReleaseDateConflicts(movie.getId(), now, releaseStartVnUtc);
+        if (conflicts <= 0) {
+            return;
+        }
+        Instant earliestConflict = showtimeRepository.findEarliestReleaseDateConflict(movie.getId(), now, releaseStartVnUtc).orElse(null);
+        String detail = newReleaseDate == null
+                ? "Không thể bỏ ngày khởi chiếu khi còn " + conflicts + " suất chiếu SCHEDULED chưa kết thúc."
+                : "Không thể đổi ngày khởi chiếu sang " + newReleaseDate + " vì có " + conflicts + " suất chiếu SCHEDULED chưa kết thúc bắt đầu trước ngày này.";
+        if (earliestConflict != null) {
+            detail += " Suất sớm nhất bị ảnh hưởng: " + earliestConflict + ".";
+        }
+        throw new AppException(ErrorCode.RESOURCE_STATE_CONFLICT, detail);
     }
 
     private void apply(Movie movie, MovieRequest request) {

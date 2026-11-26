@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+﻿import { useEffect, useRef, useState } from "react";
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Upload,
@@ -9,6 +9,7 @@ import {
   Image as ImageIcon,
   RefreshCw,
 } from 'lucide-react';
+import { moviesApi } from '../../api/movies.api';
 import { Button } from '@/shared/components/ui/Button';
 import { Input } from '@/shared/components/ui/Input';
 import { StatusBadge } from '@/shared/components/ui/StatusBadge';
@@ -16,7 +17,7 @@ import { ApiErrorResponse } from '@/shared/api/http-client';
 import { useCreateMovie } from '../../hooks/useCreateMovie';
 import { useUpdateMovie } from '../../hooks/useUpdateMovie';
 import { useUploadMoviePoster } from '../../hooks/useUploadMoviePoster';
-import type { Movie, MovieRequest, MovieStatus, AgeRating } from '../../types/movie.types';
+import type { Movie, MovieRequest, MovieStatus, AgeRating, MovieHideImpactResponse } from '../../types/movie.types';
 
 export interface AdminMovieFormProps {
   initialData?: Movie | null;
@@ -55,6 +56,11 @@ export const AdminMovieForm: React.FC<AdminMovieFormProps> = ({
   // Partial creation state: when create succeeds but upload fails
   const [createdMovieId, setCreatedMovieId] = useState<number | null>(null);
   const [uploadFailureNotice, setUploadFailureNotice] = useState<string | null>(null);
+  const [hideImpact, setHideImpact] = useState<MovieHideImpactResponse | null>(null);
+  const [hideImpactError, setHideImpactError] = useState<string | null>(null);
+  const [hideImpactLoading, setHideImpactLoading] = useState(false);
+  const [showHideConfirm, setShowHideConfirm] = useState(false);
+  const [pendingPayload, setPendingPayload] = useState<MovieRequest | null>(null);
 
   // Mutations
   const createMutation = useCreateMovie();
@@ -196,29 +202,11 @@ export const AdminMovieForm: React.FC<AdminMovieFormProps> = ({
   };
 
   // Submit Handler
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
-    if (isSubmittingRef.current) return;
-    if (!validateForm()) return;
-
+  const submitPayload = async (payload: MovieRequest) => {
     isSubmittingRef.current = true;
     setGeneralError(null);
     setUploadFailureNotice(null);
     setSuccessNotice(null);
-
-    const payload: MovieRequest = {
-      title: title.trim(),
-      durationMinutes: parseInt(durationMinutes, 10),
-      status,
-      description: description.trim() ? description : null,
-      genre: genre.trim() ? genre.trim() : null,
-      ageRating: ageRating ? ageRating : null,
-      releaseDate: releaseDate.trim() ? releaseDate.trim() : null,
-      posterUrl: posterUrl.trim() ? posterUrl.trim() : null,
-      isFeatured,
-    };
-
     try {
       if (isEditing) {
         const targetMovieId = initialData?.id || createdMovieId;
@@ -226,20 +214,17 @@ export const AdminMovieForm: React.FC<AdminMovieFormProps> = ({
           throw new Error('Không tìm thấy mã phim để cập nhật.');
         }
 
-        // 1. Update metadata first
         let updatedMovie = await updateMutation.mutateAsync({
           id: targetMovieId,
           data: payload,
         });
 
-        // 2. If a new file is selected, upload it sequentially
         if (selectedFile) {
           try {
             updatedMovie = await uploadPosterMutation.mutateAsync({
               id: targetMovieId,
               file: selectedFile,
             });
-            // Update posterUrl in state with the new URL returned from backend
             if (updatedMovie.posterUrl) {
               setPosterUrl(updatedMovie.posterUrl);
             }
@@ -256,9 +241,6 @@ export const AdminMovieForm: React.FC<AdminMovieFormProps> = ({
         setSuccessNotice('Cập nhật thông tin phim thành công!');
         navigate('/admin/movies');
       } else {
-        // CREATE FLOW
-        // If movie was already created in a previous attempt where poster upload failed,
-        // do NOT create another movie! Just retry the upload.
         let targetMovieId = createdMovieId;
         let movieObj: Movie | null = null;
 
@@ -268,7 +250,6 @@ export const AdminMovieForm: React.FC<AdminMovieFormProps> = ({
           setCreatedMovieId(targetMovieId);
         }
 
-        // Upload poster if selected
         if (selectedFile && targetMovieId) {
           try {
             const withPoster = await uploadPosterMutation.mutateAsync({
@@ -309,6 +290,46 @@ export const AdminMovieForm: React.FC<AdminMovieFormProps> = ({
     } finally {
       isSubmittingRef.current = false;
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    if (isSubmittingRef.current) return;
+    if (!validateForm()) return;
+
+    const payload: MovieRequest = {
+      title: title.trim(),
+      durationMinutes: parseInt(durationMinutes, 10),
+      status,
+      description: description.trim() ? description : null,
+      genre: genre.trim() ? genre.trim() : null,
+      ageRating: ageRating ? ageRating : null,
+      releaseDate: releaseDate.trim() ? releaseDate.trim() : null,
+      posterUrl: posterUrl.trim() ? posterUrl.trim() : null,
+      isFeatured,
+    };
+
+    const targetMovieId = initialData?.id || createdMovieId;
+    const hidingNow = status === 'HIDDEN' && initialData?.status !== 'HIDDEN';
+    if (hidingNow && targetMovieId) {
+      setHideImpactLoading(true);
+      setHideImpactError(null);
+      try {
+        const impact = await moviesApi.getHideImpact(targetMovieId);
+        setHideImpact(impact);
+      } catch {
+        setHideImpact(null);
+        setHideImpactError('Không thể kiểm tra tác động ẩn phim. Bạn vẫn có thể xác nhận ẩn, nhưng hãy kiểm tra kỹ suất chiếu/đặt vé đang hoạt động.');
+      } finally {
+        setHideImpactLoading(false);
+      }
+      setPendingPayload(payload);
+      setShowHideConfirm(true);
+      return;
+    }
+
+    await submitPayload(payload);
   };
 
   // Standalone Retry Poster Upload for partially created movie
@@ -646,6 +667,39 @@ export const AdminMovieForm: React.FC<AdminMovieFormProps> = ({
           </div>
         </form>
       </div>
+
+      {showHideConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70" onClick={() => !isSubmitting && setShowHideConfirm(false)} />
+          <div role="dialog" aria-modal="true" className="relative w-full max-w-lg rounded-2xl bg-[#13151d] border border-[#242733] p-6 shadow-2xl space-y-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-6 h-6 text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <h2 className="text-lg font-bold text-white">Xác nhận ẩn phim</h2>
+                <p className="text-sm text-zinc-400 mt-1">Phim ẩn sẽ không bán vé mới trên public. Vé/booking đã phát hành cần được xem xét trước khi ẩn.</p>
+              </div>
+            </div>
+            {hideImpactLoading ? (
+              <p className="text-sm text-zinc-300">Đang kiểm tra tác động...</p>
+            ) : hideImpactError ? (
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-sm">{hideImpactError}</div>
+            ) : hideImpact ? (
+              <div className="p-3 rounded-xl bg-[#090a0f] border border-[#252836] text-sm text-zinc-300 space-y-1">
+                <div>Suất chiếu còn hiệu lực: <strong className="text-white">{hideImpact.activeShowtimes}</strong></div>
+                <div>Booking CONFIRMED bị ảnh hưởng: <strong className="text-white">{hideImpact.confirmedBookings}</strong></div>
+                <div>Booking PENDING còn hạn: <strong className="text-white">{hideImpact.pendingBookings}</strong></div>
+                {hideImpact.earliestStart && <div>Suất sớm nhất: <strong className="text-white">{hideImpact.earliestStart}</strong></div>}
+                {hideImpact.latestEnd && <div>Suất muộn nhất kết thúc: <strong className="text-white">{hideImpact.latestEnd}</strong></div>}
+              </div>
+            ) : null}
+            <div className="flex justify-end gap-3 pt-2">
+              <Button type="button" variant="outline" onClick={() => { setShowHideConfirm(false); setPendingPayload(null); }} disabled={isSubmitting}>Hủy</Button>
+              <Button type="button" variant="danger" isLoading={isSubmitting} disabled={isSubmitting || !pendingPayload} onClick={async () => { if (!pendingPayload) return; setShowHideConfirm(false); await submitPayload(pendingPayload); setPendingPayload(null); }}>Xác nhận ẩn phim</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
