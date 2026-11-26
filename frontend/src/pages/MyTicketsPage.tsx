@@ -57,6 +57,7 @@ export const MyTicketsPage: React.FC = () => {
   // Modal and feedback states
   const [cancelTarget, setCancelTarget] = useState<BookingSummaryItem | null>(null);
   const [cancelFeedback, setCancelFeedback] = useState<string | null>(null);
+  const [nowMs] = useState(() => Date.now());
 
   // Fetch real booking history from GET /api/bookings/me
   const {
@@ -240,7 +241,7 @@ export const MyTicketsPage: React.FC = () => {
                     {(b.cinemaName || b.roomName) && (
                       <p className="text-xs text-zinc-400">{[b.cinemaName, b.roomName].filter(Boolean).join(' • ')}</p>
                     )}
-                    {b.movieStatus === 'HIDDEN' && isConfirmed && b.showtimeStatus === 'SCHEDULED' && b.endsAt && new Date(b.endsAt).getTime() > Date.now() && (
+                    {b.movieStatus === 'HIDDEN' && isConfirmed && b.showtimeStatus === 'SCHEDULED' && b.endsAt && new Date(b.endsAt).getTime() > nowMs && (
                       <p className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
                         Phim đã ngừng hiển thị để đặt mới. Suất chiếu vẫn diễn ra; vé đã thanh toán vẫn có giá trị sử dụng.
                       </p>

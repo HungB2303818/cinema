@@ -23,6 +23,7 @@ import { formatCurrency, formatVietnamDateTime } from '@/shared/utils';
 export const BookingSuccessPage: React.FC = () => {
   const { bookingId: rawBookingId } = useParams<{ bookingId: string }>();
   const { user } = useAuth();
+  const [nowMs] = useState(() => Date.now());
 
   const isValidId = Boolean(
     rawBookingId && /^\d+$/.test(rawBookingId) && parseInt(rawBookingId, 10) > 0
@@ -231,7 +232,7 @@ export const BookingSuccessPage: React.FC = () => {
 
         <div className="space-y-3">
           <h3 className="text-xl font-black text-white">{booking.movieTitle}</h3>
-          {booking.movieStatus === 'HIDDEN' && booking.showtimeStatus === 'SCHEDULED' && booking.endsAt && new Date(booking.endsAt).getTime() > Date.now() && (
+          {booking.movieStatus === 'HIDDEN' && booking.showtimeStatus === 'SCHEDULED' && booking.endsAt && new Date(booking.endsAt).getTime() > nowMs && (
             <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs">
               Phim đã ngừng hiển thị công khai để đặt mới. Suất chiếu vẫn diễn ra; vé đã thanh toán vẫn có giá trị sử dụng.
             </div>

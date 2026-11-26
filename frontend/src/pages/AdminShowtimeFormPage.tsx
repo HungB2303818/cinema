@@ -98,11 +98,13 @@ export const AdminShowtimeFormPage: React.FC = () => {
   // Populate data when editing
   const hasInitializedRef = useRef(false);
   const originalStartsAtRef = useRef<string | null>(null);
+  const [originalStartsAt, setOriginalStartsAt] = useState<string | null>(null);
   useEffect(() => {
     if (existingShowtime && !hasInitializedRef.current) {
       hasInitializedRef.current = true;
       const localStartsAt = utcIsoToVietnamLocalInput(existingShowtime.startsAt);
       originalStartsAtRef.current = localStartsAt;
+      setOriginalStartsAt(localStartsAt);
       setMovieId(existingShowtime.movieId);
       setCinemaId(existingShowtime.cinemaId);
       setRoomId(existingShowtime.roomId);
@@ -144,10 +146,10 @@ export const AdminShowtimeFormPage: React.FC = () => {
   }, [selectedMovie]);
 
   const effectiveMinStartAt = useMemo(() => {
-    if (isEdit && originalStartsAtRef.current === startsAt) return undefined;
+    if (isEdit && originalStartsAt === startsAt) return undefined;
     if (!releaseDateMin) return minStartAt;
     return releaseDateMin > minStartAt ? releaseDateMin : minStartAt;
-  }, [isEdit, minStartAt, releaseDateMin, startsAt]);
+  }, [isEdit, minStartAt, originalStartsAt, releaseDateMin, startsAt]);
 
   // Auto-calculate end time from start time and movie duration
   const computedEndsAt = useMemo(() => {
