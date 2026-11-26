@@ -1,4 +1,4 @@
-﻿package com.example.cinema.catalog.dto;
+package com.example.cinema.catalog.dto;
 
 import java.time.Instant;
 

@@ -319,6 +319,7 @@ class ShowtimeServiceTest {
         when(showtimes.findRoomIdById(4L)).thenReturn(Optional.of(2L));
         when(rooms.findByIdForUpdate(2L)).thenReturn(Optional.of(room));
         when(showtimes.findByIdForUpdate(4L)).thenReturn(Optional.of(showtime));
+        lenient().when(movies.findById(1L)).thenReturn(Optional.of(movie));
     }
     private ShowtimeRequest request(Instant starts, Instant ends) {
         return new ShowtimeRequest(1L, 2L, starts, ends, 15, new BigDecimal("75000"), new BigDecimal("20000"));
