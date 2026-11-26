@@ -6,6 +6,7 @@ import com.example.cinema.cinema.service.CinemaService;
 import com.example.cinema.common.config.SecurityConfig;
 import com.example.cinema.common.dto.PageResponse;
 import com.example.cinema.showtime.dto.*;
+import com.example.cinema.showtime.service.BatchShowtimeAutoGenerationService;
 import com.example.cinema.showtime.service.ShowtimeService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -30,6 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ScheduleControllerTest {
     @Autowired MockMvc mvc;
     @MockBean ShowtimeService showtimes;
+    @MockBean BatchShowtimeAutoGenerationService batchAutoGenerationService;
     @MockBean CinemaService cinemas;
     @MockBean JwtUtils jwtUtils;
     @MockBean UserDetailsService userDetailsService;

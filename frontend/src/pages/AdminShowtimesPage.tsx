@@ -1,6 +1,6 @@
 import React from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Calendar, Plus, Edit2, Grid, Filter, RotateCcw } from 'lucide-react';
+import { Calendar, Plus, Edit2, Grid, Filter, RotateCcw, Sparkles } from 'lucide-react';
 import { useAdminShowtimes, type ShowtimeStatus } from '@/features/showtimes';
 import { useAdminCinemas, useAdminRooms } from '@/features/cinemas';
 import { useAdminMovies } from '@/features/movies';
@@ -118,12 +118,20 @@ export const AdminShowtimesPage: React.FC = () => {
           <h1 className="text-2xl sm:text-3xl font-black text-white">Quản lý Suất Chiếu</h1>
         </div>
 
-        <Link to="/admin/showtimes/new">
-          <Button variant="primary" className="flex items-center gap-2 self-start sm:self-auto">
-            <Plus className="w-4 h-4" />
-            <span>Thêm suất chiếu mới</span>
-          </Button>
-        </Link>
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          <Link to="/admin/showtimes/auto-generate">
+            <Button variant="outline" className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4" />
+              <span>Tạo suất tự động</span>
+            </Button>
+          </Link>
+          <Link to="/admin/showtimes/new">
+            <Button variant="primary" className="flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              <span>Thêm suất chiếu mới</span>
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Filter Bar */}

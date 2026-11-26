@@ -84,6 +84,14 @@ httpClient.interceptors.response.use(
           ? 'Không tìm thấy tài nguyên yêu cầu.'
           : 'Đã có lỗi xảy ra từ máy chủ.');
 
+      const requestUrl = error.config?.url || '';
+      const isAuthCredentialEndpoint =
+        requestUrl.includes('/auth/login') || requestUrl.includes('/auth/register');
+      if (status === 401 && !isAuthCredentialEndpoint && typeof window !== 'undefined') {
+        localStorage.removeItem('token');
+        window.dispatchEvent(new Event('auth:unauthorized'));
+      }
+
       return Promise.reject(
         new ApiErrorResponse(
           message,

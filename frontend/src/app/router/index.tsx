@@ -21,9 +21,7 @@ import {
   AdminSeatsPage,
   AdminShowtimesPage,
   AdminShowtimeFormPage,
-  AdminSchedulePlansPage,
-  AdminSchedulePlanFormPage,
-  AdminSchedulePlanLogsPage,
+  AdminAutoGenerateShowtimesPage,
   NotFoundPage,
   ProfilePage,
 } from '@/pages';
@@ -120,11 +118,8 @@ export const AppRouter: React.FC = () => {
         <Route path="rooms/:roomId/seats" element={<AdminSeatsPage />} />
         <Route path="showtimes" element={<AdminShowtimesPage />} />
         <Route path="showtimes/new" element={<AdminShowtimeFormPage />} />
+        <Route path="showtimes/auto-generate" element={<AdminAutoGenerateShowtimesPage />} />
         <Route path="showtimes/:showtimeId/edit" element={<AdminShowtimeFormPage />} />
-        <Route path="schedule-plans" element={<AdminSchedulePlansPage />} />
-        <Route path="schedule-plans/new" element={<AdminSchedulePlanFormPage />} />
-        <Route path="schedule-plans/:planId/edit" element={<AdminSchedulePlanFormPage />} />
-        <Route path="schedule-plans/:planId/logs" element={<AdminSchedulePlanLogsPage />} />
       </Route>
     </Routes>
   );

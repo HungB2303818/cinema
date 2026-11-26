@@ -110,4 +110,28 @@ export const adminShowtimesApi = {
     const res = await httpClient.put<Showtime>(`/admin/showtimes/${id}`, payload);
     return res.data;
   },
+
+  /**
+   * POST /api/admin/showtimes/auto-generate/preview
+   */
+  previewAutoGenerate: async (
+    payload: import('../types/showtime.types').BatchAutoGenerateShowtimesRequest
+  ): Promise<import('../types/showtime.types').BatchAutoGenerateShowtimesResponse> => {
+    const res = await httpClient.post<
+      import('../types/showtime.types').BatchAutoGenerateShowtimesResponse
+    >('/admin/showtimes/auto-generate/preview', payload, { timeout: 120_000 });
+    return res.data;
+  },
+
+  /**
+   * POST /api/admin/showtimes/auto-generate
+   */
+  autoGenerate: async (
+    payload: import('../types/showtime.types').BatchAutoGenerateShowtimesRequest
+  ): Promise<import('../types/showtime.types').BatchAutoGenerateShowtimesResponse> => {
+    const res = await httpClient.post<
+      import('../types/showtime.types').BatchAutoGenerateShowtimesResponse
+    >('/admin/showtimes/auto-generate', payload, { timeout: 120_000 });
+    return res.data;
+  },
 };

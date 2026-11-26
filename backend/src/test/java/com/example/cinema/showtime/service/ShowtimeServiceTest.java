@@ -29,7 +29,6 @@ import static org.mockito.Mockito.*;
 class ShowtimeServiceTest {
     @Mock ShowtimeRepository showtimes;
     @Mock ShowtimeSeatRepository inventory;
-    @Mock SchedulePlanRepository schedulePlans;
     @Mock RoomRepository rooms;
     @Mock SeatRepository seats;
     @Mock MovieRepository movies;
@@ -232,19 +231,6 @@ class ShowtimeServiceTest {
         assertThat(result.totalElements()).isEqualTo(1);
         verify(showtimes).findAdminSchedule(isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
                 any(Pageable.class));
-    }
-
-    @Test void rejectsShowtimeLinkedToPlanOfAnotherRoom() {
-        when(rooms.findByIdForUpdate(2L)).thenReturn(Optional.of(room));
-        SchedulePlan plan = SchedulePlan.builder().id(5L)
-                .room(Room.builder().id(9L).name("Phòng khác").build()).build();
-        when(schedulePlans.findById(5L)).thenReturn(Optional.of(plan));
-
-        assertThatThrownBy(() -> service.createInternal(
-                request(start, start.plusSeconds(7200)), "system", 5L))
-                .isInstanceOfSatisfying(AppException.class, ex ->
-                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.SCHEDULE_INVALID));
-        verify(showtimes, never()).saveAndFlush(any());
     }
 
     @Test void adminDetailReturnsShowtimeEvenIfMovieHiddenOrRoomMaintenance() {
