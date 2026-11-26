@@ -6,7 +6,6 @@ import {
   CalendarClock,
   Clock,
   DollarSign,
-  ShieldAlert,
   CheckCircle2,
   Tv,
   Film,
@@ -206,7 +205,7 @@ export const AdminShowtimeFormPage: React.FC = () => {
       return;
     }
     if (isSeatCheckBlocked) {
-      setFormError('Phòng phải có ghế ACTIVE trước khi tạo suất chiếu. Vui lòng kiểm tra cấu hình ghế.');
+      setFormError('Phòng phải có ghế đang hoạt động trước khi tạo suất chiếu. Vui lòng kiểm tra cấu hình ghế.');
       return;
     }
     if (!startsAt) {
@@ -314,10 +313,10 @@ export const AdminShowtimeFormPage: React.FC = () => {
         );
       } else if (code === 'ROOM_UNAVAILABLE') {
         setFormError(
-          'Phòng chiếu hoặc cụm rạp không hoạt động, hoặc phòng chưa có ghế hoạt động (ACTIVE).'
+          'Phòng chiếu hoặc cụm rạp không hoạt động, hoặc phòng chưa có ghế đang hoạt động.'
         );
       } else if (code === 'MOVIE_UNAVAILABLE') {
-        setFormError('Phim đang ở trạng thái ẩn (HIDDEN), không thể tạo lịch chiếu.');
+        setFormError('Phim đang tạm ẩn, không thể tạo lịch chiếu.');
       } else if (code === 'SCHEDULE_INVALID') {
         setFormError(
           message || 'Suất chiếu không đủ thời lượng phim hoặc cấu hình giá không hợp lệ.'
@@ -425,25 +424,6 @@ export const AdminShowtimeFormPage: React.FC = () => {
         </div>
       )}
 
-      {/* Rules Notice */}
-      <div className="bg-[#13151d] border border-amber-500/30 rounded-xl p-4 flex items-start gap-3.5 text-xs text-amber-200/90">
-        <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-        <div className="space-y-1">
-          <p className="font-bold text-amber-300">Ràng buộc nghiệp vụ tạo & sửa suất chiếu (BR-02 / BR-20):</p>
-          <ul className="list-disc list-inside space-y-0.5 leading-relaxed">
-            <li>
-              <strong>Chống trùng lịch (BR-02):</strong> Hai suất chiếu trong cùng một phòng không được trùng khoảng thời gian <code>[startsAt, endsAt + cleanupMinutes)</code>.
-            </li>
-            <li>
-              <strong>Bảo vệ lịch sử:</strong> Chỉ sửa được suất ở trạng thái <code>SCHEDULED</code> và chưa có bất kỳ booking lịch sử nào (kể cả EXPIRED hoặc CANCELLED).
-            </li>
-            <li>
-              <strong>Ngày khởi chiếu (HC-01):</strong> Admin vẫn chọn được ngày tùy ý, nhưng nếu giờ bắt đầu trước ngày khởi chiếu thì hệ thống báo lỗi và yêu cầu chọn lại từ ngày khởi chiếu trở đi.
-            </li>
-          </ul>
-        </div>
-      </div>
-
       {/* Main Form */}
       <form onSubmit={handleSubmit} noValidate className="space-y-6">
         {formError && <AlertMessage variant="error">{formError}</AlertMessage>}
@@ -479,7 +459,7 @@ export const AdminShowtimeFormPage: React.FC = () => {
               </select>
             )}
             <p className="text-[11px] text-zinc-500 mt-1">
-              Phim HIDDEN bị loại trừ. Bạn vẫn chọn được ngày bất kỳ, nhưng hệ thống sẽ báo lỗi nếu giờ bắt đầu trước ngày khởi chiếu (HC-01).
+              Phim đang tạm ẩn không hiển thị trong danh sách. Bạn vẫn chọn được ngày bất kỳ, nhưng hệ thống sẽ báo lỗi nếu giờ bắt đầu trước ngày khởi chiếu.
             </p>
           </div>
 
@@ -498,7 +478,7 @@ export const AdminShowtimeFormPage: React.FC = () => {
             </div>
           )}
           {selectedMovie && !selectedMovie.releaseDate && (
-            <AlertMessage variant="warning">Phim chưa có ngày khởi chiếu. Vui lòng cập nhật trước khi lập lịch (HC-01).</AlertMessage>
+            <AlertMessage variant="warning">Phim chưa có ngày khởi chiếu. Vui lòng cập nhật trước khi lập lịch.</AlertMessage>
           )}
         </div>
 
@@ -563,7 +543,7 @@ export const AdminShowtimeFormPage: React.FC = () => {
                   ))}
                 </select>
               )}
-              <p className="text-[11px] text-zinc-500 mt-1">Chỉ hiển thị các phòng ACTIVE.</p>
+              <p className="text-[11px] text-zinc-500 mt-1">Chỉ hiển thị các phòng đang hoạt động.</p>
             </div>
           </div>
           {needsSeatCheck && roomId && (
@@ -577,11 +557,11 @@ export const AdminShowtimeFormPage: React.FC = () => {
                 </AlertMessage>
               ) : hasNoActiveSeats ? (
                 <AlertMessage variant="warning">
-                  Phòng chiếu chưa có ghế ACTIVE nên chưa thể tạo suất chiếu. Vui lòng thêm ghế hoặc chuyển ghế đang bảo trì sang ACTIVE trước.{' '}
+                  Phòng chiếu chưa có ghế đang hoạt động nên chưa thể tạo suất chiếu. Vui lòng thêm ghế hoặc chuyển ghế đang bảo trì sang trạng thái hoạt động trước.{' '}
                   <Link to={`/admin/rooms/${roomId}/seats`} className="font-semibold underline">Cấu hình ghế phòng chiếu</Link>
                 </AlertMessage>
               ) : roomSeats ? (
-                <p className="text-xs text-emerald-400">Phòng có {roomSeats.filter((seat) => seat.status === 'ACTIVE').length} ghế ACTIVE để khởi tạo tồn kho suất chiếu.</p>
+                <p className="text-xs text-emerald-400">Phòng có {roomSeats.filter((seat) => seat.status === 'ACTIVE').length} ghế đang hoạt động để khởi tạo tồn kho suất chiếu.</p>
               ) : null}
             </div>
           )}

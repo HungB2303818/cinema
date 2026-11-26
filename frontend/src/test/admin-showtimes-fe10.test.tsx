@@ -358,7 +358,7 @@ describe('FE-10: Admin Quản Lý Suất Chiếu (Showtimes)', () => {
       const retryButton = await screen.findByRole('button', { name: 'Thử lại' });
       expect(screen.getByRole('button', { name: 'Tạo suất chiếu' })).toBeDisabled();
       fireEvent.click(retryButton);
-      expect(await screen.findByText(/Phòng có 1 ghế ACTIVE/)).toBeInTheDocument();
+      expect(await screen.findByText(/Phòng có 1 ghế đang hoạt động/)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Tạo suất chiếu' })).toBeEnabled();
     });
 
@@ -369,7 +369,7 @@ describe('FE-10: Admin Quản Lý Suất Chiếu (Showtimes)', () => {
       const createSpy = vi.spyOn(adminShowtimesApi, 'create');
       renderWithProviders(<AdminShowtimeFormPage />, { initialEntries: ['/admin/showtimes/new?cinemaId=1&roomId=10'] });
 
-      expect(await screen.findByText(/Phòng chiếu chưa có ghế ACTIVE/)).toBeInTheDocument();
+      expect(await screen.findByText(/Phòng chiếu chưa có ghế đang hoạt động/)).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'Cấu hình ghế phòng chiếu' })).toHaveAttribute('href', '/admin/rooms/10/seats');
       expect(screen.getByRole('button', { name: 'Tạo suất chiếu' })).toBeDisabled();
       expect(createSpy).not.toHaveBeenCalled();
@@ -384,12 +384,12 @@ describe('FE-10: Admin Quản Lý Suất Chiếu (Showtimes)', () => {
         { id: 2, roomId: id, seatRow: 'A', seatNumber: 1, label: 'A1', seatType: 'STANDARD', status: 'ACTIVE' },
       ]);
       renderWithProviders(<AdminShowtimeFormPage />, { initialEntries: ['/admin/showtimes/new?cinemaId=1&roomId=10'] });
-      await screen.findByText(/Phòng chiếu chưa có ghế ACTIVE/);
+      await screen.findByText(/Phòng chiếu chưa có ghế đang hoạt động/);
       await screen.findByRole('option', { name: 'Cinema 3' });
       fireEvent.change(screen.getByLabelText(/Phòng chiếu/i), { target: { value: '12' } });
 
-      expect(await screen.findByText(/Phòng có 1 ghế ACTIVE/)).toBeInTheDocument();
-      expect(screen.queryByText(/Phòng chiếu chưa có ghế ACTIVE/)).not.toBeInTheDocument();
+      expect(await screen.findByText(/Phòng có 1 ghế đang hoạt động/)).toBeInTheDocument();
+      expect(screen.queryByText(/Phòng chiếu chưa có ghế đang hoạt động/)).not.toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Tạo suất chiếu' })).toBeEnabled();
     });
 
