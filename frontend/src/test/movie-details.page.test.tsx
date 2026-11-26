@@ -38,6 +38,7 @@ describe('MovieDetailsPage (FE-03, Section A & C)', () => {
     expect(
       screen.getByText(/Bộ phim bạn tìm kiếm không tồn tại hoặc đã bị ẩn khỏi hệ thống/i)
     ).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Vé của tôi/i })).not.toBeInTheDocument();
 
     // No retry button on 404
     expect(screen.queryByRole('button', { name: /Thử lại/i })).not.toBeInTheDocument();

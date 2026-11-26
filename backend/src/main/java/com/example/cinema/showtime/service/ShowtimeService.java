@@ -196,10 +196,14 @@ public class ShowtimeService {
     public SeatMapResponse seatMap(Long id) {
         Requests.positiveId(id);
         Showtime showtime = showtimeRepository.findById(id).orElseThrow(this::notFound);
-        if (showtime.getStatus() != ShowtimeStatus.SCHEDULED || showtime.getMovie().getStatus() == MovieStatus.HIDDEN
+        if (showtime.getStatus() != ShowtimeStatus.SCHEDULED
                 || showtime.getRoom().getStatus() != RoomStatus.ACTIVE
                 || showtime.getRoom().getCinema().getStatus() != CinemaStatus.ACTIVE) {
             throw notFound();
+        }
+        if (showtime.getMovie().getStatus() == MovieStatus.HIDDEN) {
+            throw new AppException(ErrorCode.RESOURCE_NOT_FOUND,
+                    "Phim này hiện tạm ngừng hiển thị để đặt vé mới. Nếu bạn đã có vé, vui lòng kiểm tra trong Vé của tôi.");
         }
         Instant now = databaseTime.now();
         List<SeatMapResponse.SeatItem> seats = inventoryRepository.findSeatMap(id).stream().map(inventory -> {
@@ -239,8 +243,7 @@ public class ShowtimeService {
 
     private void publicMovie(Long id) {
         Requests.positiveId(id);
-        Movie movie = movieRepository.findById(id).orElseThrow(this::notFound);
-        if (movie.getStatus() == MovieStatus.HIDDEN) throw notFound();
+        movieRepository.findById(id).orElseThrow(this::notFound);
     }
 
     private List<Seat> activeSeats(Long roomId) {

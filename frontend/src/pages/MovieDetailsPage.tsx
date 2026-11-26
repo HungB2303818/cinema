@@ -89,11 +89,6 @@ export const MovieDetailsPage: React.FC = () => {
           onRetry={!is404 ? () => refetchMovie() : undefined}
           action={
             <div className="flex items-center gap-3">
-              {is404 && (
-                <Link to="/my-tickets" className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-[#e6e2c1] text-black text-xs font-semibold rounded-full border-none transition-colors">
-                  <span>Vé của tôi</span>
-                </Link>
-              )}
               <Link
                 to="/movies"
                 className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-[#181a24] hover:bg-[#222530] text-zinc-200 text-xs font-semibold rounded-full border-none transition-colors"
@@ -199,6 +194,13 @@ export const MovieDetailsPage: React.FC = () => {
             Chọn cụm rạp và ngày để xem các suất chiếu khả dụng
           </p>
         </div>
+
+        {movie.status === 'HIDDEN' && (
+          <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+            Phim đang tạm ngừng hiển thị để đặt vé mới, nhưng các suất chiếu đã lên lịch vẫn được giữ nguyên để khách đã mua vé theo dõi.
+            <Link to="/my-tickets" className="ml-2 font-semibold text-[#e6e2c1] underline underline-offset-2">Xem Vé của tôi</Link>
+          </div>
+        )}
 
         {/* Filters: Cinema Select & Date Strip */}
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end">

@@ -52,13 +52,15 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
 
     // Select the movie root once via EXISTS. DISTINCT on s.movie lets Hibernate order by
     // the showtime FK instead of the selected movie PK, which MySQL rejects.
-    @Query(value = "select m from Movie m where m.status <> 'HIDDEN' and exists (" +
+    // HC-02: include HIDDEN movies so customers with existing tickets can still see
+    // their scheduled showtimes; booking creation remains blocked separately.
+    @Query(value = "select m from Movie m where exists (" +
             "select s.id from Showtime s where s.movie = m " +
             "and s.room.cinema.id = :cinemaId and s.status = 'SCHEDULED' " +
             "and s.startsAt >= :start and s.startsAt < :end " +
             "and s.room.status = 'ACTIVE' and s.room.cinema.status = 'ACTIVE' " +
             ") order by m.title asc, m.id asc",
-           countQuery = "select count(m.id) from Movie m where m.status <> 'HIDDEN' and exists (" +
+           countQuery = "select count(m.id) from Movie m where exists (" +
             "select s.id from Showtime s where s.movie = m " +
             "and s.room.cinema.id = :cinemaId and s.status = 'SCHEDULED' " +
             "and s.startsAt >= :start and s.startsAt < :end " +
@@ -70,7 +72,6 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
     @Query("select s from Showtime s where s.room.cinema.id = :cinemaId and s.movie.id in :movieIds " +
             "and s.status = 'SCHEDULED' and s.startsAt >= :start and s.startsAt < :end " +
             "and s.room.status = 'ACTIVE' and s.room.cinema.status = 'ACTIVE' " +
-            "and s.movie.status <> 'HIDDEN' " +
             "order by s.startsAt asc, s.id asc")
     List<Showtime> findShowtimesForCinemaMovies(@Param("cinemaId") Long cinemaId,
             @Param("movieIds") List<Long> movieIds, @Param("start") Instant start, @Param("end") Instant end);

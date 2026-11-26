@@ -93,11 +93,9 @@ public class MovieService {
     }
 
     public MovieResponse getPublic(Long id) {
-        Movie movie = find(id);
-        if (movie.getStatus() == MovieStatus.HIDDEN) {
-            throw notFound();
-        }
-        return MovieResponse.from(movie);
+        // HC-02: keep hidden movies readable so customers with existing tickets
+        // can still understand public schedule/context; booking stays blocked elsewhere.
+        return MovieResponse.from(find(id));
     }
 
     @PreAuthorize("hasRole('ADMIN')")

@@ -59,13 +59,13 @@ class MovieServiceTest {
     }
 
     @Test
-    void hidesHiddenMovieAndMissingMovieWithSameError() {
+    void hiddenMovieIsReadablePubliclyButMissingMovieStill404() {
         when(repository.findById(1L)).thenReturn(Optional.of(movie(MovieStatus.HIDDEN)));
         when(repository.findById(2L)).thenReturn(Optional.empty());
-        for (long id : new long[]{1, 2}) {
-            assertThatThrownBy(() -> service.getPublic(id)).isInstanceOfSatisfying(AppException.class,
-                    ex -> assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.RESOURCE_NOT_FOUND));
-        }
+
+        assertThat(service.getPublic(1L).status()).isEqualTo(MovieStatus.HIDDEN);
+        assertThatThrownBy(() -> service.getPublic(2L)).isInstanceOfSatisfying(AppException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.RESOURCE_NOT_FOUND));
     }
 
     @Test
