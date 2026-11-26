@@ -54,4 +54,7 @@ public class Showtime {
     @Column(name = "status", nullable = false, length = 20)
     @Builder.Default
     private ShowtimeStatus status = ShowtimeStatus.SCHEDULED;
+
+    @Column(name = "schedule_plan_id")
+    private Long schedulePlanId;
 }

@@ -27,12 +27,13 @@ public class AdminShowtimeController {
             @RequestParam(required = false) Long cinemaId,
             @RequestParam(required = false) Long roomId,
             @RequestParam(required = false) Long movieId,
+            @RequestParam(required = false) Long planId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(required = false) ShowtimeStatus status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "id,desc") String sort) {
-        return service.adminSchedule(cinemaId, roomId, movieId, date, status, page, size, sort);
+        return service.adminSchedule(cinemaId, roomId, movieId, planId, date, status, page, size, sort);
     }
 
     @GetMapping("/{id}")

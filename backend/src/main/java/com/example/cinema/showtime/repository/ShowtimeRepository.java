@@ -22,6 +22,8 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
 
     boolean existsByRoomId(Long roomId);
 
+    boolean existsBySchedulePlanId(Long schedulePlanId);
+
     @Query("select s.room.id from Showtime s where s.id = :id")
     Optional<Long> findRoomIdById(@Param("id") Long id);
 
@@ -81,6 +83,7 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
             "(:cinemaId is null or s.room.cinema.id = :cinemaId) and " +
             "(:roomId is null or s.room.id = :roomId) and " +
             "(:movieId is null or s.movie.id = :movieId) and " +
+            "(:planId is null or s.schedulePlanId = :planId) and " +
             "(:start is null or s.startsAt >= :start) and " +
             "(:end is null or s.startsAt < :end) and " +
             "(:status is null or s.status = :status)",
@@ -88,12 +91,14 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
             "(:cinemaId is null or s.room.cinema.id = :cinemaId) and " +
             "(:roomId is null or s.room.id = :roomId) and " +
             "(:movieId is null or s.movie.id = :movieId) and " +
+            "(:planId is null or s.schedulePlanId = :planId) and " +
             "(:start is null or s.startsAt >= :start) and " +
             "(:end is null or s.startsAt < :end) and " +
             "(:status is null or s.status = :status)")
     Page<Showtime> findAdminSchedule(@Param("cinemaId") Long cinemaId,
                                      @Param("roomId") Long roomId,
                                      @Param("movieId") Long movieId,
+                                     @Param("planId") Long planId,
                                      @Param("start") Instant start,
                                      @Param("end") Instant end,
                                      @Param("status") ShowtimeStatus status,
@@ -121,4 +126,17 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
 
     @Query("select max(s.endsAt) from Showtime s where s.movie.id = :movieId and s.status = com.example.cinema.showtime.entity.ShowtimeStatus.SCHEDULED and s.endsAt > :now")
     Optional<Instant> findLatestActiveEndByMovie(@Param("movieId") Long movieId, @Param("now") Instant now);
+
+    @Query("select s from Showtime s where s.room.id = :roomId " +
+           "and s.status = 'SCHEDULED' and s.startsAt < :until and s.endsAt > :from " +
+           "order by s.startsAt asc")
+    List<Showtime> findScheduledOverlapping(@Param("roomId") Long roomId,
+                                            @Param("from") Instant from,
+                                            @Param("until") Instant until);
+
+    @Query("select count(s) from Showtime s where s.room.id = :roomId " +
+           "and s.status = 'SCHEDULED' and s.startsAt >= :start and s.startsAt < :end")
+    int countScheduledStartsForRoomBetween(@Param("roomId") Long roomId,
+                                           @Param("start") Instant start,
+                                           @Param("end") Instant end);
 }

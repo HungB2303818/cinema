@@ -42,6 +42,7 @@ public class ShowtimeService {
     private static final long MIN_LEAD_SECONDS = 600;
     private final ShowtimeRepository showtimeRepository;
     private final ShowtimeSeatRepository inventoryRepository;
+    private final SchedulePlanRepository schedulePlanRepository;
     private final RoomRepository roomRepository;
     private final SeatRepository seatRepository;
     private final MovieRepository movieRepository;
@@ -52,17 +53,29 @@ public class ShowtimeService {
     @Transactional(isolation = Isolation.READ_COMMITTED)
     @PreAuthorize("hasRole('ADMIN')")
     public ShowtimeCreatedResponse create(ShowtimeRequest request) {
+        return createInternal(request, currentActor(), null);
+    }
+
+    /**
+     * Shared creation pipeline for admin requests and the auto-generation job.
+     * The job has no SecurityContext, so it must pass an explicit actor and plan id.
+     * Not exposed through a controller and intentionally has no @PreAuthorize.
+     */
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public ShowtimeCreatedResponse createInternal(ShowtimeRequest request, String actor, Long schedulePlanId) {
         Room room = lockRoom(request.roomId());
         requireActive(room);
+        requirePlanRoom(schedulePlanId, room.getId());
         Movie movie = movieForSchedule(request.movieId());
         validateSchedule(request, movie);
         List<Seat> seats = activeSeats(room.getId());
         checkOverlap(request, null);
-        Showtime showtime = Showtime.builder().room(room).movie(movie).build();
+        Showtime showtime = Showtime.builder().room(room).movie(movie)
+                .schedulePlanId(schedulePlanId).build();
         apply(showtime, request);
         showtimeRepository.saveAndFlush(showtime);
         initializeInventory(showtime, seats);
-        audit("showtime.create", showtime.getId());
+        audit("showtime.create", showtime.getId(), actor);
         return new ShowtimeCreatedResponse(ShowtimeResponse.from(showtime), seats.size());
     }
 
@@ -104,17 +117,18 @@ public class ShowtimeService {
         showtime.setMovie(movie);
         apply(showtime, request);
         showtimeRepository.flush();
-        audit("showtime.update", id);
+        audit("showtime.update", id, currentActor());
         return ShowtimeResponse.from(showtime);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     public PageResponse<ShowtimeResponse> adminSchedule(Long cinemaId, Long roomId, Long movieId,
-                                                       LocalDate date, ShowtimeStatus status,
+                                                       Long planId, LocalDate date, ShowtimeStatus status,
                                                        int page, int size, String sort) {
         if (cinemaId != null) Requests.positiveId(cinemaId);
         if (roomId != null) Requests.positiveId(roomId);
         if (movieId != null) Requests.positiveId(movieId);
+        if (planId != null) Requests.positiveId(planId);
         Instant start = null;
         Instant end = null;
         if (date != null) {
@@ -125,7 +139,7 @@ public class ShowtimeService {
             end = date.plusDays(1).atStartOfDay(VIETNAM).toInstant();
         }
         Page<Showtime> showtimePage = showtimeRepository.findAdminSchedule(
-                cinemaId, roomId, movieId, start, end, status,
+                cinemaId, roomId, movieId, planId, start, end, status,
                 Requests.page(page, size, sort, Set.of("id", "startsAt", "basePrice", "status")));
         return PageResponse.from(showtimePage.map(ShowtimeResponse::from));
     }
@@ -234,6 +248,19 @@ public class ShowtimeService {
         }
     }
 
+    private void requirePlanRoom(Long schedulePlanId, Long roomId) {
+        if (schedulePlanId == null) {
+            return;
+        }
+        SchedulePlan plan = schedulePlanRepository.findById(schedulePlanId)
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND,
+                        "Không tìm thấy kế hoạch lịch tự động."));
+        if (!plan.getRoom().getId().equals(roomId)) {
+            throw new AppException(ErrorCode.SCHEDULE_INVALID,
+                    "Kế hoạch lịch tự động không thuộc phòng chiếu của suất.");
+        }
+    }
+
     private Movie movieForSchedule(Long id) {
         Requests.positiveId(id);
         Movie movie = movieRepository.findById(id).orElseThrow(this::notFound);
@@ -308,8 +335,13 @@ public class ShowtimeService {
 
     private AppException conflict(String message) { return new AppException(ErrorCode.RESOURCE_STATE_CONFLICT, message); }
 
-    private void audit(String action, Long id) {
+    private void audit(String action, Long id, String actor) {
         log.info("{} actor={} showtimeId={} outcome=SUCCESS", action,
-                SecurityContextHolder.getContext().getAuthentication().getName(), id);
+                actor == null || actor.isBlank() ? "system" : actor, id);
+    }
+
+    private String currentActor() {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication == null ? "system" : authentication.getName();
     }
 }

@@ -56,7 +56,7 @@ class ScheduleControllerTest {
         var showtimeItem = new ShowtimeResponse(101L, 10L, 1L, "Rạp Mẫu", 20L, "Phòng 01",
                 Instant.parse("2026-11-10T11:00:00Z"), Instant.parse("2026-11-10T13:00:00Z"), 15,
                 new java.math.BigDecimal("75000.00"), new java.math.BigDecimal("20000.00"),
-                com.example.cinema.showtime.entity.ShowtimeStatus.SCHEDULED);
+                com.example.cinema.showtime.entity.ShowtimeStatus.SCHEDULED, null);
         var group = new CinemaMovieShowtimeGroupResponse(movieSummary, List.of(showtimeItem));
 
         when(showtimes.cinemaSchedule(eq(1L), any(), eq(0), eq(20)))
@@ -101,12 +101,12 @@ class ScheduleControllerTest {
         var showtimeItem = new ShowtimeResponse(101L, 10L, 1L, "Rạp Mẫu", 20L, "Phòng 01",
                 Instant.parse("2026-11-10T11:00:00Z"), Instant.parse("2026-11-10T13:00:00Z"), 15,
                 new java.math.BigDecimal("75000.00"), new java.math.BigDecimal("20000.00"),
-                com.example.cinema.showtime.entity.ShowtimeStatus.SCHEDULED);
-        when(showtimes.adminSchedule(eq(1L), eq(20L), eq(10L), eq(java.time.LocalDate.of(2026, 11, 10)),
+                com.example.cinema.showtime.entity.ShowtimeStatus.SCHEDULED, null);
+        when(showtimes.adminSchedule(eq(1L), eq(20L), eq(10L), eq(7L), eq(java.time.LocalDate.of(2026, 11, 10)),
                 eq(com.example.cinema.showtime.entity.ShowtimeStatus.SCHEDULED), eq(0), eq(20), eq("id,desc")))
                 .thenReturn(new PageResponse<>(List.of(showtimeItem), 0, 20, 1, 1));
 
-        mvc.perform(get("/api/admin/showtimes?cinemaId=1&roomId=20&movieId=10&date=2026-11-10&status=SCHEDULED&page=0&size=20&sort=id,desc"))
+        mvc.perform(get("/api/admin/showtimes?cinemaId=1&roomId=20&movieId=10&planId=7&date=2026-11-10&status=SCHEDULED&page=0&size=20&sort=id,desc"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1))
                 .andExpect(jsonPath("$.content[0].id").value(101))
@@ -118,7 +118,7 @@ class ScheduleControllerTest {
         var showtimeItem = new ShowtimeResponse(101L, 10L, 1L, "Rạp Mẫu", 20L, "Phòng 01",
                 Instant.parse("2026-11-10T11:00:00Z"), Instant.parse("2026-11-10T13:00:00Z"), 15,
                 new java.math.BigDecimal("75000.00"), new java.math.BigDecimal("20000.00"),
-                com.example.cinema.showtime.entity.ShowtimeStatus.SCHEDULED);
+                com.example.cinema.showtime.entity.ShowtimeStatus.SCHEDULED, null);
         when(showtimes.adminDetail(101L)).thenReturn(showtimeItem);
 
         mvc.perform(get("/api/admin/showtimes/101"))

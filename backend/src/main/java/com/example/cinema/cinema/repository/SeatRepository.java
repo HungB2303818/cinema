@@ -20,4 +20,7 @@ public interface SeatRepository extends JpaRepository<Seat, Long> {
     Optional<Seat> findByRoomIdAndSeatRowAndSeatNumber(Long roomId, String seatRow, Integer seatNumber);
 
     List<Seat> findByRoomIdAndIdIn(Long roomId, List<Long> ids);
+
+    boolean existsByRoomIdAndStatus(Long roomId,
+            com.example.cinema.cinema.entity.PhysicalSeatStatus status);
 }

@@ -36,8 +36,14 @@
 | PUT | `/api/admin/rooms/{roomId}/seats/{seatId}` | ADMIN | Sửa vị trí/loại/trạng thái ghế chưa có suất | 02 |
 | POST | `/api/admin/showtimes` | ADMIN | Tạo lịch + inventory | 02 |
 | PUT | `/api/admin/showtimes/{id}` | ADMIN | Sửa suất chưa ảnh hưởng booking | 02 |
-| GET | `/api/admin/showtimes` | ADMIN | Danh sách suất chiếu quản trị, lọc theo rạp/phòng/phim/ngày/status | 02 |
+| GET | `/api/admin/showtimes` | ADMIN | Danh sách suất chiếu quản trị, lọc theo rạp/phòng/phim/kế hoạch tự động/ngày/status | 02 |
 | GET | `/api/admin/showtimes/{id}` | ADMIN | Chi tiết suất chiếu quản trị theo ID | 02 |
+| GET | `/api/admin/schedule-plans` | ADMIN | Danh sách kế hoạch lịch tự động, lọc rạp/phòng/status | 10 |
+| GET | `/api/admin/schedule-plans/{id}` | ADMIN | Chi tiết kế hoạch và thứ tự phim | 10 |
+| POST | `/api/admin/schedule-plans` | ADMIN | Tạo kế hoạch lịch tự động | 10 |
+| PUT | `/api/admin/schedule-plans/{id}` | ADMIN | Sửa kế hoạch; không đụng suất đã sinh | 10 |
+| POST | `/api/admin/schedule-plans/{id}/generate` | ADMIN | “Sinh ngay”, bổ sung khung trống tối đa 31 ngày | 10 |
+| GET | `/api/admin/schedule-plans/{id}/logs` | ADMIN | Nhật ký sinh lịch theo kế hoạch/ngày | 10 |
 | GET | `/api/admin/reports/revenue` | ADMIN | Doanh thu | 09 |
 
 **Quy ước:** endpoint GET hỗ trợ phân trang `page` (0-based), `size` (default 20, max 100), `sort` có whitelist; `date` của UI là ngày theo `Asia/Ho_Chi_Minh`, server đổi sang UTC để lọc chính xác.
@@ -424,13 +430,14 @@ Lỗi 404 invalid ticket; 422 trước/sau khung giờ hoặc suất bị hủy;
 
 ### 9.2 Đọc danh sách và chi tiết suất chiếu quản trị — TASK-07 bổ sung (FE-10)
 
-`GET /api/admin/showtimes?cinemaId=1&roomId=20&movieId=10&date=2026-11-10&status=SCHEDULED&page=0&size=20&sort=id,desc`
+`GET /api/admin/showtimes?cinemaId=1&roomId=20&movieId=10&planId=7&date=2026-11-10&status=SCHEDULED&page=0&size=20&sort=id,desc`
 
 - Phân quyền: Chỉ `ADMIN`. Chưa đăng nhập → 401; CUSTOMER/STAFF → 403.
 - Các bộ lọc tùy chọn (optional):
   - `cinemaId`: số nguyên dương.
   - `roomId`: số nguyên dương.
   - `movieId`: số nguyên dương.
+  - `planId`: số nguyên dương, lọc theo `showtimes.schedule_plan_id` (suất do kế hoạch tự động sinh). UI trang nhật ký sinh lịch dùng tham số này để mở danh sách suất của đúng kế hoạch; kết hợp được với `roomId`/`date`.
   - `date`: ngày theo `Asia/Ho_Chi_Minh` (định dạng YYYY-MM-DD, năm 1000–9998). Server chuyển đổi thành khoảng nửa mở UTC `[00:00:00 ngày đó, 00:00:00 ngày tiếp theo)` để so khớp `startsAt`. Nếu không truyền `date`, **không tự động lọc ngày hôm nay** (trả về tất cả suất thỏa mãn các điều kiện khác).
   - `status`: enum `SCHEDULED`, `CANCELLED`, `COMPLETED`.
 - Phân trang & sắp xếp:
@@ -439,7 +446,7 @@ Lỗi 404 invalid ticket; 422 trước/sau khung giờ hoặc suất bị hủy;
 - Đặc tả dữ liệu:
   - Admin không bị bộ lọc public loại trừ: phim HIDDEN, phòng/rạp ngừng hoạt động (MAINTENANCE/SUSPENDED) hoặc suất có trạng thái khác SCHEDULED vẫn hiển thị đầy đủ.
   - Tránh N+1 bằng `@EntityGraph` trên `room`, `room.cinema`, `movie`. Không sử dụng row lock cho thao tác đọc thông thường.
-  - Response dùng `PageResponse<ShowtimeResponse>` với ShowtimeResponse đầy đủ thuộc tính như mục 1.3: `{id, movieId, cinemaId, cinemaName, roomId, roomName, startsAt, endsAt, cleanupMinutes, basePrice, vipSurcharge, status}`.
+  - Response dùng `PageResponse<ShowtimeResponse>` với ShowtimeResponse đầy đủ thuộc tính như mục 1.3: `{id, movieId, cinemaId, cinemaName, roomId, roomName, startsAt, endsAt, cleanupMinutes, basePrice, vipSurcharge, status, schedulePlanId}`.
   - Tuyệt đối không để lộ owner hold, booking khách hoặc mã vé.
   - Tham số sai hoặc sort ngoài whitelist → 400 VALIDATION_ERROR.
 
@@ -463,6 +470,94 @@ Chỉ ADMIN; `from/to` bắt buộc là ngày ISO hợp lệ, năm 1000–9998, 
 ```
 
 Một truy vấn aggregate theo `payments.status=SUCCESS` và `paid_at >= fromUtc AND paid_at < endUtc`, không dùng created_at hoặc bookings.total_amount. Nhóm ngày Việt Nam (UTC+07), sắp tăng dần; chỉ có ngày phát sinh SUCCESS, không tự chèn ngày trống. Không có dữ liệu → totalRevenue=0.00, successfulPayments=0, dailyRevenue=[]. Không phân trang danh sách aggregate này. INITIATED/FAILED không được cộng, kể cả có paid_at.
+
+### 9.4 Lịch chiếu tự động — UC-10 (FR-17, BR-23…30)
+
+Tất cả endpoint dưới `/api/admin/schedule-plans`, chỉ `ADMIN`; thiếu JWT → 401, CUSTOMER/STAFF → 403.
+
+**Request tạo/sửa** (`POST`, `PUT /{id}`):
+
+```json
+{
+  "name": "Lịch tối phòng 1",
+  "roomId": 20,
+  "effectiveFrom": "2026-12-01",
+  "effectiveTo": "2026-12-31",
+  "daysOfWeek": [1, 2, 3, 4, 5],
+  "openTime": "08:00",
+  "closeTime": "23:00",
+  "slotStepMinutes": 15,
+  "cleanupMinutes": 15,
+  "basePrice": 75000.00,
+  "vipSurcharge": 20000.00,
+  "movieIds": [10, 11],
+  "status": "ACTIVE"
+}
+```
+
+- `name` 1–150 ký tự, unique trong phòng; `roomId` dương và tồn tại.
+- `effectiveTo >= effectiveFrom`, năm 1000–9998; `daysOfWeek` 1–7 (1 = Thứ 2 … 7 = CN), không trùng, ít nhất một; `openTime < closeTime <= 23:59`, chỉ phút, **không** hỗ trợ khung qua nửa đêm.
+- `slotStepMinutes` 5–120, mặc định 15; `cleanupMinutes` 0–240, mặc định 15; `vipSurcharge` mặc định 0.
+- `basePrice` bắt buộc `>= 0`; tổng `basePrice + vipSurcharge <= 9999999999.99`, tối đa 2 chữ số thập phân.
+- `movieIds` 1–50 phần tử, không trùng, giữ nguyên thứ tự ưu tiên; phim không tồn tại → 404; phim `HIDDEN` → 422 `MOVIE_UNAVAILABLE`.
+- `status` mặc định `ACTIVE`. Khi `ACTIVE`, nếu khoảng ngày giao **và** khung giờ giao với kế hoạch `ACTIVE` khác cùng phòng → 409 `RESOURCE_STATE_CONFLICT`; trùng tên trong phòng → 409 `DUPLICATE_RESOURCE`.
+- `POST` trả 201 kèm `Location: /api/admin/schedule-plans/{id}`; `PUT` trả 200. Sửa kế hoạch không sửa/xóa suất đã sinh.
+- `PUT` không được đổi `roomId` khi kế hoạch đã có ít nhất một suất chiếu tham chiếu (`showtimes.schedule_plan_id`) → 409 `RESOURCE_STATE_CONFLICT`; phải tạo kế hoạch mới cho phòng khác để tránh suất cũ trỏ sai phòng.
+
+**Response chi tiết:**
+
+```json
+{
+  "id": 7,
+  "name": "Lịch tối phòng 1",
+  "roomId": 20,
+  "roomName": "Cinema 1",
+  "cinemaId": 1,
+  "cinemaName": "CGV Vincom Cần Thơ",
+  "effectiveFrom": "2026-12-01",
+  "effectiveTo": "2026-12-31",
+  "daysOfWeek": [1, 2, 3, 4, 5],
+  "openTime": "08:00",
+  "closeTime": "23:00",
+  "slotStepMinutes": 15,
+  "cleanupMinutes": 15,
+  "basePrice": 75000.00,
+  "vipSurcharge": 20000.00,
+  "status": "ACTIVE",
+  "movieCount": 2,
+  "movies": [
+    {"movieId": 10, "title": "Phim A", "durationMinutes": 120, "status": "SHOWING", "releaseDate": "2026-11-01", "priority": 0},
+    {"movieId": 11, "title": "Phim B", "durationMinutes": 95, "status": "UPCOMING", "releaseDate": "2026-12-05", "priority": 1}
+  ]
+}
+```
+
+`GET /api/admin/schedule-plans?cinemaId=&roomId=&status=&page=0&size=20&sort=id,desc` trả `PageResponse<SchedulePlanSummaryResponse>` (không có `movies`, có `movieCount`). Sort whitelist: `id`, `name`, `effectiveFrom`, `effectiveTo`, `status`; mặc định `id,desc`.
+
+**Sinh ngay** — `POST /api/admin/schedule-plans/{id}/generate`:
+
+```json
+{"from": "2026-12-01", "to": "2026-12-07"}
+```
+
+- Kế hoạch phải `ACTIVE`; `from <= to`, `from >= hôm nay`, khoảng nằm trong hiệu lực, tối đa **31 ngày bao gồm hai đầu**; vi phạm → 400 `VALIDATION_ERROR` hoặc 422 `SCHEDULE_INVALID` khi ngoài hiệu lực.
+- Chỉ sinh ngày đúng `daysOfWeek`; bỏ qua log `SUCCESS`/`PARTIAL` có `createdCount > 0` trước đó và chỉ bổ sung khung trống. Không sửa/xóa suất cũ.
+- Mỗi ngày một transaction độc lập; lỗi một ngày không dừng các ngày khác. Bản thân `generate` **không** mở transaction bao ngoài (`Propagation.NOT_SUPPORTED`): từng suất được tạo trong transaction riêng, nên một khung bị chiếm chỉ bị bỏ qua thay vì đánh dấu rollback toàn bộ khoảng ngày. Nhật ký ghi bằng `REQUIRES_NEW`. Trả:
+
+```json
+{
+  "planId": 7, "from": "2026-12-01", "to": "2026-12-07",
+  "createdCount": 12, "skippedCount": 2, "failedCount": 0,
+  "dates": [
+    {"date": "2026-12-01", "outcome": "SUCCESS", "createdCount": 4, "skippedCount": 0, "message": "Đã tạo 4 suất."},
+    {"date": "2026-12-02", "outcome": "PARTIAL", "createdCount": 3, "skippedCount": 1, "message": "Bỏ qua 1 khung bị chiếm."}
+  ]
+}
+```
+
+**Nhật ký** — `GET /api/admin/schedule-plans/{id}/logs?from=&to=&page=0&size=20` trả `PageResponse<GenerationLogResponse>`, sắp xếp `targetDate desc, createdAt desc`; `size` 1–100. Mỗi phần tử: `{id, planId, targetDate, outcome, createdCount, skippedCount, message, createdAt}`. `id` không tồn tại → 404 `RESOURCE_NOT_FOUND`; `to < from` → 400 `VALIDATION_ERROR`. Log `FAILED` lưu cả `createdCount`/`skippedCount` một phần đã tạo trước khi lỗi hệ thống.
+
+**Job:** mặc định 00:30 `Asia/Ho_Chi_Minh`, horizon 7 ngày, chạy bù khi khởi động; bỏ qua ngày đã `SUCCESS`/`PARTIAL` có `createdCount > 0`, retry ngày `SKIPPED`/`FAILED`. Job không trả HTTP; theo dõi qua log và nhật ký.
 
 ## 10. Ràng buộc tích hợp frontend
 

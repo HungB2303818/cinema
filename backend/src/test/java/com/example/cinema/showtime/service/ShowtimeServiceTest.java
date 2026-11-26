@@ -29,6 +29,7 @@ import static org.mockito.Mockito.*;
 class ShowtimeServiceTest {
     @Mock ShowtimeRepository showtimes;
     @Mock ShowtimeSeatRepository inventory;
+    @Mock SchedulePlanRepository schedulePlans;
     @Mock RoomRepository rooms;
     @Mock SeatRepository seats;
     @Mock MovieRepository movies;
@@ -223,11 +224,11 @@ class ShowtimeServiceTest {
     }
 
     @Test void adminScheduleWithFilters() {
-        when(showtimes.findAdminSchedule(eq(3L), eq(2L), eq(1L), any(Instant.class), any(Instant.class),
+        when(showtimes.findAdminSchedule(eq(3L), eq(2L), eq(1L), isNull(), any(Instant.class), any(Instant.class),
                 eq(ShowtimeStatus.SCHEDULED), any(Pageable.class)))
                 .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(showtime)));
 
-        var result = service.adminSchedule(3L, 2L, 1L, LocalDate.of(2026, 11, 10), ShowtimeStatus.SCHEDULED,
+        var result = service.adminSchedule(3L, 2L, 1L, null, LocalDate.of(2026, 11, 10), ShowtimeStatus.SCHEDULED,
                 0, 20, "startsAt,asc");
 
         assertThat(result.totalElements()).isEqualTo(1);
@@ -238,13 +239,28 @@ class ShowtimeServiceTest {
     }
 
     @Test void adminScheduleWithoutDateDoesNotFilterToday() {
-        when(showtimes.findAdminSchedule(isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), any(Pageable.class)))
+        when(showtimes.findAdminSchedule(isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
+                any(Pageable.class)))
                 .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(showtime)));
 
-        var result = service.adminSchedule(null, null, null, null, null, 0, 20, "id,desc");
+        var result = service.adminSchedule(null, null, null, null, null, null, 0, 20, "id,desc");
 
         assertThat(result.totalElements()).isEqualTo(1);
-        verify(showtimes).findAdminSchedule(isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), any(Pageable.class));
+        verify(showtimes).findAdminSchedule(isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
+                any(Pageable.class));
+    }
+
+    @Test void rejectsShowtimeLinkedToPlanOfAnotherRoom() {
+        when(rooms.findByIdForUpdate(2L)).thenReturn(Optional.of(room));
+        SchedulePlan plan = SchedulePlan.builder().id(5L)
+                .room(Room.builder().id(9L).name("Phòng khác").build()).build();
+        when(schedulePlans.findById(5L)).thenReturn(Optional.of(plan));
+
+        assertThatThrownBy(() -> service.createInternal(
+                request(start, start.plusSeconds(7200)), "system", 5L))
+                .isInstanceOfSatisfying(AppException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.SCHEDULE_INVALID));
+        verify(showtimes, never()).saveAndFlush(any());
     }
 
     @Test void adminDetailReturnsShowtimeEvenIfMovieHiddenOrRoomMaintenance() {

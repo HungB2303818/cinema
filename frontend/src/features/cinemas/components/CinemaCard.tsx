@@ -9,7 +9,7 @@ interface CinemaCardProps {
   onSelectCinema?: (cinema: Cinema) => void;
 }
 
-export const CinemaCard: React.FC<CinemaCardProps> = ({ cinema, onSelectCinema }) => {
+export const CinemaCard: React.FC<CinemaCardProps> = ({ cinema }) => {
   const imageInfo = getCinemaImage(cinema);
   const [imageError, setImageError] = useState(false);
 

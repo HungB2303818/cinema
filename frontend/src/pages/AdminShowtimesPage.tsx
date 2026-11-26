@@ -21,6 +21,7 @@ export const AdminShowtimesPage: React.FC = () => {
   const cinemaIdParam = searchParams.get('cinemaId');
   const roomIdParam = searchParams.get('roomId');
   const movieIdParam = searchParams.get('movieId');
+  const planIdParam = searchParams.get('planId');
   const dateParam = searchParams.get('date');
   const statusParam = searchParams.get('status') as ShowtimeStatus | null;
   const pageParam = parseInt(searchParams.get('page') || '0', 10);
@@ -28,6 +29,7 @@ export const AdminShowtimesPage: React.FC = () => {
   const cinemaId = cinemaIdParam ? parseInt(cinemaIdParam, 10) : undefined;
   const roomId = roomIdParam ? parseInt(roomIdParam, 10) : undefined;
   const movieId = movieIdParam ? parseInt(movieIdParam, 10) : undefined;
+  const planId = planIdParam ? parseInt(planIdParam, 10) : undefined;
   const date = dateParam || undefined;
   const status = statusParam || undefined;
 
@@ -46,6 +48,7 @@ export const AdminShowtimesPage: React.FC = () => {
     cinemaId,
     roomId,
     movieId,
+    planId,
     date,
     status,
     page: pageParam,
@@ -130,7 +133,7 @@ export const AdminShowtimesPage: React.FC = () => {
             <Filter className="w-4 h-4 text-[#e6e2c1]" />
             <span>Bộ lọc lịch chiếu</span>
           </div>
-          {(cinemaId || roomId || movieId || date || status) && (
+          {(cinemaId || roomId || movieId || planId || date || status) && (
             <button
               type="button"
               onClick={resetAllFilters}
@@ -141,6 +144,12 @@ export const AdminShowtimesPage: React.FC = () => {
             </button>
           )}
         </div>
+
+        {planId && (
+          <p className="text-xs text-[#e6e2c1]">
+            Đang lọc theo kế hoạch tự động #{planId}.
+          </p>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           {/* Cinema */}
@@ -291,8 +300,18 @@ export const AdminShowtimesPage: React.FC = () => {
                         #{showtime.id}
                       </td>
                       <td className="py-4 px-6">
-                        <div className="font-bold text-white line-clamp-1">
-                          {movie?.title || `Phim #${showtime.movieId}`}
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="font-bold text-white line-clamp-1">
+                            {movie?.title || `Phim #${showtime.movieId}`}
+                          </div>
+                          {showtime.schedulePlanId != null && (
+                            <span
+                              title={`Sinh tự động từ kế hoạch #${showtime.schedulePlanId}`}
+                              className="inline-flex items-center rounded-full border border-sky-500/30 bg-sky-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sky-300"
+                            >
+                              Tự động
+                            </span>
+                          )}
                         </div>
                         {movie?.durationMinutes && (
                           <span className="text-[11px] text-zinc-400">

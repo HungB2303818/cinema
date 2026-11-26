@@ -252,6 +252,7 @@ describe('FE-10: Admin Quản Lý Suất Chiếu (Showtimes)', () => {
         cinemaId: undefined,
         roomId: undefined,
         movieId: undefined,
+        planId: undefined,
         date: undefined,
         status: undefined,
         page: 0,
@@ -286,6 +287,20 @@ describe('FE-10: Admin Quản Lý Suất Chiếu (Showtimes)', () => {
           })
         );
       });
+    });
+
+    it('lọc theo kế hoạch tự động khi URL có planId', async () => {
+      renderWithProviders(<AdminShowtimesPage />, {
+        initialEntries: ['/admin/showtimes?roomId=10&date=2026-12-01&planId=7'],
+      });
+
+      await waitFor(() => {
+        expect(adminShowtimesApi.list).toHaveBeenCalledWith(
+          expect.objectContaining({ roomId: 10, planId: 7, date: '2026-12-01' })
+        );
+      });
+
+      expect(screen.getByText('Đang lọc theo kế hoạch tự động #7.')).toBeInTheDocument();
     });
 
     it('nút Xóa bộ lọc khôi phục toàn bộ tham số tìm kiếm về mặc định', async () => {
