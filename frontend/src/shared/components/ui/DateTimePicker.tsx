@@ -10,6 +10,8 @@ export interface DateTimePickerProps {
   disabled?: boolean;
   placeholder?: string;
   minDateTime?: string;
+  /** Ngày cần đánh dấu trong lịch (định dạng YYYY-MM-DD), ví dụ ngày khởi chiếu. */
+  highlightDate?: string;
 }
 
 interface Parts {
@@ -36,6 +38,12 @@ const parseValue = (value: string): Parts | null => {
 
 const nowInVietnam = (): Parts | null =>
   parseValue(utcIsoToVietnamLocalInput(new Date().toISOString()));
+
+const parseDateOnly = (value?: string) => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value ?? '');
+  if (!match) return null;
+  return { year: Number(match[1]), month: Number(match[2]), day: Number(match[3]) };
+};
 
 const toValue = (parts: Parts) =>
   `${parts.year}-${pad2(parts.month)}-${pad2(parts.day)}T${pad2(parts.hour)}:${pad2(parts.minute)}`;
@@ -77,6 +85,7 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
   disabled = false,
   placeholder = 'Chọn ngày giờ',
   minDateTime,
+  highlightDate,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -91,6 +100,7 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
   const selected = parseValue(value);
   const today = nowInVietnam();
   const min = parseValue(minDateTime ?? '');
+  const highlight = useMemo(() => parseDateOnly(highlightDate), [highlightDate]);
   const current = selected ?? min ?? today;
   const days = useMemo(() => buildDays(view.year, view.month), [view]);
   const yearOptions = useMemo(
@@ -294,6 +304,10 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
                     today?.year === day.year &&
                     today?.month === day.month &&
                     today?.day === day.day;
+                  const isHighlight =
+                    highlight?.year === day.year &&
+                    highlight?.month === day.month &&
+                    highlight?.day === day.day;
                   const isCurrentMonth = day.month === view.month;
                   const dayDisabled = isDayDisabled(day);
 
@@ -304,6 +318,8 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
                     dayClass = 'bg-[#e6e2c1] text-black font-bold';
                   } else if (isToday) {
                     dayClass = 'text-[#e6e2c1] ring-1 ring-[#e6e2c1]/50 hover:bg-[#1d202b]';
+                  } else if (isHighlight) {
+                    dayClass = 'text-amber-300 ring-1 ring-amber-400/60 hover:bg-[#1d202b]';
                   } else if (isCurrentMonth) {
                     dayClass = 'text-zinc-200 hover:bg-[#1d202b]';
                   }
@@ -316,6 +332,7 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
                       onClick={() => selectDay(day)}
                       aria-label={`Ngày ${day.day} tháng ${day.month} năm ${day.year}`}
                       aria-pressed={Boolean(isSelected)}
+                      title={isHighlight ? 'Ngày khởi chiếu' : undefined}
                       className={`h-8 rounded-lg text-xs font-semibold transition-colors ${dayDisabled ? '' : 'cursor-pointer'} ${dayClass}`}
                     >
                       {day.day}
@@ -386,13 +403,21 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
           </div>
 
           <div className="mt-3 flex items-center justify-between border-t border-[#20232e] pt-3">
-            <button
-              type="button"
-              onClick={selectNow}
-              className="text-xs font-semibold text-[#e6e2c1] hover:underline cursor-pointer"
-            >
-              Bây giờ
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={selectNow}
+                className="text-xs font-semibold text-[#e6e2c1] hover:underline cursor-pointer"
+              >
+                Bây giờ
+              </button>
+              {highlight && (
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-medium text-amber-300">
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400" aria-hidden="true" />
+                  Ngày khởi chiếu
+                </span>
+              )}
+            </div>
             <button
               type="button"
               onClick={() => close()}

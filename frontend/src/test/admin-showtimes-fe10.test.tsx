@@ -88,6 +88,17 @@ describe('FE-10: Admin Quản Lý Suất Chiếu (Showtimes)', () => {
       status: 'HIDDEN',
       releaseDate: '2026-12-01',
     },
+    {
+      id: 103,
+      title: 'Phim Sắp Khởi Chiếu',
+      description: 'Phim chờ ngày ra mắt',
+      durationMinutes: 105,
+      genre: 'Hành động',
+      ageRating: 'T13',
+      posterUrl: 'https://example.com/poster3.jpg',
+      status: 'SHOWING',
+      releaseDate: '2026-12-15',
+    },
   ];
 
   const mockShowtimes: ShowtimeResponse[] = [
@@ -398,6 +409,49 @@ describe('FE-10: Admin Quản Lý Suất Chiếu (Showtimes)', () => {
       expect(screen.getByRole('option', { name: /Mai/i })).toBeInTheDocument();
       // Phim HIDDEN bị loại trừ
       expect(screen.queryByRole('option', { name: /Phim Đang Ẩn/i })).not.toBeInTheDocument();
+    });
+
+    it('vẫn cho chọn ngày trước khởi chiếu nhưng báo lỗi rõ và chặn gửi đến khi chọn lại', async () => {
+      renderWithProviders(<AdminShowtimeFormPage />, {
+        initialEntries: ['/admin/showtimes/new?cinemaId=1&roomId=10'],
+      });
+
+      await waitFor(() => {
+        expect(screen.getByRole('combobox', { name: /Phim chiếu/i })).toBeInTheDocument();
+      });
+
+      // Phim có ngày khởi chiếu 15/12/2026
+      fireEvent.change(screen.getByRole('combobox', { name: /Phim chiếu/i }), { target: { value: '103' } });
+
+      // Mở picker: ngày 20/11/2026 (trước khởi chiếu) phải vẫn chọn được
+      fireEvent.click(screen.getByRole('button', { name: /Giờ bắt đầu/i }));
+      fireEvent.change(screen.getByLabelText('Tháng'), { target: { value: '11' } });
+      fireEvent.change(screen.getByLabelText('Năm'), { target: { value: '2026' } });
+      const day20 = screen.getByRole('button', { name: 'Ngày 20 tháng 11 năm 2026' });
+      expect(day20).toBeEnabled();
+      fireEvent.click(day20);
+      fireEvent.click(screen.getByRole('button', { name: 'Giờ 09' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Phút 00' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Xong' }));
+
+      // Báo lỗi rõ ràng, nêu ngày khởi chiếu hợp lệ
+      const alert = await screen.findByRole('alert');
+      expect(alert).toHaveTextContent(/Ngày bắt đầu đang trước ngày khởi chiếu/i);
+      expect(alert).toHaveTextContent(/15\/12\/2026/);
+
+      // Chặn gửi cho đến khi chọn lại
+      const submitBtn = screen.getByRole('button', { name: 'Tạo suất chiếu' });
+      expect(submitBtn).toBeDisabled();
+
+      // Nút gợi ý đưa về đúng ngày khởi chiếu, giữ giờ đã chọn
+      fireEvent.click(screen.getByRole('button', { name: /Chọn ngày khởi chiếu/i }));
+      await waitFor(() => {
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      });
+      expect(screen.getByRole('button', { name: /Giờ bắt đầu/i })).toHaveTextContent(
+        '15/12/2026 09:00'
+      );
+      expect(submitBtn).toBeEnabled();
     });
 
     it('tự động tính giờ kết thúc từ thời lượng phim và thời điểm phòng sẵn sàng', async () => {
