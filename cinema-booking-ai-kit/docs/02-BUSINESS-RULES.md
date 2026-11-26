@@ -67,7 +67,7 @@
 | BR-19 | Không xóa vật lý dữ liệu có giao dịch; vô hiệu hóa hoặc đổi trạng thái. | Soft status, FK RESTRICT. |
 | BR-20 | Không thay đổi cấu hình phòng/ghế/lịch chiếu nếu có thể ảnh hưởng booking hiện hữu. | Admin service validate dưới lock, lịch sử giữ nguyên. |
 | BR-21 | Chỉ Admin tạo/sửa suất chiếu; Staff chỉ xử lý check-in (Admin có thể check-in). | Spring Security + method auth. |
-| BR-22 | Doanh thu = tổng `payments.amount` với `payments.status=SUCCESS`, gộp theo `paid_at`, không cộng FAILED/INITIATED. | TC báo cáo. |
+| BR-22 | Doanh thu = tổng `payments.amount` với `payments.status=SUCCESS`, lọc theo `paid_at` trong khoảng nửa mở ngày Việt Nam và gộp theo `paid_at`; không cộng FAILED/INITIATED và không tính lại từ giá hiện tại. Số vé = số `booking_seats.ticket_code` của booking thuộc tập thanh toán hợp lệ; bình quân = doanh thu / số giao dịch SUCCESS (0 giao dịch → 0). | TC-24; `RevenueReportIntegrationTest`, `RevenueAnalyticsServiceTest`. |
 | BR-23 | Chỉ Admin quản lý kế hoạch lịch tự động. Một kế hoạch gắn một phòng, một khoảng ngày, một khung giờ mỗi ngày, một mức giá và danh sách phim ưu tiên. | `@PreAuthorize`; TC-53. |
 | BR-24 | Chỉ sinh khi kế hoạch `ACTIVE`, rạp/phòng `ACTIVE`, phòng có ghế `ACTIVE`; phim phải `SHOWING` hoặc `UPCOMING` đã đến `release_date`. | Scheduler/service validate; TC-55. |
 | BR-25 | Hai kế hoạch `ACTIVE` cùng phòng không được giao cả khoảng ngày và khung giờ; khung giờ không giao nhau được phép. | Conflict check dưới room lock; TC-53. |

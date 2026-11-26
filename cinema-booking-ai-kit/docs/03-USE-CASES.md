@@ -87,9 +87,9 @@
 ## UC-09 — Báo cáo doanh thu
 
 - **Actor:** Admin.
-- **S:** (1) chọn range UTC/khung ngày local được chuyển sang UTC; (2) query `payments.status=SUCCESS`, group theo `paid_at`, join showtime/phim/rạp nếu cần; (3) trả tổng tiền, tổng giao dịch và biểu đồ theo ngày.
-- **E:** Không cộng INITIATED/FAILED; không lấy `bookings.total_amount` của PENDING làm doanh thu.
-- **Quy tắc:** BR-22; **API:** `GET /api/admin/reports/revenue`.
+- **S:** (1) chọn khoảng ngày Việt Nam và bộ lọc phim/rạp từ danh mục ADMIN; (2) server chuyển khoảng sang UTC nửa mở và query `payments.status=SUCCESS` theo `paid_at`, join showtime/phim/rạp; (3) trả tổng tiền, số giao dịch, số vé, bình quân và chuỗi ngày/tháng có đủ mốc 0; (4) tab phim/rạp trả bảng phân trang/sort; (5) xuất CSV cùng bộ lọc, tối đa 10.000 dòng.
+- **E:** Không cộng INITIATED/FAILED; không lấy `bookings.total_amount` của PENDING làm doanh thu; không nhân tiền theo số ghế; không loại dữ liệu lịch sử vì trạng thái phim/rạp hiện tại; quá 366 ngày hoặc CSV quá 10.000 dòng bị từ chối rõ ràng.
+- **Quy tắc:** BR-22; **API:** `GET /api/admin/reports/revenue` (giữ nguyên), `/dashboard`, `/breakdown`, `/export`.
 
 ## UC-10 — Cấu hình và sinh suất chiếu tự động
 

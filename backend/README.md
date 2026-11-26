@@ -192,6 +192,20 @@ Remove-Item Env:DB_NAME
 
 Không dùng DB dev/production: fixture integration/concurrency được commit và không tự xóa. Bỏ biến URL nếu dùng Testcontainers. Không có Docker/URL → integration bị skip, không coi là pass MySQL.
 
+### 11.1 Báo cáo doanh thu mở rộng — FR-13/UC-09 (2026-11-26)
+
+ADMIN có thêm 3 endpoint dưới `/api/admin/reports/revenue`; endpoint cũ giữ nguyên DTO số JSON:
+
+- `GET /dashboard?from&to&cinemaId&movieId&timeGroup=DAY|MONTH` → `summary` (doanh thu, giao dịch SUCCESS, vé, bình quân/giao dịch) và `timeSeries` zero-fill đủ mốc.
+- `GET /breakdown?from&to&cinemaId&movieId&groupBy=MOVIE|CINEMA&page&size&sort` → `PageResponse` nhóm theo ID; sort whitelist `totalRevenue`, `successfulPayments`, `ticketsSold`, `groupName`, tie-break ID tăng dần.
+- `GET /export?from&to&cinemaId&movieId&groupBy=DAY|MONTH|MOVIE|CINEMA` → CSV UTF-8 BOM, metadata, escape công thức; không phân trang, quá 10.000 dòng → 422 `REPORT_EXPORT_TOO_LARGE`.
+
+Quy tắc: khoảng `[from 00:00 +07, (to+1) 00:00 +07)`; tối đa 366 ngày; `cinemaId`/`movieId` phải tồn tại; doanh thu là `payments.amount` SUCCESS theo `paid_at`; vé là `booking_seats.ticket_code` của booking trong tập thanh toán; `booking_seats` gom theo booking trước khi join nên tiền không nhân theo ghế. DTO mới trả tiền dạng chuỗi thập phân. Bộ lọc frontend lấy từ endpoint ADMIN để vẫn chọn được phim HIDDEN/ENDED và rạp INACTIVE.
+
+**Hiệu năng (đo 2026-11-26):** MySQL 26.7, schema `cinema_report_it` có 81 payments (63 SUCCESS), 102 bookings, 114 booking_seats, 87 showtimes, 124 movies, 91 cinemas; 100 lần/chỉ số qua Docker client. p95: summary 3,049 ms, series 3,501 ms, breakdown 3,843 ms, count 3,070 ms; avg 1,907–2,472 ms. EXPLAIN: scan `payments`, primary-key lookup `bookings`/`showtimes`/`rooms`, materialize derived `booking_seats`, temporary table cho group/sort. **Không thêm index/migration**; đo lại khi `payments` tăng hàng trăm nghìn dòng.
+
+**Kiểm thử:** `.\mvnw.cmd "-Dtest=RevenueAnalyticsServiceTest,RevenueCsvExportServiceTest,RevenueReportControllerTest,RevenueReportIntegrationTest,PaymentIntegrationTest,PaymentTicketControllerTest" test` với `CINEMA_IT_JDBC_URL` trỏ MySQL test → **89/89 đạt**. Frontend: 31/31 test báo cáo; toàn bộ 237/240 với 3 lỗi có sẵn ở banner/rạp, không liên quan.
+
 ## 12. Cấu trúc Package Modular Monolith
 
 ```

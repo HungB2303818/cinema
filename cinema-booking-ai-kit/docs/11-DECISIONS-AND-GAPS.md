@@ -21,6 +21,7 @@ Trang này phân biệt **quyết định đã khóa cho MVP** với **chủ đ�
 | ADR-013 | HTTP 200 cho retry payment FAILED giả lập; 409 cho payment key mới sau CONFIRMED | Hợp đồng nhất quán, không tạo payment SUCCESS mới. |
 | ADR-014 | Chọn rạp/ngày hiển thị ngay các phim kèm poster và nút giờ, không bắt chọn phim trước | Yêu cầu bố cục người dùng 05/11/2026; bổ sung API đọc theo rạp, phân trang nhóm phim; chưa triển khai khi ghi nhận. |
 | ADR-015 | Lịch tự động theo phòng: một kế hoạch/khung giờ/giá, job sinh trước 7 ngày, không preview, không xóa kế hoạch, không tự hủy suất đã sinh | Giữ mô hình dễ hiểu, tránh sửa lịch sử; nhiều khung giá tách thành nhiều kế hoạch rời giờ. |
+| ADR-016 | Báo cáo doanh thu mở rộng giữ grain payment; `booking_seats` gom theo booking trước khi join; dashboard/breakdown giới hạn 366 ngày, CSV 10.000 dòng; DTO mới trả tiền dạng chuỗi; không thêm index đợt này | Tránh nhân tiền theo ghế và sai số tiền lớn; giữ API cũ; EXPLAIN hiện tại cho thấy scan `payments` rẻ hơn thêm index khi dữ liệu còn nhỏ. Đo lại khi payments tăng hàng trăm nghìn dòng. |
 
 ## 2. Điểm dễ cần chốt khi viết code
 
