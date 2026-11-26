@@ -34,7 +34,7 @@ describe('Admin tạo suất chiếu tự động theo rạp & nhiều phòng', 
   const mockRooms: RoomResponse[] = [
     { id: 10, cinemaId: 1, name: 'Phòng 1', status: 'ACTIVE' },
     { id: 11, cinemaId: 1, name: 'Phòng 2', status: 'ACTIVE' },
-    { id: 12, cinemaId: 1, name: 'Phòng 3', status: 'INACTIVE' },
+    { id: 12, cinemaId: 1, name: 'Phòng 3', status: 'MAINTENANCE' },
   ];
 
   const mockMovies: Movie[] = [
