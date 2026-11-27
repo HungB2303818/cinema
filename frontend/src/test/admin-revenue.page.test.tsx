@@ -260,7 +260,7 @@ describe('Trang doanh thu & thống kê admin', () => {
       </>,
       {
         initialEntries: [
-          '/admin/reports/revenue?from=2026-11-01&to=2026-11-10&timeGroup=DAY&tab=time&page=0&size=20',
+          '/admin/reports/revenue?from=2026-11-01&to=2026-11-10&timeGroup=DAY&tab=time&page=0&size=10',
         ],
       }
     );
@@ -279,12 +279,12 @@ describe('Trang doanh thu & thống kê admin', () => {
       { from: '2026-11-01', to: '2026-11-10', cinemaId: null, movieId: null },
       'MOVIE',
       0,
-      20,
+      10,
       'totalRevenue,desc'
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Phim đang chiếu')).toBeInTheDocument();
+      expect(screen.getAllByText('Phim đang chiếu').length).toBeGreaterThan(0);
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'Xuất CSV' }));
@@ -320,5 +320,40 @@ describe('Trang doanh thu & thống kê admin', () => {
       expect(screen.getAllByText('240.000 ₫').length).toBeGreaterThan(0);
     });
     expect(reportsApi.dashboard).toHaveBeenCalledTimes(2);
+  });
+
+  it('hiển thị nhận định nổi bật, cơ cấu phim/rạp và giới hạn tối đa 10 dòng bảng chi tiết', async () => {
+    const twelveDaysDashboard: RevenueDashboardResponse = {
+      ...dashboard,
+      filter: { from: '2026-11-01', to: '2026-11-12', cinemaId: null, movieId: null },
+      timeSeries: Array.from({ length: 12 }, (_, idx) => {
+        const day = String(idx + 1).padStart(2, '0');
+        return {
+          period: `2026-11-${day}`,
+          totalRevenue: idx === 0 ? '240000.00' : '0.00',
+          successfulPayments: idx === 0 ? 1 : 0,
+          ticketsSold: idx === 0 ? 3 : 0,
+        };
+      }),
+    };
+    vi.mocked(reportsApi.dashboard).mockResolvedValueOnce(twelveDaysDashboard);
+
+    renderWithProviders(<AdminRevenuePage />, {
+      initialEntries: [
+        '/admin/reports/revenue?from=2026-11-01&to=2026-11-12&timeGroup=DAY&tab=time&page=0&size=10',
+      ],
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Nhận định nổi bật' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { name: 'Cơ cấu doanh thu theo phim & rạp' })
+      ).toBeInTheDocument();
+      expect(screen.getByText('Giá vé trung bình')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByRole('button', { name: 'So sánh kỳ trước' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Đường vé bán' })).not.toBeInTheDocument();
+    expect(screen.getByText('Hiển thị 10 / 12 mốc')).toBeInTheDocument();
   });
 });

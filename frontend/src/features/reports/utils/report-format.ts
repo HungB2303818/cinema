@@ -56,3 +56,41 @@ export function formatChartPeriod(period: string, timeGroup: RevenueTimeGroup): 
 export function isZeroMoney(value: string): boolean {
   return /^-?0+(\.0+)?$/.test(value.trim());
 }
+
+export function toNumericMoney(value: string | null | undefined): number {
+  if (!value) return 0;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export function formatPercent(ratio: number, digits = 1): string {
+  if (!Number.isFinite(ratio)) return '0%';
+  return `${(ratio * 100).toFixed(digits).replace('.', ',')}%`;
+}
+
+export interface PeriodDelta {
+  direction: 'up' | 'down' | 'flat';
+  percentLabel: string;
+  diff: number;
+}
+
+export function calculateDelta(current: number, previous: number): PeriodDelta {
+  const diff = current - previous;
+  if (Math.abs(diff) < 1e-9) {
+    return { direction: 'flat', percentLabel: '0%', diff: 0 };
+  }
+  if (previous <= 0) {
+    return {
+      direction: diff > 0 ? 'up' : 'down',
+      percentLabel: diff > 0 ? 'Mới' : '-100%',
+      diff,
+    };
+  }
+  const pct = (diff / previous) * 100;
+  const formatted = `${pct > 0 ? '+' : ''}${pct.toFixed(1).replace('.', ',')}%`;
+  return {
+    direction: diff > 0 ? 'up' : 'down',
+    percentLabel: formatted,
+    diff,
+  };
+}

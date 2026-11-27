@@ -9,6 +9,7 @@ import {
   isValidIsoDate,
   parsePositiveId,
   parseRevenueQuery,
+  previousRange,
   quickRange,
   revenueTabToExportGroupBy,
   revenueTabToGroupBy,
@@ -24,9 +25,21 @@ describe('report filters', () => {
   it('builds quick ranges including month and year boundaries', () => {
     expect(quickRange('today', '2026-11-26')).toEqual({ from: '2026-11-26', to: '2026-11-26' });
     expect(quickRange('last7', '2026-11-26')).toEqual({ from: '2026-11-20', to: '2026-11-26' });
+    expect(quickRange('last30', '2026-11-26')).toEqual({ from: '2026-10-28', to: '2026-11-26' });
     expect(quickRange('thisMonth', '2026-11-26')).toEqual({ from: '2026-11-01', to: '2026-11-26' });
     expect(quickRange('lastMonth', '2026-01-15')).toEqual({ from: '2025-12-01', to: '2025-12-31' });
     expect(quickRange('lastMonth', '2024-03-31')).toEqual({ from: '2024-02-01', to: '2024-02-29' });
+  });
+
+  it('computes the exact previous comparison range of equal length', () => {
+    expect(previousRange('2026-11-01', '2026-11-10')).toEqual({
+      from: '2026-10-22',
+      to: '2026-10-31',
+    });
+    expect(previousRange('2026-11-26', '2026-11-26')).toEqual({
+      from: '2026-11-25',
+      to: '2026-11-25',
+    });
   });
 
   it('adds days without depending on the machine timezone', () => {
@@ -125,7 +138,7 @@ describe('report filters', () => {
   it('parses valid URL state and falls back on invalid page or size', () => {
     const parsed = parseRevenueQuery(
       new URLSearchParams(
-        'from=2026-10-01&to=2026-10-31&cinemaId=2&movieId=5&timeGroup=MONTH&tab=cinema&page=2&size=50'
+        'from=2026-10-01&to=2026-10-31&cinemaId=2&movieId=5&timeGroup=MONTH&tab=cinema&page=2&size=5'
       ),
       '2026-11-26'
     );
@@ -134,11 +147,11 @@ describe('report filters', () => {
       timeGroup: 'MONTH',
       tab: 'cinema',
       page: 2,
-      size: 50,
+      size: 5,
     });
 
     const fallback = parseRevenueQuery(
-      new URLSearchParams('from=2026-10-01&to=2026-10-31&page=-3&size=15&tab=other'),
+      new URLSearchParams('from=2026-10-01&to=2026-10-31&page=-3&size=50&tab=other'),
       '2026-11-26'
     );
     expect(fallback.page).toBe(0);

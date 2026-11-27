@@ -27,6 +27,7 @@ export interface RevenueFiltersProps {
   onApply: () => void;
   onReset: () => void;
   onQuickRange: (kind: QuickRange) => void;
+  activeQuickRange?: QuickRange | null;
   isDirty: boolean;
   disabled?: boolean;
 }
@@ -39,6 +40,7 @@ const errorClass = 'mt-1 text-[11px] font-semibold text-red-400';
 const quickRanges: { kind: QuickRange; label: string }[] = [
   { kind: 'today', label: 'Hôm nay' },
   { kind: 'last7', label: '7 ngày gần nhất' },
+  { kind: 'last30', label: '30 ngày gần nhất' },
   { kind: 'thisMonth', label: 'Tháng này' },
   { kind: 'lastMonth', label: 'Tháng trước' },
 ];
@@ -65,13 +67,14 @@ export const RevenueFiltersPanel: React.FC<RevenueFiltersProps> = ({
   onApply,
   onReset,
   onQuickRange,
+  activeQuickRange = null,
   isDirty,
   disabled = false,
 }) => {
   return (
     <section
       aria-labelledby="revenueFilterHeading"
-      className="bg-[#13151d] border border-[#242733] rounded-2xl p-6 space-y-4"
+      className="bg-[#13151d] border border-[#242733] rounded-2xl p-6 space-y-4 print:hidden"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-zinc-200 font-bold text-sm">
@@ -258,17 +261,25 @@ export const RevenueFiltersPanel: React.FC<RevenueFiltersProps> = ({
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        {quickRanges.map((range) => (
-          <button
-            key={range.kind}
-            type="button"
-            onClick={() => onQuickRange(range.kind)}
-            disabled={disabled}
-            className="px-3 py-1.5 rounded-full bg-[#181a24] border border-[#2b2f3e] text-[11px] font-semibold text-zinc-300 hover:text-white hover:bg-[#222532] transition-colors cursor-pointer disabled:opacity-40"
-          >
-            {range.label}
-          </button>
-        ))}
+        {quickRanges.map((range) => {
+          const isActive = activeQuickRange === range.kind;
+          return (
+            <button
+              key={range.kind}
+              type="button"
+              onClick={() => onQuickRange(range.kind)}
+              disabled={disabled}
+              aria-pressed={isActive}
+              className={`px-3 py-1.5 rounded-full border text-xs font-semibold transition-colors cursor-pointer disabled:opacity-40 ${
+                isActive
+                  ? 'bg-blue-500/20 border-blue-500/50 text-blue-200'
+                  : 'bg-[#181a24] border-[#2b2f3e] text-zinc-300 hover:text-white hover:bg-[#222532]'
+              }`}
+            >
+              {range.label}
+            </button>
+          );
+        })}
 
         <div className="ml-auto flex items-center gap-2">
           {isDirty && (

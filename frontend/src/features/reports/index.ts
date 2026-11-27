@@ -7,5 +7,7 @@ export * from './hooks/useRevenueBreakdown';
 export * from './hooks/useExportRevenue';
 export * from './components/RevenueFilters';
 export * from './components/RevenueSummaryCards';
+export * from './components/RevenueKeyFindings';
 export * from './components/RevenueTrendChart';
+export * from './components/RevenueBreakdownCharts';
 export * from './components/RevenueTable';

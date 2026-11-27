@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import {
+  calculateDelta,
   formatChartPeriod,
   formatCompactMoney,
   formatCount,
   formatMoneyString,
+  formatPercent,
   formatPeriod,
   isZeroMoney,
 } from '@/features/reports';
@@ -55,5 +57,30 @@ describe('report formatting', () => {
     expect(isZeroMoney('000.000')).toBe(true);
     expect(isZeroMoney('0.01')).toBe(false);
     expect(isZeroMoney('100.00')).toBe(false);
+  });
+
+  it('formats percentages and calculates period deltas', () => {
+    expect(formatPercent(0.256)).toBe('25,6%');
+    expect(formatPercent(1, 0)).toBe('100%');
+    expect(calculateDelta(150, 100)).toEqual({
+      direction: 'up',
+      percentLabel: '+50,0%',
+      diff: 50,
+    });
+    expect(calculateDelta(80, 100)).toEqual({
+      direction: 'down',
+      percentLabel: '-20,0%',
+      diff: -20,
+    });
+    expect(calculateDelta(100, 100)).toEqual({
+      direction: 'flat',
+      percentLabel: '0%',
+      diff: 0,
+    });
+    expect(calculateDelta(200, 0)).toEqual({
+      direction: 'up',
+      percentLabel: 'Mới',
+      diff: 200,
+    });
   });
 });

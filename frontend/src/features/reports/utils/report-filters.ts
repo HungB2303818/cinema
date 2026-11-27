@@ -8,8 +8,8 @@ import type {
 } from '../types/report.types';
 
 export const MAX_RANGE_DAYS = 366;
-export const DEFAULT_PAGE_SIZE = 20;
-export const PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
+export const DEFAULT_PAGE_SIZE = 10;
+export const PAGE_SIZE_OPTIONS = [5, 10] as const;
 export const GROUP_SORT = 'totalRevenue,desc';
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -48,7 +48,7 @@ export interface ParsedRevenueQuery {
   errors: RevenueFilterErrors;
 }
 
-export type QuickRange = 'today' | 'last7' | 'thisMonth' | 'lastMonth';
+export type QuickRange = 'today' | 'last7' | 'last30' | 'thisMonth' | 'lastMonth';
 
 export function defaultRange(today: string = getVietnamDateString()): { from: string; to: string } {
   return { from: `${today.slice(0, 7)}-01`, to: today };
@@ -61,6 +61,14 @@ export function addDays(dateString: string, days: number): string {
   return date.toISOString().slice(0, 10);
 }
 
+export function previousRange(from: string, to: string): { from: string; to: string } {
+  const span = daysInclusive(from, to);
+  return {
+    from: addDays(from, -span),
+    to: addDays(from, -1),
+  };
+}
+
 export function quickRange(kind: QuickRange, today: string = getVietnamDateString()): { from: string; to: string } {
   const [year, month] = today.split('-').map(Number);
   switch (kind) {
@@ -68,6 +76,8 @@ export function quickRange(kind: QuickRange, today: string = getVietnamDateStrin
       return { from: today, to: today };
     case 'last7':
       return { from: addDays(today, -6), to: today };
+    case 'last30':
+      return { from: addDays(today, -29), to: today };
     case 'thisMonth':
       return { from: `${today.slice(0, 7)}-01`, to: today };
     case 'lastMonth': {
