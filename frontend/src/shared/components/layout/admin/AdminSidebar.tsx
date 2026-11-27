@@ -5,6 +5,7 @@ import {
   Armchair,
   Calendar,
   Sparkles,
+  BarChart3,
   LogOut,
   X,
   ChevronRight,
@@ -49,6 +50,12 @@ const navItems: NavItem[] = [
     label: 'Tạo suất tự động',
     icon: Sparkles,
     isActive: (pathname) => pathname.startsWith('/admin/showtimes/auto-generate'),
+  },
+  {
+    to: '/admin/reports/revenue',
+    label: 'Doanh thu & thống kê',
+    icon: BarChart3,
+    isActive: (pathname) => pathname.startsWith('/admin/reports'),
   },
 ];
 

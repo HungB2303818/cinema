@@ -44,6 +44,7 @@
 - **TASK-14** Phát hành ticket codes CSPRNG và GET tickets theo owner.
 - **TASK-15** STAFF/ADMIN check-in và bảo vệ UNIQUE.
 - **TASK-16** Revenue từ payments.SUCCESS, truy vấn theo paid_at.
+- **Mở rộng 2026-11-26 (FR-13/UC-09, BR-22):** thêm dashboard ngày/tháng, breakdown theo phim/rạp có phân trang/sort, CSV không phân trang và bộ lọc danh mục ADMIN. API cũ giữ nguyên; DTO mới trả tiền dạng chuỗi. Đã chạy bộ test báo cáo + payment hồi quy trên MySQL thật: **89/89 đạt**; frontend 31/31 test báo cáo, toàn bộ 237/240 với 3 lỗi có sẵn ngoài phạm vi. Không thêm migration/index; p95 đo được 3,049–3,843 ms cho 63 payment SUCCESS trong `backend/README.md`. Chi tiết ở `maintenance_docs/admin-revenue-statistics-plan.md` và docs 08.
 - **DoD:** TC-06…08,13,14,16,21,22,24 pass; không xuất hiện payment SUCCESS trùng hoặc vé trùng.
 
 ## Tuần 5 — UI, test, demo

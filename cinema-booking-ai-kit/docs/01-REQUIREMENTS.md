@@ -16,7 +16,7 @@
 | FR-10 | Scheduler hết hạn PENDING và giải phóng ghế vẫn thuộc booking. | System | Must | UC-06 |
 | FR-11 | Staff/Admin check-in vé theo mã duy nhất trong thời gian hợp lệ, tối đa một lần. | Staff/Admin | Must | UC-07 |
 | FR-12 | Customer xem booking và mã vé của chính mình; Admin có truy cập hỗ trợ có kiểm soát. | Customer/Admin | Must | UC-08 |
-| FR-13 | Admin xem doanh thu tổng hợp từ payments SUCCESS theo khoảng ngày. | Admin | Must | UC-09 |
+| FR-13 | Admin xem doanh thu tổng hợp từ payments SUCCESS theo khoảng ngày; dashboard ngày/tháng, bảng theo phim/rạp, xuất CSV và lọc theo danh mục ADMIN (gồm phim ẩn, rạp tạm dừng). | Admin | Must | UC-09 |
 | FR-14 | Idempotency cho tạo booking và payment; trùng key khác payload phải bị từ chối. | System | Must | UC-03,04 |
 | FR-15 | API lỗi có mã máy đọc được, xác thực dữ liệu, phân trang danh sách. | All | Must | All |
 | FR-16 | Gửi thông báo, websocket ghế, quét QR bằng camera. | Various | Could | — |

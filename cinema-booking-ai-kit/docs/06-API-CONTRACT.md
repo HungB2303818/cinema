@@ -44,7 +44,10 @@
 | PUT | `/api/admin/schedule-plans/{id}` | ADMIN | Sửa kế hoạch; không đụng suất đã sinh | 10 |
 | POST | `/api/admin/schedule-plans/{id}/generate` | ADMIN | “Sinh ngay”, bổ sung khung trống tối đa 31 ngày | 10 |
 | GET | `/api/admin/schedule-plans/{id}/logs` | ADMIN | Nhật ký sinh lịch theo kế hoạch/ngày | 10 |
-| GET | `/api/admin/reports/revenue` | ADMIN | Doanh thu | 09 |
+| GET | `/api/admin/reports/revenue` | ADMIN | Doanh thu (hợp đồng cũ, giữ nguyên) | 09 |
+| GET | `/api/admin/reports/revenue/dashboard` | ADMIN | Tổng hợp + chuỗi ngày/tháng | 09 |
+| GET | `/api/admin/reports/revenue/breakdown` | ADMIN | Bảng doanh thu theo phim/rạp, phân trang | 09 |
+| GET | `/api/admin/reports/revenue/export` | ADMIN | Xuất CSV theo ngày/tháng/phim/rạp | 09 |
 
 **Quy ước:** endpoint GET hỗ trợ phân trang `page` (0-based), `size` (default 20, max 100), `sort` có whitelist; `date` của UI là ngày theo `Asia/Ho_Chi_Minh`, server đổi sang UTC để lọc chính xác.
 
@@ -558,6 +561,75 @@ Tất cả endpoint dưới `/api/admin/schedule-plans`, chỉ `ADMIN`; thiếu 
 **Nhật ký** — `GET /api/admin/schedule-plans/{id}/logs?from=&to=&page=0&size=20` trả `PageResponse<GenerationLogResponse>`, sắp xếp `targetDate desc, createdAt desc`; `size` 1–100. Mỗi phần tử: `{id, planId, targetDate, outcome, createdCount, skippedCount, message, createdAt}`. `id` không tồn tại → 404 `RESOURCE_NOT_FOUND`; `to < from` → 400 `VALIDATION_ERROR`. Log `FAILED` lưu cả `createdCount`/`skippedCount` một phần đã tạo trước khi lỗi hệ thống.
 
 **Job:** mặc định 00:30 `Asia/Ho_Chi_Minh`, horizon 7 ngày, chạy bù khi khởi động; bỏ qua ngày đã `SUCCESS`/`PARTIAL` có `createdCount > 0`, retry ngày `SKIPPED`/`FAILED`. Job không trả HTTP; theo dõi qua log và nhật ký.
+
+### 9.5 Dashboard, breakdown và CSV doanh thu — mở rộng FR-13/UC-09
+
+Ba endpoint dưới `/api/admin/reports/revenue`, chỉ `ADMIN` (`@PreAuthorize`); thiếu JWT → 401, CUSTOMER/STAFF → 403. Endpoint cũ `GET /api/admin/reports/revenue` giữ nguyên DTO số JSON để không phá hợp đồng.
+
+**Tham số chung**
+
+| Tham số | Quy ước |
+|---|---|
+| `from`, `to` | Bắt buộc, ISO `YYYY-MM-DD`, năm 1000–9998, `from <= to`, tối đa **366 ngày tính cả hai đầu**; sai → 400 `VALIDATION_ERROR`. |
+| `cinemaId`, `movieId` | Tùy chọn, số nguyên dương; không tồn tại → 404 `RESOURCE_NOT_FOUND` (kể cả khi khoảng không có doanh thu). Bỏ trống = tất cả. |
+| `timeGroup` | `DAY` (mặc định) hoặc `MONTH` — chỉ dashboard. |
+| `groupBy` | Breakdown: `MOVIE` hoặc `CINEMA` (bắt buộc). Export: `DAY`, `MONTH`, `MOVIE` hoặc `CINEMA` (bắt buộc). |
+| `page`, `size` | Breakdown: `page` 0-based, `size` 1–100 (mặc định 20). |
+| `sort` | Breakdown: whitelist `totalRevenue`, `successfulPayments`, `ticketsSold`, `groupName`; mặc định `totalRevenue,desc`; luôn thêm tie-break theo ID nhóm tăng dần. |
+
+Khoảng lọc là nửa mở theo ngày Việt Nam: `[from 00:00 +07, (to + 1) 00:00 +07)` đổi sang UTC để so `payments.paid_at`. Doanh thu luôn là `payments.amount` của `status='SUCCESS'`; số vé là số `booking_seats.ticket_code` của booking thuộc tập thanh toán đó, không nhân tiền theo ghế. Mọi trường tiền trong DTO mới là **chuỗi thập phân** (ví dụ `"240000.00"`), không phải JSON number.
+
+**Dashboard** — `GET .../dashboard?from=2026-11-01&to=2026-11-10&cinemaId=&movieId=&timeGroup=DAY`
+
+```json
+{
+  "filter": {"from": "2026-11-01", "to": "2026-11-10", "cinemaId": null, "movieId": null},
+  "timeGroup": "DAY",
+  "summary": {
+    "totalRevenue": "240000.00",
+    "successfulPayments": 1,
+    "ticketsSold": 3,
+    "averageRevenuePerPayment": "240000.00"
+  },
+  "timeSeries": [
+    {"period": "2026-11-01", "totalRevenue": "240000.00", "successfulPayments": 1, "ticketsSold": 3},
+    {"period": "2026-11-02", "totalRevenue": "0.00", "successfulPayments": 0, "ticketsSold": 0}
+  ],
+  "currency": "VND",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "generatedAt": "2026-11-10T03:00:00Z"
+}
+```
+
+`timeSeries` luôn có đủ mốc: mỗi ngày trong khoảng (hoặc mỗi tháng giao với khoảng), kỳ không phát sinh trả `"0.00"`/0. `averageRevenuePerPayment` = doanh thu / số giao dịch SUCCESS, làm tròn 2 chữ số; 0 giao dịch → `"0.00"`.
+
+**Breakdown** — `GET .../breakdown?...&groupBy=MOVIE&page=0&size=20&sort=totalRevenue,desc`
+
+```json
+{
+  "filter": {"from": "2026-11-01", "to": "2026-11-10", "cinemaId": null, "movieId": null},
+  "groupBy": "MOVIE",
+  "rows": {
+    "content": [
+      {"groupId": 10, "groupName": "Phim đang chiếu", "totalRevenue": "240000.00",
+       "successfulPayments": 1, "ticketsSold": 3}
+    ],
+    "page": 0, "size": 20, "totalElements": 1, "totalPages": 1
+  },
+  "currency": "VND",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "generatedAt": "2026-11-10T03:00:00Z"
+}
+```
+
+Nhóm theo ID thật (`showtimes.movie_id` hoặc `rooms.cinema_id`), nên hai phim trùng tên vẫn tách dòng. Không lọc theo trạng thái hiện tại của phim/rạp: dữ liệu lịch sử vẫn được tính. `sort` sai whitelist → 400 `VALIDATION_ERROR`.
+
+**Export** — `GET .../export?from=...&to=...&groupBy=DAY|MONTH|MOVIE|CINEMA`
+
+- Trả `text/csv; charset=UTF-8`, `Content-Disposition: attachment`, tên `revenue_{from}_{to}_by-{group}.csv`.
+- Nội dung: UTF-8 BOM, dòng tiêu đề "Báo cáo doanh thu thanh toán mô phỏng", các dòng metadata (Từ ngày, Đến ngày, Rạp, Phim, Nhóm, Múi giờ, Thời điểm tạo), dòng trống, rồi bảng. `DAY`/`MONTH` dùng cột `Kỳ, Doanh thu (VND), Giao dịch thành công, Vé đã bán`; `MOVIE`/`CINEMA` dùng `ID, Tên, Doanh thu (VND), Giao dịch thành công, Vé đã bán`.
+- Không phân trang, không âm thầm cắt dữ liệu: vượt **10.000 dòng** trả 422 `REPORT_EXPORT_TOO_LARGE`.
+- Ô bắt đầu bằng `=`, `+`, `-`, `@`, tab hoặc CR được thêm tiền tố `'`; ô chứa dấu phẩy, ngoặc kép hoặc xuống dòng được bọc ngoặc kép và nhân đôi ngoặc kép bên trong.
 
 ## 10. Ràng buộc tích hợp frontend
 

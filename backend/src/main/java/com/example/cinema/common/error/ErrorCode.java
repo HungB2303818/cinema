@@ -20,6 +20,7 @@ public enum ErrorCode {
     SCHEDULE_INVALID(HttpStatus.UNPROCESSABLE_ENTITY, "Thời gian hoặc giá suất chiếu không hợp lệ."),
     ROOM_UNAVAILABLE(HttpStatus.UNPROCESSABLE_ENTITY, "Rạp/phòng không hoạt động hoặc không có ghế hoạt động."),
     MOVIE_UNAVAILABLE(HttpStatus.UNPROCESSABLE_ENTITY, "Phim đang ẩn, không thể lập lịch chiếu."),
+    REPORT_EXPORT_TOO_LARGE(HttpStatus.UNPROCESSABLE_ENTITY, "Tệp CSV vượt quá 10.000 dòng dữ liệu. Vui lòng thu hẹp khoảng ngày hoặc bộ lọc."),
     VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "Dữ liệu yêu cầu không hợp lệ."),
     UNAUTHENTICATED(HttpStatus.UNAUTHORIZED, "Chưa xác thực hoặc token không hợp lệ."),
     ACCESS_DENIED(HttpStatus.FORBIDDEN, "Bạn không có quyền thực hiện thao tác này."),

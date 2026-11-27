@@ -19,5 +19,6 @@ export * from './AdminSeatsPage';
 export * from './AdminShowtimesPage';
 export * from './AdminShowtimeFormPage';
 export * from './AdminAutoGenerateShowtimesPage';
+export * from './AdminRevenuePage';
 export * from './NotFoundPage';
 export * from './ProfilePage';

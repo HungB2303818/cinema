@@ -191,6 +191,31 @@ Frontend FE-05 bổ sung test theo các TC hiện có:
 - TC-05/07/18/19: timestamp countdown không reset sau refresh/tab ngủ; đến 0 refetch effectiveStatus dù persisted còn PENDING; network error không bị coi là EXPIRED; cutoff tạo mới không cắt ngắn hold hiện hữu.
 - TC-15/20: checkout deep link chỉ GET, hiển thị giá snapshot/tổng server; CUSTOMER owner, 401/403/404, logout/đổi tài khoản xóa intent/cache và chặn response phiên cũ điều hướng vào tài khoản mới.
 
+### Báo cáo doanh thu mở rộng — FR-13/UC-09 (2026-11-26)
+
+| Mã | Nội dung | Tệp kiểm thử |
+|---|---|---|
+| DT-T01/02/03 | SUCCESS theo paid_at; đơn nhiều ghế không nhân tiền; hai đơn cùng amount cộng đủ | `RevenueReportIntegrationTest` |
+| DT-T04 | FAILED/INITIATED và replay không tăng doanh thu/giao dịch | `RevenueReportIntegrationTest` |
+| DT-T05/06 | Biên ngày Việt Nam, nhóm tháng, mốc 0, tháng nhuận | `RevenueReportIntegrationTest` |
+| DT-T07 | Khoảng rỗng; SUCCESS 0 VND vẫn đếm giao dịch/vé; bình quân không chia 0 | `RevenueAnalyticsServiceTest`, `RevenueReportIntegrationTest` |
+| DT-T08/09/10 | Lọc phim/rạp cùng quần thể; phim HIDDEN/ENDED, rạp INACTIVE, suất CANCELLED; giá hiện tại đổi không ảnh hưởng | `RevenueReportIntegrationTest` |
+| DT-T11/12 | Gom theo ID khi tên trùng; phân trang, sort whitelist, tie-break | `RevenueAnalyticsServiceTest`, `RevenueReportIntegrationTest` |
+| DT-T13 | Đối chiếu tổng nhóm phim = nhóm rạp = series = summary | `RevenueReportIntegrationTest` |
+| DT-T14/15 | Validate ngày/enum/page/size/sort/ID; Guest 401, CUSTOMER/STAFF 403, ADMIN 200 | `RevenueReportControllerTest`, `RevenueAnalyticsServiceTest` |
+| DT-T17/18 | CSV đủ dòng ngoài trang hiện tại; BOM, tiếng Việt, escape, chống công thức, ngưỡng 10.000 | `RevenueCsvExportServiceTest`, `RevenueReportControllerTest` |
+| DT-T19/20 | URL/filter/reset page; loading/rỗng/lỗi/retry | `admin-revenue.page.test.tsx`, `report-filters.test.ts` |
+| DT-T22 | Chuỗi tiền lớn giữ đủ chữ số; DTO cũ giữ JSON number | `RevenueAnalyticsServiceTest`, `RevenueReportIntegrationTest`, `report-format.test.ts` |
+| DT-T23 | Hợp đồng endpoint cũ không đổi | `RevenueReportIntegrationTest`, `RevenueReportControllerTest` |
+| DT-T24 | EXPLAIN + p95 trên MySQL thật | Đo thủ công, ghi trong `backend/README.md` |
+
+**Kết quả thực chạy (2026-11-26):**
+
+- Backend: `.\mvnw.cmd "-Dtest=RevenueAnalyticsServiceTest,RevenueCsvExportServiceTest,RevenueReportControllerTest,RevenueReportIntegrationTest,PaymentIntegrationTest,PaymentTicketControllerTest" test` với `CINEMA_IT_JDBC_URL` trỏ MySQL host `cinema_report_it` → **89/89 đạt**, gồm 16 integration báo cáo, 9 service, 3 CSV, 9 controller, 29 payment integration và 23 payment/ticket controller. Không chạy toàn bộ `verify` trong lần này.
+- Frontend: `npm test -- reports.api admin-revenue report-filters report-format` → **31/31 đạt**. Toàn bộ `npm test` → **237/240**, 3 lỗi có sẵn ở `movie-hero-banner.test.tsx` (kỳ vọng `.jpg`/`.avif`, asset thực tế `.webp`) và `cinemas.page.test.tsx` (thiếu nút "Phòng chiếu"), không liên quan báo cáo.
+- `npm run build` đạt; `npm run lint` còn cảnh báo có sẵn ở `AuthContext` và `HomePage`, không có lỗi.
+- Hiệu năng: 81 payments (63 SUCCESS), 102 bookings, 114 booking_seats, 87 showtimes, 124 movies, 91 cinemas; 100 lần/chỉ số trên MySQL 26.7 qua Docker client, p95 summary 3,049 ms, series 3,501 ms, breakdown 3,843 ms, count 3,070 ms. EXPLAIN cho thấy scan `payments` + primary-key lookup, materialize derived `booking_seats`, temporary table cho group/sort. Không thêm index.
+
 ## 2. Fixture tối thiểu
 
 - Một cinema ACTIVE, hai room ACTIVE; mỗi room 30–50 ghế STANDARD/VIP.
@@ -226,7 +251,7 @@ Then tổng số booking create thành công = 1
 | UC-06 | 06,07,15 | Scheduled job | 05,07,18 |
 | UC-07 | 17,18,21 | POST ticket check-in | 13,14,21 |
 | UC-08 | 16,17,21 | GET bookings/me, {id}, tickets | 15 |
-| UC-09 | 22 | GET revenue | 24 |
+| UC-09 | 22 | GET revenue, dashboard, breakdown, export | 24, DT-T01…DT-T24 |
 | UC-10 | 23…30 | Admin schedule-plans, generate, logs | 53,54,55,56,57,58 |
 
 ## 5. Definition of Done cho một use case

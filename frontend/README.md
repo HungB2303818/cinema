@@ -23,6 +23,7 @@ frontend/src/
 │   ├── LoginPage.tsx           # Đăng nhập tài khoản
 │   ├── RegisterPage.tsx        # Đăng ký thành viên
 │   ├── AdminDashboardPage.tsx  # Bảng điều khiển quản trị
+│   ├── AdminRevenuePage.tsx    # Doanh thu & thống kê: bộ lọc, biểu đồ, bảng nhóm, CSV
 │   ├── NotFoundPage.tsx        # Trang 404
 │   └── index.ts
 │
@@ -32,7 +33,8 @@ frontend/src/
 │   ├── cinemas/                # Cụm rạp CGV: api, components (CinemaCard, CinemaDetailModal), hooks (useCinemas), data fallback, types
 │   ├── showtimes/              # Lịch & suất chiếu: api, hooks (useShowtimes), types
 │   ├── bookings/               # Đặt vé & giữ ghế: api, types
-│   └── tickets/                # Vé điện tử: api, hooks (useMyTickets), types
+│   ├── tickets/                # Vé điện tử: api, hooks (useMyTickets), types
+│   └── reports/                # Doanh thu admin: api, hooks, components, utils, types
 │
 ├── shared/                     # Tài nguyên & Primitives dùng chung
 │   ├── api/                    # HTTP Client chung (Axios instance, JWT interceptor, ApiError)
@@ -76,3 +78,23 @@ VITE_API_BASE_URL=/api
 VITE_APP_NAME="Cinema Booking"
 ```
 Khi chạy `npm run dev`, Vite sẽ tự động proxy mọi request bắt đầu bằng `/api` sang backend Spring Boot tại `http://localhost:8080` (tránh lỗi CORS khi dev).
+
+---
+
+## 4. Trang Doanh thu & thống kê (ADMIN)
+
+Route `/admin/reports/revenue`, chỉ ADMIN (bọc `AdminRoute`); mục sidebar "Doanh thu & thống kê".
+
+- Bộ lọc ngày Việt Nam + rạp/phim lấy từ endpoint ADMIN (`getAdminMovies`, `listCinemas`) nên vẫn chọn được phim HIDDEN/ENDED và rạp INACTIVE. Trạng thái lọc đồng bộ URL (`from`, `to`, `cinemaId`, `movieId`, `timeGroup`, `tab`, `page`, `size`); đổi bộ lọc đưa `page` về 0; nút "Áp dụng" mới commit bộ lọc nháp.
+- Chọn nhanh: hôm nay, 7 ngày, tháng này, tháng trước. Khoảng tối đa 366 ngày, validate `from <= to` trước khi gọi API.
+- Tab "Theo thời gian" hiển thị 4 thẻ tổng hợp, biểu đồ SVG và bảng ngày/tháng; tab "Theo phim"/"Theo rạp" gọi breakdown phân trang/sort. Tiền là chuỗi thập phân từ API, format bằng `formatMoneyString` để không mất chữ số.
+- "Xuất CSV" tải blob theo đúng bộ lọc đã áp dụng (không phải trang đang xem), xử lý lỗi JSON trong blob và chặn response của phiên đăng nhập cũ. Quá 10.000 dòng hiển thị lỗi `REPORT_EXPORT_TOO_LARGE`.
+- Loading/rỗng/lỗi tách biệt, có nút "Thử lại"; trang ghi rõ số liệu là thanh toán mô phỏng.
+
+Kiểm thử:
+
+```bash
+npm test -- reports.api admin-revenue report-filters report-format
+npm run build
+npm run lint
+```
