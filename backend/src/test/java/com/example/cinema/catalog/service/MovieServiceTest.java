@@ -207,6 +207,31 @@ class MovieServiceTest {
         verify(repository, never()).transitionUpcomingToShowing(any());
     }
 
+    @Test
+    void getHideImpactSplitsConfirmedBookedAndUnbookedActiveShowtimes() {
+        Instant now = Instant.parse("2026-11-10T00:00:00Z");
+        Instant earliest = Instant.parse("2026-11-10T12:00:00Z");
+        Instant latest = Instant.parse("2026-11-12T15:00:00Z");
+        when(repository.findById(1L)).thenReturn(Optional.of(movie(MovieStatus.SHOWING)));
+        when(databaseTime.now()).thenReturn(now);
+        when(showtimeRepository.countActiveScheduledByMovie(1L, now)).thenReturn(5L);
+        when(showtimeRepository.countConfirmedBookedActiveScheduledByMovie(1L, now)).thenReturn(2L);
+        when(bookingRepository.countConfirmedActiveByMovie(1L, now)).thenReturn(4L);
+        when(bookingRepository.countPendingActiveByMovie(1L, now)).thenReturn(1L);
+        when(showtimeRepository.findEarliestActiveStartByMovie(1L, now)).thenReturn(Optional.of(earliest));
+        when(showtimeRepository.findLatestActiveEndByMovie(1L, now)).thenReturn(Optional.of(latest));
+
+        var impact = service.getHideImpact(1L);
+
+        assertThat(impact.activeShowtimes()).isEqualTo(5L);
+        assertThat(impact.bookedActiveShowtimes()).isEqualTo(2L);
+        assertThat(impact.unbookedActiveShowtimes()).isEqualTo(3L);
+        assertThat(impact.confirmedBookings()).isEqualTo(4L);
+        assertThat(impact.pendingBookings()).isEqualTo(1L);
+        assertThat(impact.earliestStart()).isEqualTo(earliest);
+        assertThat(impact.latestEnd()).isEqualTo(latest);
+    }
+
     private Movie movie(MovieStatus status) {
         return Movie.builder().id(1L).title("Phim A").durationMinutes(120).status(status).build();
     }

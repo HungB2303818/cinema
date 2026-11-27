@@ -204,7 +204,53 @@ class ScheduleIntegrationTest {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.content[0].startsAt").value("2026-11-09T17:00:00Z"));
         movie.setStatus(MovieStatus.HIDDEN);
         movies.flush();
-        assertCode(() -> service.schedule(movie.getId(), LocalDate.of(2026, 11, 10), null, 0, 20, "id,asc"), ErrorCode.RESOURCE_NOT_FOUND);
+        // Unbooked showtimes of a HIDDEN movie are hidden from public schedule
+        assertThat(service.schedule(movie.getId(), LocalDate.of(2026, 11, 10), null, 0, 20, "id,asc").content()).isEmpty();
+    }
+
+    @Test void hiddenMovieOnlyShowsConfirmedBookedShowtimesAndHidesUnbookedOrPendingOnly() throws Exception {
+        Instant dayStart = Instant.parse("2026-11-09T17:00:00Z");
+        var confirmedShowtime = service.create(request(dayStart));
+        var pendingOnlyShowtime = service.create(request(dayStart.plusSeconds(7200)));
+        var unbookedShowtime = service.create(request(dayStart.plusSeconds(14400)));
+
+        booking(confirmedShowtime.showtime().id(), BookingStatus.CONFIRMED);
+        booking(pendingOnlyShowtime.showtime().id(), BookingStatus.PENDING);
+
+        movie.setStatus(MovieStatus.HIDDEN);
+        movies.flush();
+        em.clear();
+
+        // Movie schedule only returns the showtime with CONFIRMED booking
+        var movieSchedule = service.schedule(movie.getId(), LocalDate.of(2026, 11, 10), null, 0, 20, "startsAt,asc");
+        assertThat(movieSchedule.content()).hasSize(1);
+        assertThat(movieSchedule.content().get(0).id()).isEqualTo(confirmedShowtime.showtime().id());
+        assertThat(movieSchedule.content().get(0).movieStatus()).isEqualTo(MovieStatus.HIDDEN);
+
+        // Cinema schedule only includes the movie with its CONFIRMED-booked showtime
+        var cinemaSchedule = service.cinemaSchedule(room.getCinema().getId(), LocalDate.of(2026, 11, 10), 0, 20);
+        assertThat(cinemaSchedule.content()).hasSize(1);
+        assertThat(cinemaSchedule.content().get(0).movie().status()).isEqualTo(MovieStatus.HIDDEN);
+        assertThat(cinemaSchedule.content().get(0).showtimes())
+                .extracting(ShowtimeResponse::id)
+                .containsExactly(confirmedShowtime.showtime().id());
+
+        // Seat map remains blocked for the HIDDEN movie even when showtime is visible
+        assertCode(() -> service.seatMap(confirmedShowtime.showtime().id()), ErrorCode.RESOURCE_NOT_FOUND);
+
+        // Restoring movie to SHOWING restores all 3 showtimes
+        Movie managed = movies.findById(movie.getId()).orElseThrow();
+        managed.setStatus(MovieStatus.SHOWING);
+        movies.flush();
+        em.clear();
+
+        var restored = service.schedule(movie.getId(), LocalDate.of(2026, 11, 10), null, 0, 20, "startsAt,asc");
+        assertThat(restored.content())
+                .extracting(ShowtimeResponse::id)
+                .containsExactly(
+                        confirmedShowtime.showtime().id(),
+                        pendingOnlyShowtime.showtime().id(),
+                        unbookedShowtime.showtime().id());
     }
 
     @Test void publicCinemaScheduleUsesHalfOpenVietnamDayAndPaginatesByMovie() throws Exception {

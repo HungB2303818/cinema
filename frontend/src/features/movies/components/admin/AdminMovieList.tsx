@@ -22,7 +22,8 @@ import { Modal } from '@/shared/components/ui/Modal';
 import { getAgeRatingBadge, formatDate } from '@/shared/utils';
 import { useAdminMovies } from '../../hooks/useAdminMovies';
 import { useUpdateMovie } from '../../hooks/useUpdateMovie';
-import type { Movie, MovieStatus, MovieRequest } from '../../types/movie.types';
+import { moviesApi } from '../../api/movies.api';
+import type { Movie, MovieStatus, MovieRequest, MovieHideImpactResponse } from '../../types/movie.types';
 
 export const AdminMovieList: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -74,7 +75,33 @@ export const AdminMovieList: React.FC = () => {
   // Modal state for Hide Movie
   const [movieToHide, setMovieToHide] = useState<Movie | null>(null);
   const [hideConfirming, setHideConfirming] = useState(false);
+  const [hideImpact, setHideImpact] = useState<MovieHideImpactResponse | null>(null);
+  const [hideImpactLoading, setHideImpactLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!movieToHide) {
+      setHideImpact(null);
+      setHideImpactLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setHideImpactLoading(true);
+    moviesApi
+      .getHideImpact(movieToHide.id)
+      .then((impact) => {
+        if (!cancelled) setHideImpact(impact);
+      })
+      .catch(() => {
+        if (!cancelled) setHideImpact(null);
+      })
+      .finally(() => {
+        if (!cancelled) setHideImpactLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [movieToHide]);
 
   // Modal state for Restore Movie
   const [movieToRestore, setMovieToRestore] = useState<Movie | null>(null);
@@ -451,10 +478,25 @@ export const AdminMovieList: React.FC = () => {
               <div className="text-xs leading-relaxed">
                 Phim <strong>{movieToHide.title}</strong> sẽ được chuyển sang trạng thái{' '}
                 <span className="font-bold text-amber-300">HIDDEN</span>. Phim sẽ không còn hiển thị
-                trên trang công khai của khách hàng, nhưng toàn bộ lịch chiếu và lịch sử đơn đặt vé liên
-                quan vẫn được bảo toàn nguyên vẹn.
+                trên trang công khai của khách hàng. Các suất chiếu đã có vé xác nhận sẽ tiếp tục hiển
+                thị ở chế độ ngừng nhận đặt mới; các suất chưa có người đặt sẽ được ẩn khỏi trang công khai.
               </div>
             </div>
+
+            {hideImpactLoading ? (
+              <p className="text-xs text-zinc-400">Đang kiểm tra tác động suất chiếu...</p>
+            ) : hideImpact ? (
+              <div className="p-3 rounded-xl bg-[#090a0f] border border-[#252836] text-xs text-zinc-300 space-y-1">
+                <div>Suất chiếu còn hiệu lực: <strong className="text-white">{hideImpact.activeShowtimes}</strong></div>
+                {hideImpact.bookedActiveShowtimes !== undefined && (
+                  <div>Suất đã có vé CONFIRMED (vẫn hiện, ngừng đặt mới): <strong className="text-amber-300">{hideImpact.bookedActiveShowtimes}</strong></div>
+                )}
+                {hideImpact.unbookedActiveShowtimes !== undefined && (
+                  <div>Suất chưa có vé CONFIRMED (sẽ ẩn): <strong className="text-zinc-200">{hideImpact.unbookedActiveShowtimes}</strong></div>
+                )}
+                <div>Booking CONFIRMED bị ảnh hưởng: <strong className="text-white">{hideImpact.confirmedBookings}</strong></div>
+              </div>
+            ) : null}
 
             {actionError && (
               <p className="text-xs text-red-400 font-medium">{actionError}</p>

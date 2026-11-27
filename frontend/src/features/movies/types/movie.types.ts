@@ -56,6 +56,8 @@ export interface MovieHideImpactResponse {
   movieId: number;
   title: string;
   activeShowtimes: number;
+  bookedActiveShowtimes?: number;
+  unbookedActiveShowtimes?: number;
   confirmedBookings: number;
   pendingBookings: number;
   earliestStart: string | null;

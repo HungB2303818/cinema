@@ -686,6 +686,12 @@ export const AdminMovieForm: React.FC<AdminMovieFormProps> = ({
             ) : hideImpact ? (
               <div className="p-3 rounded-xl bg-[#090a0f] border border-[#252836] text-sm text-zinc-300 space-y-1">
                 <div>Suất chiếu còn hiệu lực: <strong className="text-white">{hideImpact.activeShowtimes}</strong></div>
+                {hideImpact.bookedActiveShowtimes !== undefined && (
+                  <div>Suất đã có vé CONFIRMED (vẫn hiển thị, ngừng đặt mới): <strong className="text-amber-300">{hideImpact.bookedActiveShowtimes}</strong></div>
+                )}
+                {hideImpact.unbookedActiveShowtimes !== undefined && (
+                  <div>Suất chưa có vé CONFIRMED (sẽ ẩn khỏi trang công khai): <strong className="text-zinc-200">{hideImpact.unbookedActiveShowtimes}</strong></div>
+                )}
                 <div>Booking CONFIRMED bị ảnh hưởng: <strong className="text-white">{hideImpact.confirmedBookings}</strong></div>
                 <div>Booking PENDING còn hạn: <strong className="text-white">{hideImpact.pendingBookings}</strong></div>
                 {hideImpact.earliestStart && <div>Suất sớm nhất: <strong className="text-white">{hideImpact.earliestStart}</strong></div>}

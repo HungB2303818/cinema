@@ -202,4 +202,56 @@ describe('Cinema Showtimes (Part A / TC-46..49)', () => {
 
     expect(await screen.findByText('Dune: Hành Tinh Cát 2')).toBeInTheDocument();
   });
+
+  it('renders showtimes of a HIDDEN movie as read-only disabled buttons without booking links', async () => {
+    vi.spyOn(cinemasApi, 'list').mockResolvedValue(mockCinemas);
+    vi.spyOn(showtimesApi, 'getCinemaShowtimes').mockResolvedValue({
+      content: [
+        {
+          movie: {
+            id: 99,
+            title: 'Phim Đã Ẩn Có Vé',
+            posterUrl: null,
+            ageRating: 'T13',
+            durationMinutes: 120,
+            status: 'HIDDEN',
+          },
+          showtimes: [
+            {
+              id: 901,
+              movieId: 99,
+              movieStatus: 'HIDDEN',
+              cinemaId: 1,
+              cinemaName: 'CGV Vincom',
+              roomId: 201,
+              roomName: 'Phòng 01',
+              startsAt: `${tomorrow}T11:00:00Z`,
+              endsAt: `${tomorrow}T13:00:00Z`,
+              cleanupMinutes: 15,
+              basePrice: 75000,
+              vipSurcharge: 20000,
+              status: 'SCHEDULED',
+            },
+          ],
+        },
+      ],
+      page: 0,
+      size: 20,
+      totalElements: 1,
+      totalPages: 1,
+    });
+
+    renderWithProviders(<ShowtimesPage />, {
+      initialEntries: [`/showtimes?cinemaId=1&date=${today}`],
+    });
+
+    expect(await screen.findByText('Phim Đã Ẩn Có Vé')).toBeInTheDocument();
+    expect(screen.getByText('Ngừng nhận đặt vé mới')).toBeInTheDocument();
+
+    const stoppedBtn = screen.getByRole('button', {
+      name: /Phim Đã Ẩn Có Vé.*Ngừng nhận đặt vé mới/i,
+    });
+    expect(stoppedBtn).toBeDisabled();
+    expect(screen.queryByRole('link', { name: /18:00/i })).not.toBeInTheDocument();
+  });
 });

@@ -384,6 +384,15 @@ export const ShowtimesPage: React.FC = () => {
             </div>
           </div>
 
+          {selectedMovie?.status === 'HIDDEN' && (
+            <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+              Phim đang tạm ngừng bán vé mới. Chỉ các suất chiếu đã có khách đặt vé mới được hiển thị để theo dõi và không thể đặt thêm vé mới.
+              <Link to="/my-tickets" className="ml-2 font-semibold text-[#e6e2c1] underline underline-offset-2">
+                Xem Vé của tôi
+              </Link>
+            </div>
+          )}
+
           {/* Showtimes Result State */}
           {loadingMovieShowtimes ? (
             <div className="py-20 flex justify-center">
@@ -439,6 +448,7 @@ export const ShowtimesPage: React.FC = () => {
                     key={st.id}
                     showtime={st}
                     movieTitle={selectedMovie?.title}
+                    movieStatus={selectedMovie?.status}
                     now={now}
                   />
                 ))}

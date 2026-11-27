@@ -227,4 +227,64 @@ describe('MovieDetailsPage (FE-03, Section A & C)', () => {
     // Past-cutoff showtime is rendered disabled
     expect(screen.getByRole('button', { name: /không khả dụng/i })).toBeDisabled();
   });
+
+  it('shows booked showtimes of a HIDDEN movie as disabled without seat-selection links', async () => {
+    vi.spyOn(moviesApi, 'getById').mockResolvedValue({
+      id: 2,
+      title: 'Phim Tạm Ẩn',
+      description: 'Mô tả phim ẩn.',
+      durationMinutes: 120,
+      genre: 'Tâm lý',
+      ageRating: 'T16',
+      releaseDate: '2026-11-01',
+      posterUrl: null,
+      status: 'HIDDEN',
+    });
+
+    vi.spyOn(cinemasApi, 'list').mockResolvedValue([
+      { id: 1, name: 'CGV Vincom', address: '01 Hùng Vương', status: 'ACTIVE' },
+    ]);
+
+    vi.spyOn(showtimesApi, 'getMovieShowtimes').mockResolvedValue({
+      content: [
+        {
+          id: 201,
+          movieId: 2,
+          movieStatus: 'HIDDEN',
+          cinemaId: 1,
+          cinemaName: 'CGV Vincom',
+          roomId: 1,
+          roomName: 'Phòng 1',
+          startsAt: '2030-01-01T10:00:00Z',
+          endsAt: '2030-01-01T12:00:00Z',
+          cleanupMinutes: 15,
+          basePrice: 80000,
+          vipSurcharge: 20000,
+          status: 'SCHEDULED',
+        },
+      ],
+      page: 0,
+      size: 50,
+      totalElements: 1,
+      totalPages: 1,
+    });
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/movies/:id" element={<MovieDetailsPage />} />
+      </Routes>,
+      { initialEntries: ['/movies/2'] }
+    );
+
+    expect(await screen.findByText('Phim Tạm Ẩn')).toBeInTheDocument();
+    expect(
+      screen.getByText(/Chỉ các suất chiếu đã có khách đặt vé mới được giữ hiển thị/i)
+    ).toBeInTheDocument();
+
+    const stoppedBtn = await screen.findByRole('button', {
+      name: /ngừng nhận đặt vé mới/i,
+    });
+    expect(stoppedBtn).toBeDisabled();
+    expect(screen.queryByRole('link', { name: /Đặt vé suất/i })).not.toBeInTheDocument();
+  });
 });

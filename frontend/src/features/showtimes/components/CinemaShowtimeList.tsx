@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Building2, MapPin } from 'lucide-react';
 import type { Showtime } from '../types/showtime.types';
+import type { MovieStatus } from '@/features/movies/types/movie.types';
 import type { Cinema } from '@/features/cinemas/types/cinema.types';
 import { formatCurrency, formatTime, isPastCutoff } from '@/shared/utils/format';
 
@@ -9,6 +10,7 @@ interface CinemaShowtimeListProps {
   showtimes: Showtime[];
   cinemas?: Cinema[];
   movieTitle?: string;
+  movieStatus?: MovieStatus;
   now: Date;
 }
 
@@ -69,18 +71,35 @@ function groupByCinema(showtimes: Showtime[], cinemas: Cinema[]): CinemaShowtime
 interface ShowtimeChipProps {
   showtime: Showtime;
   movieTitle?: string;
+  movieStatus?: MovieStatus;
   now: Date;
 }
 
-const ShowtimeChip: React.FC<ShowtimeChipProps> = ({ showtime, movieTitle, now }) => {
+const ShowtimeChip: React.FC<ShowtimeChipProps> = ({ showtime, movieTitle, movieStatus, now }) => {
   const time = formatTime(showtime.startsAt);
   const isScheduled = showtime.status === 'SCHEDULED';
   const isCutoff = isPastCutoff(showtime.startsAt, null, 10, now);
-  const canBook = isScheduled && !isCutoff;
+  const isMovieHidden = (movieStatus ?? showtime.movieStatus) === 'HIDDEN';
+  const canBook = isScheduled && !isCutoff && !isMovieHidden;
 
   const detail = `${time} - ${showtime.roomName} - ${formatCurrency(showtime.basePrice)}`;
 
   if (!canBook) {
+    if (isScheduled && isMovieHidden) {
+      return (
+        <button
+          type="button"
+          disabled
+          title={`Phim đã ngừng bán vé mới — suất vẫn diễn ra cho khách đã đặt (${detail})`}
+          aria-label={`${time}, ${showtime.roomName} - ngừng nhận đặt vé mới`}
+          className="inline-flex min-w-[78px] cursor-not-allowed flex-col items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-sm font-bold text-amber-200"
+        >
+          <span>{time}</span>
+          <span className="text-[10px] font-medium text-amber-300/80">Ngừng đặt mới</span>
+        </button>
+      );
+    }
+
     return (
       <button
         type="button"
@@ -120,6 +139,7 @@ export const CinemaShowtimeList: React.FC<CinemaShowtimeListProps> = ({
   showtimes,
   cinemas = [],
   movieTitle,
+  movieStatus,
   now,
 }) => {
   const groups = useMemo(() => groupByCinema(showtimes, cinemas), [showtimes, cinemas]);
@@ -160,6 +180,7 @@ export const CinemaShowtimeList: React.FC<CinemaShowtimeListProps> = ({
                         key={showtime.id}
                         showtime={showtime}
                         movieTitle={movieTitle}
+                        movieStatus={movieStatus}
                         now={now}
                       />
                     ))}
