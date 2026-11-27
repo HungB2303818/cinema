@@ -1,8 +1,11 @@
+import type { MovieStatus } from '@/features/movies/types/movie.types';
+
 export type ShowtimeStatus = 'SCHEDULED' | 'CANCELLED' | 'COMPLETED';
 
 export interface Showtime {
   id: number;
   movieId: number;
+  movieStatus?: MovieStatus;
   cinemaId: number;
   cinemaName: string;
   roomId: number;
@@ -31,6 +34,7 @@ export interface MovieSummary {
   posterUrl: string | null;
   ageRating: string | null;
   durationMinutes: number;
+  status?: MovieStatus;
 }
 
 export interface CinemaMovieShowtimeGroup {

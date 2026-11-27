@@ -109,12 +109,15 @@ public class MovieService {
         Movie movie = find(id);
         Instant now = databaseTime.now();
         long activeShowtimes = showtimeRepository.countActiveScheduledByMovie(id, now);
+        long bookedActiveShowtimes = showtimeRepository.countConfirmedBookedActiveScheduledByMovie(id, now);
+        long unbookedActiveShowtimes = Math.max(0L, activeShowtimes - bookedActiveShowtimes);
         long confirmedBookings = bookingRepository.countConfirmedActiveByMovie(id, now);
         long pendingBookings = bookingRepository.countPendingActiveByMovie(id, now);
         Instant earliestStart = showtimeRepository.findEarliestActiveStartByMovie(id, now).orElse(null);
         Instant latestEnd = showtimeRepository.findLatestActiveEndByMovie(id, now).orElse(null);
         return new MovieHideImpactResponse(movie.getId(), movie.getTitle(), activeShowtimes,
-                confirmedBookings, pendingBookings, earliestStart, latestEnd);
+                bookedActiveShowtimes, unbookedActiveShowtimes, confirmedBookings, pendingBookings,
+                earliestStart, latestEnd);
     }
 
     @Transactional

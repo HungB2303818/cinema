@@ -44,29 +44,38 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
     List<Long> findOverlapsForUpdate(@Param("roomId") Long roomId, @Param("startsAt") Instant startsAt,
             @Param("occupiedUntil") Instant occupiedUntil, @Param("excludedId") Long excludedId);
 
-    @EntityGraph(attributePaths = {"room", "room.cinema"})
+    @EntityGraph(attributePaths = {"room", "room.cinema", "movie"})
     @Query("select s from Showtime s where s.movie.id = :movieId and s.status = 'SCHEDULED' " +
             "and s.startsAt >= :start and s.startsAt < :end " +
             "and s.room.status = 'ACTIVE' and s.room.cinema.status = 'ACTIVE' " +
-            "and (:cinemaId is null or s.room.cinema.id = :cinemaId)")
+            "and (:cinemaId is null or s.room.cinema.id = :cinemaId) " +
+            "and (s.movie.status <> com.example.cinema.catalog.entity.MovieStatus.HIDDEN " +
+            "or exists (select b.id from Booking b where b.showtime = s " +
+            "and b.status = com.example.cinema.booking.entity.BookingStatus.CONFIRMED))")
     Page<Showtime> findPublicSchedule(@Param("movieId") Long movieId, @Param("start") Instant start,
             @Param("end") Instant end, @Param("cinemaId") Long cinemaId, Pageable pageable);
 
     // Select the movie root once via EXISTS. DISTINCT on s.movie lets Hibernate order by
     // the showtime FK instead of the selected movie PK, which MySQL rejects.
-    // HC-02: include HIDDEN movies so customers with existing tickets can still see
-    // their scheduled showtimes; booking creation remains blocked separately.
+    // HC-02: for HIDDEN movies, only expose showtimes that already have at least one CONFIRMED booking;
+    // unbooked showtimes are hidden from public schedules, and new bookings remain blocked separately.
     @Query(value = "select m from Movie m where exists (" +
             "select s.id from Showtime s where s.movie = m " +
             "and s.room.cinema.id = :cinemaId and s.status = 'SCHEDULED' " +
             "and s.startsAt >= :start and s.startsAt < :end " +
             "and s.room.status = 'ACTIVE' and s.room.cinema.status = 'ACTIVE' " +
+            "and (m.status <> com.example.cinema.catalog.entity.MovieStatus.HIDDEN " +
+            "or exists (select b.id from Booking b where b.showtime = s " +
+            "and b.status = com.example.cinema.booking.entity.BookingStatus.CONFIRMED))" +
             ") order by m.title asc, m.id asc",
            countQuery = "select count(m.id) from Movie m where exists (" +
             "select s.id from Showtime s where s.movie = m " +
             "and s.room.cinema.id = :cinemaId and s.status = 'SCHEDULED' " +
             "and s.startsAt >= :start and s.startsAt < :end " +
-            "and s.room.status = 'ACTIVE' and s.room.cinema.status = 'ACTIVE')")
+            "and s.room.status = 'ACTIVE' and s.room.cinema.status = 'ACTIVE' " +
+            "and (m.status <> com.example.cinema.catalog.entity.MovieStatus.HIDDEN " +
+            "or exists (select b.id from Booking b where b.showtime = s " +
+            "and b.status = com.example.cinema.booking.entity.BookingStatus.CONFIRMED)))")
     Page<Movie> findDistinctMoviesForCinemaSchedule(@Param("cinemaId") Long cinemaId,
             @Param("start") Instant start, @Param("end") Instant end, Pageable pageable);
 
@@ -74,6 +83,9 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
     @Query("select s from Showtime s where s.room.cinema.id = :cinemaId and s.movie.id in :movieIds " +
             "and s.status = 'SCHEDULED' and s.startsAt >= :start and s.startsAt < :end " +
             "and s.room.status = 'ACTIVE' and s.room.cinema.status = 'ACTIVE' " +
+            "and (s.movie.status <> com.example.cinema.catalog.entity.MovieStatus.HIDDEN " +
+            "or exists (select b.id from Booking b where b.showtime = s " +
+            "and b.status = com.example.cinema.booking.entity.BookingStatus.CONFIRMED)) " +
             "order by s.startsAt asc, s.id asc")
     List<Showtime> findShowtimesForCinemaMovies(@Param("cinemaId") Long cinemaId,
             @Param("movieIds") List<Long> movieIds, @Param("start") Instant start, @Param("end") Instant end);
@@ -120,6 +132,11 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
 
     @Query("select count(s) from Showtime s where s.movie.id = :movieId and s.status = com.example.cinema.showtime.entity.ShowtimeStatus.SCHEDULED and s.endsAt > :now")
     long countActiveScheduledByMovie(@Param("movieId") Long movieId, @Param("now") Instant now);
+
+    @Query("select count(s) from Showtime s where s.movie.id = :movieId and s.status = com.example.cinema.showtime.entity.ShowtimeStatus.SCHEDULED "
+            + "and s.endsAt > :now and exists (select b.id from Booking b where b.showtime = s "
+            + "and b.status = com.example.cinema.booking.entity.BookingStatus.CONFIRMED)")
+    long countConfirmedBookedActiveScheduledByMovie(@Param("movieId") Long movieId, @Param("now") Instant now);
 
     @Query("select min(s.startsAt) from Showtime s where s.movie.id = :movieId and s.status = com.example.cinema.showtime.entity.ShowtimeStatus.SCHEDULED and s.endsAt > :now")
     Optional<Instant> findEarliestActiveStartByMovie(@Param("movieId") Long movieId, @Param("now") Instant now);

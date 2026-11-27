@@ -2,18 +2,21 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Building2, Clock, Ban } from 'lucide-react';
 import type { Showtime } from '../types/showtime.types';
+import type { MovieStatus } from '@/features/movies/types/movie.types';
 import { formatTime, formatDateTime, formatCurrency, isPastCutoff } from '@/shared/utils/format';
 
 interface ShowtimeCardProps {
   showtime: Showtime;
   movieTitle?: string;
+  movieStatus?: MovieStatus;
   now?: Date;
 }
 
-export const ShowtimeCard: React.FC<ShowtimeCardProps> = ({ showtime, movieTitle, now }) => {
+export const ShowtimeCard: React.FC<ShowtimeCardProps> = ({ showtime, movieTitle, movieStatus, now }) => {
   const isCutoff = isPastCutoff(showtime.startsAt, null, 10, now);
   const isScheduled = showtime.status === 'SCHEDULED';
-  const canBook = isScheduled && !isCutoff;
+  const isMovieHidden = (movieStatus ?? showtime.movieStatus) === 'HIDDEN';
+  const canBook = isScheduled && !isCutoff && !isMovieHidden;
 
   return (
     <div
@@ -59,11 +62,16 @@ export const ShowtimeCard: React.FC<ShowtimeCardProps> = ({ showtime, movieTitle
           </span>
         </div>
 
-        {/* Cutoff or cancelled notification banner */}
+        {/* Cutoff, hidden movie, or cancelled notification banner */}
         {!isScheduled ? (
           <div className="text-[11px] text-zinc-400 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-800/60">
             <Ban className="w-3 h-3 text-zinc-400 shrink-0" />
             <span>Suất chiếu không khả dụng</span>
+          </div>
+        ) : isMovieHidden ? (
+          <div className="text-[11px] text-amber-300 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20">
+            <Ban className="w-3 h-3 text-amber-400 shrink-0" />
+            <span>Ngừng nhận đặt vé mới (suất vẫn chiếu cho khách đã đặt)</span>
           </div>
         ) : isCutoff ? (
           <div className="text-[11px] text-amber-300 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20">
@@ -94,7 +102,11 @@ export const ShowtimeCard: React.FC<ShowtimeCardProps> = ({ showtime, movieTitle
             disabled
             className="w-full text-center py-2.5 px-4 text-xs font-semibold rounded-full bg-[#181a24] text-zinc-500 cursor-not-allowed border-none"
           >
-            {isCutoff ? 'Đã quá giờ đặt' : 'Không khả dụng'}
+            {!isScheduled
+              ? 'Không khả dụng'
+              : isMovieHidden
+              ? 'Ngừng nhận đặt vé'
+              : 'Đã quá giờ đặt'}
           </button>
         )}
       </div>

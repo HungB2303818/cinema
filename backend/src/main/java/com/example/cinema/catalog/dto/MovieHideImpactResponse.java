@@ -6,6 +6,8 @@ public record MovieHideImpactResponse(
         Long movieId,
         String title,
         long activeShowtimes,
+        long bookedActiveShowtimes,
+        long unbookedActiveShowtimes,
         long confirmedBookings,
         long pendingBookings,
         Instant earliestStart,

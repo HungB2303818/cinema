@@ -12,6 +12,7 @@ interface CinemaMovieGroupProps {
 export const CinemaMovieGroup: React.FC<CinemaMovieGroupProps> = ({ group, now }) => {
   const { movie, showtimes } = group;
   const [posterError, setPosterError] = useState(false);
+  const isMovieHidden = movie.status === 'HIDDEN';
 
   const fallbackPoster =
     'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=400&q=80';
@@ -28,6 +29,11 @@ export const CinemaMovieGroup: React.FC<CinemaMovieGroupProps> = ({ group, now }
           >
             {movie.title}
           </Link>
+          {isMovieHidden && (
+            <span className="px-2 py-0.5 rounded text-[11px] font-bold tracking-wide bg-amber-500/15 text-amber-200 border border-amber-500/30">
+              Ngừng nhận đặt vé mới
+            </span>
+          )}
           {movie.ageRating && (
             <span className="px-2 py-0.5 rounded text-[11px] font-bold tracking-wide uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30">
               {movie.ageRating}
@@ -78,7 +84,8 @@ export const CinemaMovieGroup: React.FC<CinemaMovieGroupProps> = ({ group, now }
               {showtimes.map((showtime) => {
                 const isCutoff = isPastCutoff(showtime.startsAt, null, 10, now);
                 const isScheduled = showtime.status === 'SCHEDULED';
-                const canBook = isScheduled && !isCutoff;
+                const isShowtimeMovieHidden = isMovieHidden || showtime.movieStatus === 'HIDDEN';
+                const canBook = isScheduled && !isCutoff && !isShowtimeMovieHidden;
 
                 if (canBook) {
                   return (
@@ -102,6 +109,26 @@ export const CinemaMovieGroup: React.FC<CinemaMovieGroupProps> = ({ group, now }
                         {showtime.roomName}
                       </span>
                     </Link>
+                  );
+                }
+
+                if (isScheduled && isShowtimeMovieHidden) {
+                  return (
+                    <button
+                      key={showtime.id}
+                      type="button"
+                      disabled
+                      className="flex flex-col items-center justify-center min-w-[90px] px-3.5 py-2 rounded-xl bg-amber-500/10 text-amber-200 border border-amber-500/30 cursor-not-allowed"
+                      title="Phim đã ngừng bán vé mới — suất vẫn diễn ra cho khách đã đặt"
+                      aria-label={`${movie.title}, ${formatTime(showtime.startsAt)}, ${showtime.roomName} (Ngừng nhận đặt vé mới)`}
+                    >
+                      <span className="text-sm sm:text-base font-bold text-amber-100">
+                        {formatTime(showtime.startsAt)}
+                      </span>
+                      <span className="text-[10px] text-amber-300/80">
+                        {showtime.roomName} · Ngừng bán
+                      </span>
+                    </button>
                   );
                 }
 
